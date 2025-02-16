@@ -1,0 +1,26 @@
+# Framework principal
+fastapi>=0.108.0
+uvicorn[standard]>=0.24.0
+
+# Base de datos
+asyncpg>=0.29.0
+sqlalchemy[asyncio]>=2.0.23
+alembic>=1.13.1
+
+# Redis
+redis>=5.0.0
+
+# Variables de entorno
+python-dotenv>=1.0.0
+
+# Validación de datos
+pydantic>=2.5.2
+pydantic-settings>=2.0.3
+
+# Autenticación
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0
+
+# Testing (opcional)
+pytest>=7.4.3
+httpx>=0.25.2

@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: angel
+      POSTGRES_PASSWORD: angel
+      POSTGRES_DB: proshooter_db
+
+volumes:
+  postgres_data:
