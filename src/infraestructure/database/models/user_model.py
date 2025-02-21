@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, UUID, Enum, Boolean, DateTime, func, ForeignKey, Date
 from sqlalchemy.orm import relationship
-from infraestructure.database.session import Base
-from domain.enums.role_enum import RoleEnum
+from src.infraestructure.database.session import Base
+from src.domain.enums.role_enum import RoleEnum
 class UserModel(Base):
     __tablename__ = "users"
 
