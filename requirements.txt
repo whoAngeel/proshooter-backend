@@ -25,3 +25,5 @@ python-jose[cryptography]>=3.3.0
 # Testing (opcional)
 pytest>=7.4.3
 httpx>=0.25.2
+
+pydantic[email]
