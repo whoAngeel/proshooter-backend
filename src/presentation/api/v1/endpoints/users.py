@@ -35,15 +35,15 @@ def get_user_by_id(user_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="El usuario ya existe")
     return user
 
-@router.patch("/{user_id}/toggle-active", response_model=UserRead)
+@router.patch("/{user_id}/toggle-active")
 def toggle_active(user_id: UUID, db: Session = Depends(get_db)):
     user = UserService.toggle_active(db, user_id)
     if not user:
         raise HTTPException(status_code=400, detail="El usuario no existe")
     return {
         # "id": user.id,
-        "message": f"El usuario ha sido actualizado a {user.is_active}",
-        "data": user
+        "message": f"El usuario ha sido actualizado a {'activo' if user.is_active else 'inactivo'}",
+        "id": user.id
     }
 
 #* ------ PERSONAL DATA ------
