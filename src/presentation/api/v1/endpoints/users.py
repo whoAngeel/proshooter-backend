@@ -54,7 +54,7 @@ def create_personal_data(user_id: UUID, data_in: UserPersonalDataCreate, db: Ses
         raise HTTPException(status_code=400, detail="Los datos personales ya existen")
     if error_code == "USER_NOT_FOUND":
         raise HTTPException(status_code=400, detail="El usuario no existe")
-    return personal_data
+    return {"message": "Datos personales creados", "data": personal_data}
 
 @router.patch("/{user_id}/personal-data")
 def update_personal_data(user_id: UUID, data_in: UserPersonalDataUpdate, db: Session = Depends(get_db)):
@@ -63,7 +63,7 @@ def update_personal_data(user_id: UUID, data_in: UserPersonalDataUpdate, db: Ses
         raise HTTPException(status_code=400, detail="Los datos personales no existen")
     if error_code == "USER_NOT_FOUND":
         raise HTTPException(status_code=400, detail="El usuario no existe")
-    return personal_data
+    return {"message": "Datos personales actualizados", "data": personal_data}
 
 
 #* ------ MEDICAL DATA ------

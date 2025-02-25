@@ -1,8 +1,12 @@
 from pydantic import BaseModel, EmailStr ,Field
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID
 from src.domain.enums.role_enum import RoleEnum
 from datetime import datetime, date
+# from .shooter_schema import ShooterRead
+
+# if TYPE_CHECKING:
+#     from src.presentation.schemas.shooter_schema import ShooterRead
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -19,6 +23,15 @@ class UserRead(UserBase):
     personal_data: Optional["UserPersonalDataRead"] = None
     medical_data: Optional["UserMedicalDataRead"] = None
     biometric_data: Optional["UserBiometricDataRead"] = None
+    shooter: Optional["ShooterRead"] = None
+
+    class Config:
+        from_attributes = True
+
+class UserReadLite(BaseModel):
+    id: UUID
+    email: EmailStr
+    personal_data: Optional["UserPersonalDataRead"] = None
 
     class Config:
         from_attributes = True
@@ -50,7 +63,7 @@ class UserPersonalDataCreate(UserPersonalDataBase):
     pass
 
 class UserPersonalDataRead(UserPersonalDataBase):
-    id: UUID
+    user_id: UUID
 
     class Config:
         from_attributes = True
@@ -72,7 +85,7 @@ class UserMedicalDataUpdate(UserMedicalDataBase):
     emergency_contact: Optional[str] = None
 
 class UserMedicalDataRead(UserMedicalDataBase):
-    id: UUID
+    user_id: UUID
     class Config:
         from_attributes = True
 
@@ -94,8 +107,9 @@ class UserBiometricDataUpdate(UserBiometricDataBase):
     eye_sight: Optional[str] = None
 
 class UserBiometricDataRead(UserBiometricDataBase):
-    id: UUID
+    user_id: UUID
     class Config:
         from_attributes = True
 
+from src.presentation.schemas.shooter_schema import ShooterRead
 UserRead.model_rebuild()

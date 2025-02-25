@@ -20,19 +20,20 @@ class UserModel(Base):
     medical_data = relationship("UserMedicalDataModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
     biometric_data = relationship("UserBiometricDataModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
-    shooter = relationship(
-        "ShooterModel",
-        back_populates="user",
-        uselist=False,
-        cascade="all, delete-orphan"
-        )
+    shooter = relationship("ShooterModel", back_populates="user", uselist=False, cascade="all, delete-orphan", foreign_keys="[ShooterModel.user_id]")
 
+
+from src.infraestructure.database.models.shooter_model import ShooterModel
 
 class UserPersonalDataModel(Base):
     __tablename__ = "user_personal_data"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id', ondelete="CASCADE"),
+        primary_key=True
+    )
 
     first_name = Column(String, nullable=False)
     second_name = Column(String)
@@ -54,8 +55,8 @@ class UserPersonalDataModel(Base):
 class UserMedicalDataModel(Base):
     __tablename__ = "user_medical_data"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
+    # id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete="CASCADE"), primary_key=True)
 
     blood_type = Column(String) # Ejemplo: O+, O-, A+, A-, B+, B-, AB+, AB-
     allergies = Column(String) # Ejemplo: Penicilina
@@ -71,8 +72,8 @@ class UserMedicalDataModel(Base):
 class UserBiometricDataModel(Base):
     __tablename__ = "user_biometric_data"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
+    # id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete="CASCADE"), primary_key=True)
 
     height = Column(String) # Ejemplo: 1.70
     weight = Column(String) # Ejemplo: 70kg
