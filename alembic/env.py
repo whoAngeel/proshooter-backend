@@ -7,6 +7,7 @@ from alembic import context
 
 from src.infraestructure.database.session import Base
 from src.infraestructure.database.models.user_model import UserBiometricDataModel, UserMedicalDataModel, UserModel, UserPersonalDataModel
+from src.infraestructure.database.models.shooter_model import ShooterModel
 
 import os
 from dotenv import load_dotenv

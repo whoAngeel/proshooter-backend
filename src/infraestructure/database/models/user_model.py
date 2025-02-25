@@ -20,6 +20,13 @@ class UserModel(Base):
     medical_data = relationship("UserMedicalDataModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
     biometric_data = relationship("UserBiometricDataModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
+    shooter = relationship(
+        "ShooterModel",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+        )
+
 
 class UserPersonalDataModel(Base):
     __tablename__ = "user_personal_data"
