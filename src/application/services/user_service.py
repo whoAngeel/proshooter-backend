@@ -12,6 +12,7 @@ from src.presentation.schemas.user_schemas import (
     UserBiometricDataCreate,
     UserCreate,
     UserMedicalDataCreate,
+    UserMedicalDataUpdate,
     UserPersonalDataCreate,
     UserPersonalDataUpdate
 )
@@ -67,12 +68,27 @@ class UserService:
         return updated_data, None
 
     @staticmethod
-    def add_medical_data(db: Session, user_id: UUID, data_in: UserMedicalDataCreate):
+    def create_medical_data(db: Session, user_id: UUID, data_in: UserMedicalDataCreate):
         user = UserRepository.get_by_id(db, user_id)
         if not user:
-            return None
-        medical_data = UserMedicalDataRepository.create(db, user_id, data_in)
-        return medical_data
+            return None, "USER_NOT_FOUND"
+        existing_data = UserMedicalDataRepository.get_by_user_id(db, user_id)
+        if existing_data:
+            return None, "MEDICAL_DATA_ALREADY_EXISTS"
+        created_data = UserMedicalDataRepository.create(db, user_id, data_in)
+        return created_data, None
+
+    @staticmethod
+    def update_medical_data(db: Session, user_id: UUID, data_in: UserMedicalDataUpdate):
+        user = UserRepository.get_by_id(db, user_id)
+        if not user:
+            return None, "USER_NOT_FOUND"
+        updated_medical_data = UserMedicalDataRepository.update(db, user_id, data_in)
+        if not updated_medical_data:
+            return None, "PERSONAL_DATA_NOT_FOUND"
+
+        return updated_medical_data, None
+
 
     @staticmethod
     def add_biometric_data(db: Session, user_id: UUID, data_in: UserBiometricDataCreate):

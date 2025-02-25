@@ -10,7 +10,8 @@ from src.presentation.schemas.user_schemas import (
     UserPersonalDataCreate,
     UserMedicalDataCreate,
     UserBiometricDataCreate,
-    UserPersonalDataUpdate
+    UserPersonalDataUpdate,
+    UserMedicalDataUpdate
     )
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -63,10 +64,21 @@ def update_personal_data(user_id: UUID, data_in: UserPersonalDataUpdate, db: Ses
 #* ------ MEDICAL DATA ------
 @router.post("/{user_id}/medical_data")
 def add_medical_data(user_id: UUID, data_in: UserMedicalDataCreate, db: Session = Depends(get_db)):
-    user = UserService.add_medical_data(db, user_id, data_in)
-    if not user:
-        raise HTTPException(status_code=400, detail="El usuario ya existe")
-    return user
+    medical_data, error_code = UserService.create_medical_data(db, user_id, data_in)
+    if error_code == "MEDICAL_DATA_ALREADY_EXISTS":
+        raise HTTPException(status_code=400, detail="Los datos médicos ya existen")
+    if error_code == "USER_NOT_FOUND":
+        raise HTTPException(status_code=400, detail="El usuario no existe")
+    return {"message": "Datos médicos creados", "data": medical_data}
+
+@router.patch("/{user_id}/medical_data")
+def update_medical_data(user_id: UUID, data_in: UserMedicalDataUpdate, db: Session = Depends(get_db)):
+    medical_data, error_code = UserService.update_medical_data(db, user_id, data_in)
+    if error_code == "MEDICAL_DATA_ALREADY_EXISTS":
+        raise HTTPException(status_code=400, detail="Los datos médicos no existen")
+    if error_code == "USER_NOT_FOUND":
+        raise HTTPException(status_code=400, detail="El usuario no existe")
+    return {"message": "Datos médicos actualizados", "data": medical_data}
 
 
 #* ------ BIOMETRIC DATA ------

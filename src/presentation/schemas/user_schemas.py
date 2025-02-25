@@ -87,6 +87,12 @@ class UserBiometricDataBase(BaseModel):
 class UserBiometricDataCreate(UserBiometricDataBase):
     pass
 
+class UserBiometricDataUpdate(UserBiometricDataBase):
+    height: Optional[str] = None
+    weight: Optional[str] = None
+    hand_dominance: Optional[str] = None
+    eye_sight: Optional[str] = None
+
 class UserBiometricDataRead(UserBiometricDataBase):
     id: UUID
     class Config:

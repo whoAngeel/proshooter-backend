@@ -11,6 +11,8 @@ from src.presentation.schemas.user_schemas import (
     UserCreate,
     UserPersonalDataCreate,
     UserPersonalDataUpdate,
+    UserMedicalDataCreate,
+    UserMedicalDataUpdate
 )
 
 class UserRepository:
@@ -107,7 +109,7 @@ class UserPersonalDataRepository:
 
 class UserMedicalDataRepository:
     @staticmethod
-    def create(db:Session, user_id: UUID, medical_data: UserCreate):
+    def create(db:Session, user_id: UUID, medical_data: UserMedicalDataCreate):
         new_medical_data = UserMedicalDataModel(
             blood_type=medical_data.blood_type,
             allergies=medical_data.allergies,
@@ -121,20 +123,27 @@ class UserMedicalDataRepository:
         return new_medical_data
 
     @staticmethod
-    def update(db: Session, personal_data_db: UserPersonalDataModel, data_in: UserPersonalDataCreate):
-        personal_data_db.fist_name = data_in.first_name
-        personal_data_db.second_name = data_in.second_name
-        personal_data_db.last_name1 = data_in.last_name1
-        personal_data_db.last_name2 = data_in.last_name2
-        personal_data_db.phone_number = data_in.phone_number
-        personal_data_db.date_of_birth = data_in.date_of_birth
-        personal_data_db.city = data_in.city
-        personal_data_db.state = data_in.state
-        personal_data_db.country = data_in.country
+    def update(db: Session, user_id: UUID, data_in: UserMedicalDataUpdate):
+
+        medical_data_db = db.query(UserMedicalDataModel).filter(
+            UserMedicalDataModel.user_id == user_id
+        ).first()
+        if not medical_data_db:
+            return None
+
+        # actualizar los campos que no vienen vacios
+        if data_in.blood_type:
+            medical_data_db.blood_type = data_in.blood_type
+        if data_in.allergies:
+            medical_data_db.allergies = data_in.allergies
+        if data_in.medical_conditions:
+            medical_data_db.medical_conditions = data_in.medical_conditions
+        if data_in.emergency_contact:
+            medical_data_db.emergency_contact = data_in.emergency_contact
 
         db.commit()
-        db.refresh(personal_data_db)
-        return personal_data_db
+        db.refresh(medical_data_db)
+        return medical_data_db
 
     @staticmethod
     def get_by_user_id(db:Session, user_id: UUID):
