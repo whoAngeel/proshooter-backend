@@ -12,7 +12,9 @@ from src.presentation.schemas.user_schemas import (
     UserPersonalDataCreate,
     UserPersonalDataUpdate,
     UserMedicalDataCreate,
-    UserMedicalDataUpdate
+    UserMedicalDataUpdate,
+    UserBiometricDataCreate,
+    UserBiometricDataUpdate
 )
 
 class UserRepository:
@@ -166,11 +168,22 @@ class UserBiometricDataRepository:
         return new_biometric_data
 
     @staticmethod
-    def update(db: Session, biometric_data_db: UserBiometricDataModel, data_in: UserPersonalDataCreate):
-        biometric_data_db.height = data_in.height
-        biometric_data_db.weight = data_in.weight
-        biometric_data_db.hand_dominance = data_in.hand_dominance
-        biometric_data_db.eye_sight = data_in.eye_sight
+    def update(db: Session, user_id: UUID, data_in: UserBiometricDataUpdate):
+        biometric_data_db = db.query(UserBiometricDataModel).filter(
+            UserBiometricDataModel.user_id == user_id
+        ).first()
+        if not biometric_data_db:
+            return None
+
+        # actualizar los campos que no vienen vacios
+        if data_in.height:
+            biometric_data_db.height = data_in.height
+        if data_in.weight:
+            biometric_data_db.weight = data_in.weight
+        if data_in.hand_dominance:
+            biometric_data_db.hand_dominance = data_in.hand_dominance
+        if data_in.eye_sight:
+            biometric_data_db.eye_sight = data_in.eye_sight
 
         db.commit()
         db.refresh(biometric_data_db)

@@ -85,15 +85,28 @@ class UserService:
             return None, "USER_NOT_FOUND"
         updated_medical_data = UserMedicalDataRepository.update(db, user_id, data_in)
         if not updated_medical_data:
-            return None, "PERSONAL_DATA_NOT_FOUND"
+            return None, "MEDICAL_DATA_NOT_FOUND"
 
         return updated_medical_data, None
 
 
     @staticmethod
-    def add_biometric_data(db: Session, user_id: UUID, data_in: UserBiometricDataCreate):
+    def create_biometric_data(db: Session, user_id: UUID, data_in: UserBiometricDataCreate):
         user = UserRepository.get_by_id(db, user_id)
         if not user:
-            return None
-        biometric_data = UserBiometricDataRepository.create(db, user_id, data_in)
-        return biometric_data
+            return None, "USER_NOT_FOUND"
+        existing_biometric_data = UserBiometricDataRepository.get_by_user_id(db, user_id)
+        if existing_biometric_data:
+            return None, "BIO_METRIC_DATA_ALREADY_EXISTS"
+        new_biometric_data = UserBiometricDataRepository.create(db, user_id, data_in)
+        return new_biometric_data, None
+
+    @staticmethod
+    def update_biometric_data(db: Session, user_id: UUID, data_in: UserBiometricDataCreate):
+        user = UserRepository.get_by_id(db, user_id)
+        if not user:
+            return None, "USER_NOT_FOUND"
+        updated_biometric_data = UserBiometricDataRepository.update(db, user_id, data_in)
+        if not updated_biometric_data:
+            return None, "BIO_METRIC_DATA_NOT_FOUND"
+        return updated_biometric_data, None

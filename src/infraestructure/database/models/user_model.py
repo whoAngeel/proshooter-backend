@@ -37,6 +37,9 @@ class UserPersonalDataModel(Base):
     state = Column(String)
     country = Column(String)
 
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
     user = relationship("UserModel", back_populates="personal_data")
 
 
@@ -53,6 +56,9 @@ class UserMedicalDataModel(Base):
     # is_disabled = Column(Boolean, default=False)
     emergency_contact = Column(String)
 
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
     user = relationship("UserModel", back_populates="medical_data")
 
 class UserBiometricDataModel(Base):
@@ -66,5 +72,8 @@ class UserBiometricDataModel(Base):
     hand_dominance = Column(String, nullable=False) # Ejemplo: Derecha, Izquierda, Ambas
     eye_sight = Column(String) # Ej "20/20", "20/30"
     # imc = Column(String)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     user = relationship("UserModel", back_populates="biometric_data")
