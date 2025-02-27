@@ -31,7 +31,7 @@ class UserRead(UserBase):
 class UserReadLite(BaseModel):
     id: UUID
     email: EmailStr
-    personal_data: Optional["UserPersonalDataRead"] = None
+    personal_data: Optional["UserPersonalDataReadLite"] = None  # 🔥 Relación con datos personales
 
     class Config:
         from_attributes = True
@@ -61,6 +61,16 @@ class UserPersonalDataUpdate(UserPersonalDataBase):
 
 class UserPersonalDataCreate(UserPersonalDataBase):
     pass
+
+class UserPersonalDataReadLite(UserPersonalDataBase):
+    user_id: UUID
+    first_name: Optional[str] = None
+    second_name: Optional[str] = None
+    last_name1: Optional[str] = None
+    last_name2: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 class UserPersonalDataRead(UserPersonalDataBase):
     user_id: UUID

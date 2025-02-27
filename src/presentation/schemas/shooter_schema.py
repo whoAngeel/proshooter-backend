@@ -9,7 +9,7 @@ class ShooterBase(BaseModel):
 
 class ShooterRead(ShooterBase):
     user_id: UUID
-    # user: Optional["UserReadLite"] = None  # Forward reference
+    user: Optional["UserReadLite"] = None  # 🔥 Relación con usuario
 
     class Config:
         from_attributes = True
