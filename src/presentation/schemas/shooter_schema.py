@@ -1,17 +1,24 @@
-from pydantic import BaseModel, EmailStr ,Field
+from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
-from src.domain.enums.role_enum import RoleEnum
-from datetime import datetime, date
-from .user_schemas import UserRead
+# from .user_schemas import UserRead
+from src.infraestructure.database.models.shooter_model import ShooterClassification
 
+class ShooterBase(BaseModel):
+    classification: str = "TR"
 
-class ShooterRead(BaseModel):
+class ShooterRead(ShooterBase):
     user_id: UUID
-    user: Optional["UserReadLite"] = None  # Forward reference
+    # user: Optional["UserReadLite"] = None  # Forward reference
 
     class Config:
         from_attributes = True
+
+class ShooterCreate(ShooterBase):
+    pass
+
+class ShooterUpdate(ShooterBase):
+    pass
 
 from src.presentation.schemas.user_schemas import UserReadLite
 ShooterRead.model_rebuild()

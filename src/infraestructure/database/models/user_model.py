@@ -10,7 +10,7 @@ class UserModel(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     hashed_password = Column(String, nullable=False)
 
-    role = Column(Enum(RoleEnum), nullable=False, default=RoleEnum.TIRADOR)
+    role = Column(String, nullable=False, default="TIRADOR")
     is_active = Column(Boolean, default=True, nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -20,7 +20,7 @@ class UserModel(Base):
     medical_data = relationship("UserMedicalDataModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
     biometric_data = relationship("UserBiometricDataModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
-    shooter = relationship("ShooterModel", back_populates="user", uselist=False, cascade="all, delete-orphan", foreign_keys="[ShooterModel.user_id]")
+    shooter = relationship("ShooterModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
 
 from src.infraestructure.database.models.shooter_model import ShooterModel

@@ -1,8 +1,8 @@
-"""Creacion de las tablas de usuarios y sus datos asociados
+"""Initial migration
 
-Revision ID: 6bc67ddcfbae
+Revision ID: 439ac7ee24ce
 Revises: 
-Create Date: 2025-02-21 00:21:31.017027
+Create Date: 2025-02-27 02:25:20.736291
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6bc67ddcfbae'
+revision: str = '439ac7ee24ce'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,38 +24,47 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('hashed_password', sa.String(), nullable=False),
-    sa.Column('role', sa.Enum('ADMIN', 'TIRADOR', 'INSTRUCTOR', 'JEFE_INSTRUCTORES', name='roleenum'), nullable=False),
+    sa.Column('role', sa.String(), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_table('shooters',
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('classification', sa.String(), nullable=False),
+    sa.Column('range', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('user_id')
+    )
     op.create_table('user_biometric_data',
-    sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('height', sa.String(), nullable=True),
     sa.Column('weight', sa.String(), nullable=True),
     sa.Column('hand_dominance', sa.String(), nullable=False),
     sa.Column('eye_sight', sa.String(), nullable=True),
-    sa.Column('imc', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('user_id')
     )
     op.create_table('user_medical_data',
-    sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('blood_type', sa.String(), nullable=True),
     sa.Column('allergies', sa.String(), nullable=True),
     sa.Column('medical_conditions', sa.String(), nullable=True),
     sa.Column('emergency_contact', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('user_id')
     )
     op.create_table('user_personal_data',
-    sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('fist_name', sa.String(), nullable=False),
+    sa.Column('first_name', sa.String(), nullable=False),
     sa.Column('second_name', sa.String(), nullable=True),
     sa.Column('last_name1', sa.String(), nullable=False),
     sa.Column('last_name2', sa.String(), nullable=True),
@@ -64,8 +73,10 @@ def upgrade() -> None:
     sa.Column('city', sa.String(), nullable=True),
     sa.Column('state', sa.String(), nullable=True),
     sa.Column('country', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('user_id')
     )
     # ### end Alembic commands ###
 
@@ -75,6 +86,7 @@ def downgrade() -> None:
     op.drop_table('user_personal_data')
     op.drop_table('user_medical_data')
     op.drop_table('user_biometric_data')
+    op.drop_table('shooters')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     # ### end Alembic commands ###

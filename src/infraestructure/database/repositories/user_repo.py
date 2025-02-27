@@ -1,19 +1,20 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from uuid import UUID
+from passlib.context import CryptContext
 from src.infraestructure.database.models.user_model import (
     UserModel,
     UserMedicalDataModel,
     UserBiometricDataModel,
     UserPersonalDataModel,
 )
+from src.infraestructure.database.models.shooter_model import ShooterModel
 from src.presentation.schemas.user_schemas import (
     UserCreate,
     UserPersonalDataCreate,
     UserPersonalDataUpdate,
     UserMedicalDataCreate,
     UserMedicalDataUpdate,
-    UserBiometricDataCreate,
     UserBiometricDataUpdate
 )
 
@@ -50,6 +51,30 @@ class UserRepository:
         db.commit()
         db.refresh(user)
         return user
+
+    @staticmethod
+    def create_user_with_shooter(db: Session, user_data: UserCreate, hashed_password: str):
+        new_user = UserModel(
+            email=user_data.email,
+            hashed_password=hashed_password
+        )
+
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+        new_shooter = ShooterModel(
+            user_id = new_user.id
+        )
+
+        db.add(new_shooter)
+        db.commit()
+        db.refresh(new_shooter)
+
+        return new_user
+
+
+
 
 
 class UserPersonalDataRepository:
