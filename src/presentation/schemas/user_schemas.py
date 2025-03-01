@@ -16,6 +16,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6, description="El password debe tener al menos 6 caracteres")
 
+class UserReadLiteNoPersonalData(BaseModel):
+    id: UUID
+    email: EmailStr  # 🔥 No incluye personal_data
+
+    class Config:
+        from_attributes = True
+
 class UserRead(UserBase):
     id: UUID
     created_at: datetime
@@ -24,6 +31,13 @@ class UserRead(UserBase):
     medical_data: Optional["UserMedicalDataRead"] = None
     biometric_data: Optional["UserBiometricDataRead"] = None
     shooter: Optional["ShooterRead"] = None
+
+    class Config:
+        from_attributes = True
+
+class UserReadLiteNoPersonalData(BaseModel):
+    id: UUID
+    email: EmailStr  # 🔥 No incluye personal_data
 
     class Config:
         from_attributes = True

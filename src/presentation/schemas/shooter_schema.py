@@ -9,11 +9,16 @@ class ShooterBase(BaseModel):
 
 class ShooterRead(ShooterBase):
     user_id: UUID
-    user: Optional["UserReadLite"] = None  # 🔥 Relación con usuario
+    user: Optional["UserReadLiteNoPersonalData"] = None  # 🔥 Relación con usuario
     stats: Optional["ShooterStatsRead"] = None
 
     class Config:
         from_attributes = True
+class ShooterReadLite(ShooterBase):
+    user_id: UUID
+    user: Optional["UserReadLite"] = None
+    stats: Optional["ShooterStatsRead"] = None
+
 
 class ShooterCreate(ShooterBase):
     pass
@@ -21,6 +26,6 @@ class ShooterCreate(ShooterBase):
 class ShooterUpdate(ShooterBase):
     pass
 
-from src.presentation.schemas.user_schemas import UserReadLite
+from src.presentation.schemas.user_schemas import UserReadLite, UserReadLiteNoPersonalData
 from src.presentation.schemas.user_stats_schema import ShooterStatsRead
 ShooterRead.model_rebuild()
