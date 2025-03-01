@@ -10,9 +10,12 @@ class ShooterModel(Base):
     classification = Column(String, nullable=False, default="TR")
     range = Column(String)
 
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     user = relationship("UserModel", back_populates="shooter")
+    stats = relationship("ShooterStatsModel", back_populates="shooter", uselist=False, cascade="all, delete-orphan")
 
 from src.infraestructure.database.models.user_model import UserModel
+from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel

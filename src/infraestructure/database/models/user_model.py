@@ -79,6 +79,11 @@ class UserBiometricDataModel(Base):
     weight = Column(String) # Ejemplo: 70kg
     hand_dominance = Column(String, nullable=False) # Ejemplo: Derecha, Izquierda, Ambas
     eye_sight = Column(String) # Ej "20/20", "20/30"
+    time_sleep = Column(String)
+    blood_pressure = Column(String) # Ejemplo: 120/80 mmHg
+    heart_rate = Column(String) # Ejemplo: 70 latidos por minuto
+    respiratory_rate = Column(String) # Ejemplo: 16 respiraciones por minuto
+
     # imc = Column(String)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

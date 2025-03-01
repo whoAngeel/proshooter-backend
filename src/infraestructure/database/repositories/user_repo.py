@@ -168,6 +168,7 @@ class UserMedicalDataRepository:
         if data_in.emergency_contact:
             medical_data_db.emergency_contact = data_in.emergency_contact
 
+
         db.commit()
         db.refresh(medical_data_db)
         return medical_data_db
@@ -209,6 +210,14 @@ class UserBiometricDataRepository:
             biometric_data_db.hand_dominance = data_in.hand_dominance
         if data_in.eye_sight:
             biometric_data_db.eye_sight = data_in.eye_sight
+        if data_in.time_sleep:
+            biometric_data_db.time_sleep = data_in.time_sleep
+        if data_in.blood_pressure:
+            biometric_data_db.blood_pressure = data_in.blood_pressure
+        if data_in.heart_rate:
+            biometric_data_db.heart_rate = data_in.heart_rate
+        if data_in.respiratory_rate:
+            biometric_data_db.respiratory_rate = data_in.respiratory_rate
 
         db.commit()
         db.refresh(biometric_data_db)

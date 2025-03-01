@@ -105,6 +105,10 @@ class UserBiometricDataBase(BaseModel):
     weight: Optional[str] = None
     hand_dominance: Optional[str] = None
     eye_sight: Optional[str] = None
+    time_sleep: Optional[str] = None
+    blood_pressure: Optional[str] = None
+    heart_rate: Optional[str] = None
+    respiratory_rate: Optional[str] = None
     # imc: Optional
 
 class UserBiometricDataCreate(UserBiometricDataBase):
@@ -115,6 +119,10 @@ class UserBiometricDataUpdate(UserBiometricDataBase):
     weight: Optional[str] = None
     hand_dominance: Optional[str] = None
     eye_sight: Optional[str] = None
+    time_sleep: Optional[str] = None
+    blood_pressure: Optional[str] = None
+    heart_rate: Optional[str] = None
+    respiratory_rate: Optional[str] = None
 
 class UserBiometricDataRead(UserBiometricDataBase):
     user_id: UUID

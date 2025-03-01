@@ -23,5 +23,6 @@ class ShooterRepository:
     @staticmethod
     def get_all(db:Session):
         return db.query(ShooterModel).options(
-            joinedload(ShooterModel.user).joinedload(UserModel.personal_data)
+            joinedload(ShooterModel.user).joinedload(UserModel.personal_data),
+            joinedload(ShooterModel.stats)
         ).all()
