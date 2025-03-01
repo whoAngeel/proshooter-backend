@@ -3,6 +3,7 @@ from sqlalchemy import select
 from uuid import UUID
 from src.infraestructure.database.models.shooter_model import ShooterModel
 from src.infraestructure.database.models.user_model import UserModel
+from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
 
 class ShooterRepository:
     @staticmethod
@@ -13,8 +14,10 @@ class ShooterRepository:
         # )
 
     @staticmethod
-    def create(db: Session, shooter_data: ShooterModel):
-        shooter = ShooterModel(**shooter_data.dict())
+    def create(db: Session, user_id: UUID):
+        shooter = ShooterModel(
+            user_id = user_id
+        )
         db.add(shooter)
         db.commit()
         db.refresh(shooter)
@@ -26,3 +29,18 @@ class ShooterRepository:
             joinedload(ShooterModel.user).joinedload(UserModel.personal_data),
             joinedload(ShooterModel.stats)
         ).all()
+
+    @staticmethod
+    def create_shooter_stats(db:Session, shooter_id: UUID):
+        shooter = ShooterRepository.get_by_user_id(db, shooter_id)
+        if not shooter:
+            return None
+
+        new_shooter_stats = ShooterStatsModel(
+            user_id = shooter_id
+        )
+
+        db.add(new_shooter_stats)
+        db.commit()
+        db.refresh(new_shooter_stats)
+        return new_shooter_stats

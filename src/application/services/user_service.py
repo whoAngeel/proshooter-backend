@@ -26,7 +26,7 @@ class UserService:
         if existing_user:
             return None
         hashed_password = pwd_context.hash(user_data.password)
-        return UserRepository.create_user_with_shooter(db, user_data, hashed_password)
+        return UserRepository.register(db, user_data, hashed_password)
 
     @staticmethod
     def get_user(db:Session, user_id: UUID):

@@ -13,12 +13,12 @@ router = APIRouter(prefix="/shooters", tags=["shooters"])
 def get_shooters(db: Session = Depends(get_db)):
     return ShooterService.get_shooters(db)
 
-@router.post("/")
-def create_shooter(shooter_in: ShooterCreate, db: Session = Depends(get_db)):
-    shooter, error_code = ShooterService.create_shooter(db, shooter_in.user_id, shooter_in)
-    if error_code == "SHOOTER_ALREADY_EXISTS":
-        raise HTTPException(status_code=400, detail="El usuario ya es tirador")
-    return {"message": "Tirador creado", "data": shooter}
+# @router.post("/")
+# def create_shooter(shooter_in: ShooterCreate, db: Session = Depends(get_db)):
+#     shooter, error_code = ShooterService.create_shooter(db, shooter_in.user_id, shooter_in)
+#     if error_code == "SHOOTER_ALREADY_EXISTS":
+#         raise HTTPException(status_code=400, detail="El usuario ya es tirador")
+#     return {"message": "Tirador creado", "data": shooter}
 
 @router.get("/{shooter_id}", response_model=ShooterRead)
 def get_shooter_by_id(shooter_id: UUID, db: Session = Depends(get_db)):

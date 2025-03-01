@@ -17,6 +17,8 @@ from src.presentation.schemas.user_schemas import (
     UserMedicalDataUpdate,
     UserBiometricDataUpdate
 )
+from src.infraestructure.database.repositories.shooter_stats_repo import ShooterStatsRepository
+from src.infraestructure.database.repositories.shooter_repo import ShooterRepository
 
 class UserRepository:
     @staticmethod
@@ -53,27 +55,11 @@ class UserRepository:
         return user
 
     @staticmethod
-    def create_user_with_shooter(db: Session, user_data: UserCreate, hashed_password: str):
-        new_user = UserModel(
-            email=user_data.email,
-            hashed_password=hashed_password
-        )
-
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-
-        new_shooter = ShooterModel(
-            user_id = new_user.id
-        )
-
-        db.add(new_shooter)
-        db.commit()
-        db.refresh(new_shooter)
-
+    def register(db: Session, user_data: UserCreate, hashed_password: str) -> UserModel:
+        new_user = UserRepository.create(db, user_data, hashed_password)
+        new_shooter = ShooterRepository.create(db, new_user.id)
+        ShooterStatsRepository.create(db, new_shooter.user_id)
         return new_user
-
-
 
 
 
