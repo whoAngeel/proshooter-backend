@@ -19,3 +19,6 @@ class ShooterStatsUpdate(ShooterStatsBase):
 
     class Config:
         from_attributes = True
+
+class ShooterStatsRead(ShooterStatsBase):
+    pass

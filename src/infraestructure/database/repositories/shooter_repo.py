@@ -9,9 +9,6 @@ class ShooterRepository:
     @staticmethod
     def get_by_user_id(db:Session, user_id: UUID):
         return db.execute(select(ShooterModel).where(ShooterModel.user_id==user_id)).scalar_one_or_none()
-        # return db.query(ShooterModel).options(
-        #     joinedload(ShooterModel.user).joinedload(UserModel)
-        # )
 
     @staticmethod
     def create(db: Session, user_id: UUID):
@@ -19,8 +16,8 @@ class ShooterRepository:
             user_id = user_id
         )
         db.add(shooter)
-        db.commit()
-        db.refresh(shooter)
+        db.flush()
+        # db.refresh(shooter)
         return shooter
 
     @staticmethod

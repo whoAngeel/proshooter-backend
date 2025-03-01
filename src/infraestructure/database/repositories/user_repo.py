@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from uuid import UUID
 from passlib.context import CryptContext
 from src.infraestructure.database.models.user_model import (
@@ -19,7 +20,7 @@ from src.presentation.schemas.user_schemas import (
 )
 from src.infraestructure.database.repositories.shooter_stats_repo import ShooterStatsRepository
 from src.infraestructure.database.repositories.shooter_repo import ShooterRepository
-
+from fastapi import HTTPException
 class UserRepository:
     @staticmethod
     def get_by_id(db: Session, user_id: UUID):
@@ -42,8 +43,8 @@ class UserRepository:
         )
 
         db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
+        db.flush()
+        # db.refresh(new_user)
         return new_user
 
     @staticmethod
@@ -56,9 +57,20 @@ class UserRepository:
 
     @staticmethod
     def register(db: Session, user_data: UserCreate, hashed_password: str) -> UserModel:
-        new_user = UserRepository.create(db, user_data, hashed_password)
-        new_shooter = ShooterRepository.create(db, new_user.id)
-        ShooterStatsRepository.create(db, new_shooter.user_id)
+        try:
+            new_user = UserRepository.create(db, user_data, hashed_password)
+            new_shooter = ShooterRepository.create(db, new_user.id)
+            ShooterStatsRepository.create(db, new_shooter.user_id)
+            db.commit()
+            db.refresh(new_user)
+            return new_user
+        except IntegrityError as ie:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=f"Error al registrar usuario {ie.orig}")
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=str(e))
+
         return new_user
 
 
