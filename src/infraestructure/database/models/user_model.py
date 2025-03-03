@@ -22,6 +22,8 @@ class UserModel(Base):
 
     shooter = relationship("ShooterModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
+    managed_club = relationship("ShootingClubModel", foreign_keys="[ShootingClubModel.chief_instructor_id]", back_populates="chief_instructor", uselist=False)
+
 
 from src.infraestructure.database.models.shooter_model import ShooterModel
 

@@ -7,6 +7,7 @@ class ShooterModel(Base):
     __tablename__ = "shooters"
 
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete="CASCADE"), primary_key=True)
+    club_id = Column(UUID(as_uuid=True), ForeignKey("shooting_clubs.id"), nullable=True)
     classification = Column(String, nullable=False, default="TR")
     range = Column(String)
 
@@ -16,6 +17,8 @@ class ShooterModel(Base):
 
     user = relationship("UserModel", back_populates="shooter")
     stats = relationship("ShooterStatsModel", back_populates="shooter", uselist=False, cascade="all, delete-orphan")
+    club = relationship("ShootingClubModel", back_populates="members")
 
 from src.infraestructure.database.models.user_model import UserModel
 from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
+from src.infraestructure.database.models.shooting_club_model import ShootingClubModel
