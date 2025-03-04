@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from src.infraestructure.database.repositories.shooter_repo import ShooterRepository
+from src.infraestructure.database.repositories.user_repo import UserRepository
+
 
 from src.presentation.schemas.shooter_schema import ShooterCreate
 

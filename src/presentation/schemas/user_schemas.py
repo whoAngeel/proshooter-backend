@@ -45,7 +45,17 @@ class UserReadLiteNoPersonalData(BaseModel):
 class UserReadLite(BaseModel):
     id: UUID
     email: EmailStr
+    role: RoleEnum
     personal_data: Optional["UserPersonalDataReadLite"] = None  # 🔥 Relación con datos personales
+
+    class Config:
+        from_attributes = True
+
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    role: Optional[RoleEnum] = None
+    is_active: Optional[bool] = None
 
     class Config:
         from_attributes = True
@@ -60,6 +70,9 @@ class UserPersonalDataBase(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
+
+
+
 
 class UserPersonalDataUpdate(UserPersonalDataBase):
     first_name: Optional[str] = None

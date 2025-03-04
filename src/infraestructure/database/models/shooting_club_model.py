@@ -23,4 +23,7 @@ class ShootingClubModel(Base):
     # groups = relationship("ShootingGroupModel")
 
     def __repr__(self):
+        """
+        Return a string representation of the ShootingClub object, showing the id, name and chief instructor id.
+        """
         return f"<ShootingClub(id={self.id}, name={self.name}, chief_instructor_id={self.chief_instructor_id})>"

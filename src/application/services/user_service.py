@@ -16,6 +16,9 @@ from src.presentation.schemas.user_schemas import (
     UserPersonalDataCreate,
     UserPersonalDataUpdate
 )
+from fastapi import HTTPException
+from src.domain.enums.role_enum import RoleEnum
+from src.application.services.shooter_service import ShooterRepository
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -42,6 +45,32 @@ class UserService:
         if not user:
             return None
         return UserRepository.toggle_active(db, user_id)
+
+    @staticmethod
+    def promote_role(db: Session, user_id: UUID, new_role: str):
+        """
+        Servicio para promover el rol de un usuario.
+
+        Args:
+            db: Sesión de base de datos
+            user_id: ID del usuario a promover
+            new_role: Nuevo rol al que se quiere promover
+
+        Returns:
+            Tupla (usuario_actualizado, mensaje_error)
+        """
+        return UserRepository.promote_role(db, user_id, new_role)
+
+    # TODO: validar los requisitos para promover a un tirador
+
+        # Verificar si tiene registro como tirador
+
+
+
+
+
+
+
 
 
     @staticmethod

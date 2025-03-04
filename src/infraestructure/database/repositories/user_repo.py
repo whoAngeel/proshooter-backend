@@ -2,7 +2,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from uuid import UUID
+from typing import Dict
 from passlib.context import CryptContext
+from sqlalchemy.exc import SQLAlchemyError
 from src.infraestructure.database.models.user_model import (
     UserModel,
     UserMedicalDataModel,
@@ -56,24 +58,86 @@ class UserRepository:
         return user
 
     @staticmethod
+    def update(db:Session, user: UserModel) -> UserModel:
+        db.add(user)
+        db.flush()
+        db.refresh(user)
+        return user
+
+
+    @staticmethod
     def register(db: Session, user_data: UserCreate, hashed_password: str) -> UserModel:
         try:
             new_user = UserRepository.create(db, user_data, hashed_password)
-            new_shooter = ShooterRepository.create(db, new_user.id)
-            ShooterStatsRepository.create(db, new_shooter.user_id)
-            db.commit()
             db.refresh(new_user)
+            ShooterRepository.create(db, new_user.id)
+            ShooterStatsRepository.create(db, new_user.id)
+            db.commit()
             return new_user
         except IntegrityError as ie:
             db.rollback()
-            raise HTTPException(status_code=400, detail=f"Error al registrar usuario {ie.orig}")
+            raise None
         except Exception as e:
             db.rollback()
-            raise HTTPException(status_code=400, detail=str(e))
+            raise None
 
-        return new_user
+    @staticmethod
+    def promote_role(db: Session, user_id: UUID, new_role: str):
+        """
+        Promueve a un usuario a un nuevo rol siguiendo la jerarquía establecida.
 
+        Args:
+            db: Sesión de base de datos
+            user_id: ID del usuario a promover
+            new_role: Nuevo rol deseado
 
+        Returns:
+            Tupla (usuario_actualizado, mensaje_error)
+        """
+        # Obtener el usuario
+        user = UserRepository.get_by_id(db, user_id)
+        if not user:
+            return None, "USER_NOT_FOUND"
+
+        # Verificar que el usuario esté activo
+        if not user.is_active:
+            return None, "USER_NOT_ACTIVE"
+
+        # Validar que el nuevo rol sea válido
+        valid_roles = ["TIRADOR", "INSTRUCTOR", "JEFE_INSTRUCTORES"]
+        if new_role not in valid_roles:
+            return None, "INVALID_ROLE"
+
+        # Definir las promociones válidas
+        valid_promotions = {
+            "TIRADOR": ["INSTRUCTOR"],
+            "INSTRUCTOR": ["JEFE_INSTRUCTORES"],
+            "JEFE_INSTRUCTORES": []  # No puede ser promovido a un rol superior
+        }
+
+        # Verificar que la promoción siga la jerarquía correcta
+        if new_role not in valid_promotions.get(user.role, []):
+            return None, f"INVALID_PROMOTION:{user.role}>{new_role}"
+
+        try:
+            # Iniciar transacción
+            db.begin_nested()
+
+            # Actualizar el rol del usuario
+            user.role = new_role
+            db.add(user)
+            db.flush()
+            db.refresh(user)
+
+            # Confirmar la transacción
+            db.commit()
+
+            return user, None
+        except Exception as e:
+            # Revertir la transacción en caso de error
+            db.rollback()
+            print(f"Error al promover rol: {str(e)}")
+            return None, "DATABASE_ERROR"
 
 class UserPersonalDataRepository:
     @staticmethod

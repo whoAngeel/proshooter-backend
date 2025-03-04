@@ -16,8 +16,10 @@ class ShooterRead(ShooterBase):
         from_attributes = True
 class ShooterReadLite(ShooterBase):
     user_id: UUID
+
     user: Optional["UserReadLite"] = None
     stats: Optional["ShooterStatsRead"] = None
+
 
 
 class ShooterCreate(ShooterBase):

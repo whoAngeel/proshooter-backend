@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from uuid import UUID
 
@@ -45,6 +45,9 @@ def toggle_active(user_id: UUID, db: Session = Depends(get_db)):
         "message": f"El usuario ha sido actualizado a {'activo' if user.is_active else 'inactivo'}",
         "id": user.id
     }
+
+#
+
 
 #* ------ PERSONAL DATA ------
 @router.post("/{user_id}/personal-data")

@@ -4,6 +4,7 @@ from uuid import UUID
 from src.infraestructure.database.models.shooter_model import ShooterModel
 from src.infraestructure.database.models.user_model import UserModel
 from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
+from src.domain.enums.role_enum import RoleEnum
 
 class ShooterRepository:
     @staticmethod
