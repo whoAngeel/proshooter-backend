@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "ProShooter BACKEND"
     SECRET_KEY: str = os.getenv("SECRET_KEY")
     VERSION: str = "1.0.0"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 12 * 60  # 12 horas en minutos
 
     class Config:
         env_file = ".env"
