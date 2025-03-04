@@ -126,9 +126,4 @@ class AuthService:
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no esta activo")
 
-        return {
-            "id": user.id,
-            "email": user.email,
-            "role": user.role,
-            "is_active": user.is_active
-        }
+        return user

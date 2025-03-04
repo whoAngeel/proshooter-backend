@@ -77,9 +77,4 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
             detail="El usuario no esta activo"
         )
 
-    return {
-        "id": user.id,
-        "email": user.email,
-        "role": user.role,
-        "is_active": user.is_active
-    }
+    return user
