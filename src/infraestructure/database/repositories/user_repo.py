@@ -5,6 +5,7 @@ from uuid import UUID
 from typing import Dict
 from passlib.context import CryptContext
 from sqlalchemy.exc import SQLAlchemyError
+from src.domain.enums.role_enum import RoleEnum
 from src.infraestructure.database.models.user_model import (
     UserModel,
     UserMedicalDataModel,
@@ -103,21 +104,25 @@ class UserRepository:
         if not user.is_active:
             return None, "USER_NOT_ACTIVE"
 
-        # Validar que el nuevo rol sea válido
-        valid_roles = ["TIRADOR", "INSTRUCTOR", "JEFE_INSTRUCTORES"]
-        if new_role not in valid_roles:
+        # Verificar que el nuevo rol sea válido usando el enum
+        try:
+            new_role_enum = RoleEnum.from_string(new_role)
+        except ValueError:
             return None, "INVALID_ROLE"
+
+        # Obtener el rol actual como enum
+        current_role_enum = RoleEnum.from_string(user.role)
 
         # Definir las promociones válidas
         valid_promotions = {
-            "TIRADOR": ["INSTRUCTOR"],
-            "INSTRUCTOR": ["JEFE_INSTRUCTORES"],
-            "JEFE_INSTRUCTORES": []  # No puede ser promovido a un rol superior
+            RoleEnum.TIRADOR: [RoleEnum.INSTRUCTOR],
+            RoleEnum.INSTRUCTOR: [RoleEnum.INSTRUCTOR_JEFE],
+            RoleEnum.INSTRUCTOR_JEFE: [],  # No puede ser promovido a un rol superior
+            RoleEnum.ADMIN: []  # Los administradores no pueden ser promovidos
         }
-
         # Verificar que la promoción siga la jerarquía correcta
-        if new_role not in valid_promotions.get(user.role, []):
-            return None, f"INVALID_PROMOTION:{user.role}>{new_role}"
+        if new_role_enum not in valid_promotions.get(current_role_enum, []):
+            return None, f"INVALID_PROMOTION:{current_role_enum}>{new_role_enum}"
 
         try:
             # Iniciar transacción

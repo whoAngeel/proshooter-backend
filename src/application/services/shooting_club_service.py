@@ -1,10 +1,13 @@
+from fastapi import Depends
 from sqlalchemy.orm import Session
-from uuid import UUID
 from typing import List, Optional, Tuple, Dict, Any
+from uuid import UUID
 
-from infraestructure.database.repositories.shooting_club_repo import ShootingClubRepository
+from src.domain.enums.role_enum import RoleEnum
+from src.infraestructure.database.repositories.shooting_club_repo import ShootingClubRepository
 from src.infraestructure.database.repositories.shooter_repo import ShooterRepository
 from src.infraestructure.database.repositories.user_repo import UserRepository
+from src.infraestructure.database.session import get_db
 from src.presentation.schemas.shootingclub_schema import ShootingClubCreate, ShootingClubRead
 
 class ShootingClubService:
@@ -16,39 +19,77 @@ class ShootingClubService:
     de aplicar reglas de negocio, validaciones, y transformaciones de datos.
     """
 
-    @staticmethod
-    def create_club(db: Session, club_data: ShootingClubCreate) -> Tuple[Any, Optional[str]]:
+    def __init__(self, db: Session = Depends(get_db)):
+        self.db = db
 
-        # Verificar que el jefe de instructores existe
-        chief_instructor = UserRepository.get_by_id(db, club_data.chief_instructor_id)
-        if not chief_instructor:
-            return None, "CHIEF_INSTRUCTOR_NOT_FOUND"
+    def create_club(self, club_data: ShootingClubCreate, current_user_id: UUID) -> Tuple[Any, Optional[str]]:
+        """
+        Crea un nuevo club de tiro.
 
-        # Verificar que el jefe de instructores tenga el rol adecuado
-        if chief_instructor.role != "CHIEF_INSTRUCTOR":
-            return None, "USER_NOT_CHIEF_INSTRUCTOR"
+        Args:
+            club_data: Datos del club a crear
+            current_user_id: ID del usuario que crea el club
 
-        # Verificar que el jefe de instructores no tenga ya un club
-        existing_club = ShootingClubRepository.get_by_chief_instructor(db, club_data.chief_instructor_id)
-        if existing_club:
-            return None, "CHIEF_INSTRUCTOR_ALREADY_HAS_CLUB"
+        Returns:
+            Tupla con el club creado y un mensaje de error (si hay error)
+        """
+        current_user = UserRepository.get_by_id(self.db, current_user_id)
 
-        # Verificar que no exista un club con el mismo nombre
-        existing_club_by_name = ShootingClubRepository.get_by_name(db, club_data.name)
+        if not current_user:
+            return None, "USER_NOT_FOUND"
+
+        user_role_enum = RoleEnum.from_string(current_user.role)
+        if not user_role_enum.can_create_club():
+            return None, "USER_NOT_AUTHORIZED_TO_CREATE_CLUB"
+
+        if user_role_enum == RoleEnum.INSTRUCTOR_JEFE:
+            club_data_dict = club_data.model_dump()
+            club_data_dict["chief_instructor_id"] = current_user.id
+
+            existing_club = ShootingClubRepository.get_by_chief_instructor(self.db, current_user.id)
+            if existing_club:
+                return None, "CHIEF_INSTRUCTOR_ALREADY_HAS_A_CLUB"
+
+        elif user_role_enum == RoleEnum.ADMIN:
+            # si es ADMIN, puede especificar cualquier instructor jefe como el jefe del club
+            chief_instructor = UserRepository.get_by_id(self.db, club_data.chief_instructor_id)
+            if not chief_instructor:
+                return None, "CHIEF_INSTRUCTOR_NOT_FOUND"
+
+            if chief_instructor.role != RoleEnum.INSTRUCTOR_JEFE.value:
+                # Solo un admin puede asignar a alguien como jefe
+                # Si es INSTRUCTOR, intentar promoverlo a INSTRUCTOR_JEFE
+                if chief_instructor.role == RoleEnum.INSTRUCTOR.value:
+                    updated_user, error = UserRepository.promote_role(self.db, chief_instructor.id, RoleEnum.INSTRUCTOR_JEFE.value)
+                    if error:
+                        return None, f"ERROR_PROMOTING_INSTRUCTOR: {error}"
+                else:
+                    return None, "USER_NOT_INSTRUCTOR"
+
+            existing_club = ShootingClubRepository.get_by_chief_instructor(self.db, chief_instructor.id)
+            if existing_club:
+                return None, "CHIEF_INSTRUCTOR_ALREADY_HAS_A_CLUB"
+
+            club_data_dict = club_data.model_dump()
+        else:
+            return None, "USER_NOT_AUTHORIZED_TO_CREATE_CLUB"
+
+        existing_club_by_name = ShootingClubRepository.get_by_name(self.db, club_data.name)
         if existing_club_by_name:
             return None, "CLUB_WITH_SAME_NAME_ALREADY_EXISTS"
 
         try:
-            # Crear el club de tiro
-            club_dict = club_data.dict()
-            new_club = ShootingClubRepository.create(db, club_dict)
+            # Creamos el club
+            new_club = ShootingClubRepository.create(self.db, club_data_dict)
 
-            db.commit()
+            self.db.commit()
 
-            return ShootingClubRepository.get_by_id(db, new_club.id), None
+            return ShootingClubRepository.get_by_id(self.db, new_club.id), None
         except Exception as e:
-            db.rollback()
+            self.db.rollback()
             return None, f"ERROR_CREATING_CLUB: {str(e)}"
+
+
 
     @staticmethod
     def get_club_by_id(db: Session, club_id: UUID) -> Any:
@@ -61,3 +102,27 @@ class ShootingClubService:
     @staticmethod
     def get_all_clubs(db: Session, skip : int = 0, limit : int = 100) -> List[Any]:
         return ShootingClubRepository.get_all(db, skip, limit)
+
+    def delete_club(self, club_id: UUID, current_user_id: UUID)-> Tuple[bool, Optional[str]]:
+        club = ShootingClubRepository.get_by_id(self.db, club_id)
+        if not club:
+            return False, "CLUB_NOT_FOUND"
+
+        current_user = UserRepository.get_by_id(self.db, current_user_id)
+        if not current_user:
+            return False, "USER_NOT_FOUND"
+
+        user_role_enum = RoleEnum.from_string(current_user.role)
+        if user_role_enum != RoleEnum.ADMIN:
+            return False, "ONLY_ADMIN_CAN_DELETE_CLUBS"
+
+        try:
+            success = ShootingClubRepository.delete(self.db, club_id)
+            if success:
+                self.db.commit()
+                return True, None
+            else:
+                return False, "ERROR_DELETING_CLUB"
+        except Exception as e:
+            self.db.rollback()
+            return False, f"ERROR_DELETING_CLUB: {str(e)}"

@@ -73,15 +73,22 @@ class ShootingClubRepository:
         Returns:
             Optional[ShootingClubModel]: Instancia del club de tiro si existe, None en caso contrario
         """
-        return db.execute(
+        # Versión corregida que evita el error de InvalidRequestError con scalar_one_or_none()
+        result = db.execute(
             select(ShootingClubModel)
-            .options(
-                joinedload(ShootingClubModel.chief_instructor).joinedload(UserModel.personal_data),
-                joinedload(ShootingClubModel.members).joinedload(ShooterModel.user).joinedload(UserModel.personal_data),
-                joinedload(ShootingClubModel.members).joinedload(ShooterModel.stats)
-            )
             .where(ShootingClubModel.chief_instructor_id == chief_instructor_id)
         ).scalar_one_or_none()
+
+        # Si necesitamos las relaciones, las cargamos después de obtener el club básico
+        if result:
+            # Cargar las relaciones necesarias de forma separada
+            db.refresh(result, ['chief_instructor'])
+            db.refresh(result, ['members'])
+
+            # Si necesitas cargar relaciones más profundas, considera hacerlo
+            # solo cuando realmente sea necesario
+
+        return result
 
     @staticmethod
     def get_all(db: Session, skip: int = 0, limit: int = 100)-> List[ShootingClubModel]:
