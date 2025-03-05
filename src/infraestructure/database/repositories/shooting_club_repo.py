@@ -43,7 +43,7 @@ class ShootingClubRepository:
                 joinedload(ShootingClubModel.members).joinedload(ShooterModel.user).joinedload(UserModel.personal_data),
                 joinedload(ShootingClubModel.members).joinedload(ShooterModel.stats)
             ).where(ShootingClubModel.id == club_id)
-        ).scalar_one_or_none()
+        ).unique().scalar_one_or_none()
 
     @staticmethod
     def get_by_name(db: Session, name: str) -> Optional[ShootingClubModel]:
@@ -255,6 +255,26 @@ class ShootingClubRepository:
             db.flush()
             return True
         return False
+
+    @staticmethod
+    def toggle_active(db: Session, club_id: UUID) -> bool:
+        """
+        Alterna el estado de activo de un club de tiro.
+
+        Args:
+            db (Session): Sesión de base de datos activa
+            club_id (UUID): ID del club de tiro
+
+        Returns:
+            ShootingClubModel: Instancia del club de tiro actualizada
+        """
+        club = db.execute(
+            select(ShootingClubModel).where(ShootingClubModel.id == club_id)
+        ).scalar_one_or_none()
+
+        club.is_active = not club.is_active
+        db.flush()
+        return club
 
     @staticmethod
     def add_member(db: Session, club_id: UUID, user_id: UUID) -> Optional[ShooterModel]:
