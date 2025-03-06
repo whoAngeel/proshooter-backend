@@ -19,6 +19,9 @@ class ShooterModel(Base):
     stats = relationship("ShooterStatsModel", back_populates="shooter", uselist=False, cascade="all, delete-orphan")
     club = relationship("ShootingClubModel", back_populates="members")
 
+    def __repr__(self):
+        return f"Shooter(user_id={self.user_id}, club_id={self.club_id}, classification={self.classification}, range={self.range}, created_at={self.created_at}, updated_at={self.updated_at})"
+
 from src.infraestructure.database.models.user_model import UserModel
 from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
 from src.infraestructure.database.models.shooting_club_model import ShootingClubModel

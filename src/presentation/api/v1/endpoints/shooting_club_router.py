@@ -106,6 +106,23 @@ async def get_my_club(
     current_user: dict = Depends(get_current_user),
     club_service: ShootingClubService = Depends(),
 ):
+    """
+    Obtiene el club de tiro del instructor jefe autenticado.
+
+    Este endpoint permite a un usuario con el rol de INSTRUCTOR_JEFE
+    acceder a los detalles de su propio club de tiro. No permite acceso
+    a otros roles.
+
+    Args:
+        current_user: Usuario autenticado que realiza la solicitud.
+        club_service: Servicio para gestionar clubes de tiro.
+
+    Returns:
+        ShootingClubDetail: Información detallada del club de tiro.
+
+    Raises:
+        HTTPException: Si el usuario no es un INSTRUCTOR_JEFE o si el club no se encuentra.
+    """
     try:
         user_role_enum = RoleEnum.from_string(current_user.role)
         if user_role_enum != RoleEnum.INSTRUCTOR_JEFE:
@@ -121,6 +138,32 @@ async def get_my_club(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No eres Jefe de ningú club de tiro.")
 
     return club
+
+@router.get("/search", response_model=List[ShootingClubWithChiefInstructor])
+async def search_clubs(
+    q: str = Query(..., description="Palabra clave para buscar clubes de tiro"),
+    skip: int = Query(0, ge=0, description="Numero de registros a omitir (paginacion)"),
+    limit: int = Query(10, ge=1, le=100, description="Limite de registros a devolver (paginacion)"),
+    current_user: dict = Depends(get_current_user),
+    club_service: ShootingClubService = Depends(),
+):
+    """
+    Busca clubes de tiro por nombre o descripción.
+
+    Permite encontrar clubes filtrando por términos que coincidan parcialmente
+    con su nombre o descripción. Útil para búsquedas de texto libre.
+
+    Args:
+        q (str): Término de búsqueda
+        skip (int): Número de registros a omitir (paginación)
+        limit (int): Límite de registros a devolver (paginación)
+        db (Session): Sesión de base de datos
+
+    Returns:
+        List[ShootingClubWithChiefInstructor]: Lista de clubes que coinciden con la búsqueda
+    """
+    return club_service.search_clubs(q, skip, limit)
+
 
 @router.get("/{club_id}", response_model=ShootingClubDetail)
 async def get_club_by_id(
@@ -257,3 +300,57 @@ async def toggle_active(
         "message": "Club de tiro actualizado correctamente como activo" if club.is_active else "Club de tiro actualizado correctamente como inactivo",
         "club_id": club_id
     }
+
+@router.post("/{club_id}/add_member", response_model=ClubMemberDetail, status_code=status.HTTP_201_CREATED)
+async def add_member(
+    club_id: UUID = Path(...),
+    member_data: ShooterClubAssignment = ...,
+    current_user: dict = Depends(get_current_user),
+    club_service: ShootingClubService = Depends(),
+):
+    """
+    Añade un tirador como miembro del club directamente.
+
+    Esta operación solo puede ser realizada por el jefe de instructores del club.
+    Un tirador solo puede pertenecer a un club a la vez.
+
+    Args:
+        club_id (UUID): ID del club al que se añadirá el tirador
+        member_data (ShooterClubAssignment): Datos con el ID del tirador a añadir
+        db (Session): Sesión de base de datos
+        current_user (Dict): Usuario autenticado actual
+
+    Returns:
+        ClubMemberDetail: Detalles del tirador añadido al club
+    """
+    try:
+        user_role_enum = RoleEnum.from_string(current_user.role)
+        if user_role_enum != RoleEnum.ADMIN and user_role_enum != RoleEnum.INSTRUCTOR_JEFE:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Solo los administradores pueden agregar miembros a clubes. Tu rol actual es: {current_user.role}"
+            )
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Rol no reconocido {current_user.role}")
+
+    updated_shooter , error = club_service.add_member(club_id, member_data.shooter_id, current_user.id)
+
+    if error:
+        error_mappings = {
+            "CLUB_NOT_FOUND": (status.HTTP_404_NOT_FOUND, "Club de tiro no encontrado"),
+            "USER_NOT_FOUND": (status.HTTP_404_NOT_FOUND, "Usuario no encontrado"),
+            "SHOOTER_NOT_FOUND": (status.HTTP_404_NOT_FOUND, "Tirador no encontrado"),
+            "USER_NOT_AUTHORIZED_TO_ADD_MEMBER_TO_CLUB": (status.HTTP_403_FORBIDDEN, "No tienes autorización para agregar miembros a este club. Solo el dueño o un administrador pueden hacerlo."),
+            "SHOOTER_ALREADY_IN_CLUB": (status.HTTP_409_CONFLICT, "El tirador ya pertenece a este club"),
+            "ERROR_ADDING_MEMBER_TO_CLUB" : (status.HTTP_400_BAD_REQUEST, "Error al agregar el miembro al club"),
+        }
+
+        for prefix, (code, message) in error_mappings.items():
+            if error.startswith(prefix):
+                raise HTTPException(status_code=code, detail=message)
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error al agregar el miembro al club: {error}"
+        )
+    return updated_shooter

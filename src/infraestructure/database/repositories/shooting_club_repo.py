@@ -157,7 +157,7 @@ class ShootingClubRepository:
         Returns:
             List[ShootingClubModel]: Lista de clubes de tiro que coinciden con la búsqueda
         """
-        search_pattern = f"${search_term}%"
+        search_pattern = f"%{search_term}%"  # Corregido de $ a %
         return db.execute(
             select(ShootingClubModel).options(
                 joinedload(ShootingClubModel.chief_instructor).joinedload(UserModel.personal_data)
@@ -277,20 +277,25 @@ class ShootingClubRepository:
         return club
 
     @staticmethod
-    def add_member(db: Session, club_id: UUID, user_id: UUID) -> Optional[ShooterModel]:
+    def add_member(db: Session, club_id: UUID, shooter_id: UUID) -> Optional[ShooterModel]:
         """
         Agrega un tirador a un club de tiro.
 
         Args:
             db (Session): Sesión de base de datos activa
             club_id (UUID): ID del club
-            user_id (UUID): ID del tirador a agregar
+            shooter_id (UUID): ID del tirador a agregar
 
         Returns:
             Optional[ShooterModel]: Tirador agregado o None si no se pudo agregar
         """
         shooter = db.execute(
-            select(ShooterModel).where(ShooterModel.user_id == user_id)
+            select(ShooterModel)
+            .options(
+                joinedload(ShooterModel.user).joinedload(UserModel.personal_data),
+                joinedload(ShooterModel.stats)
+            )
+            .where(ShooterModel.user_id == shooter_id)
         ).scalar_one_or_none()
 
         if shooter:

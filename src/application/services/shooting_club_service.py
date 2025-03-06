@@ -222,3 +222,72 @@ class ShootingClubService:
         except Exception as e:
             self.db.rollback()
             return None, f"ERROR_TOGGLING_CLUB: {str(e)}"
+
+    def search_clubs(self, search_term: str, skip: int = 0, limit: int = 100) -> List[Any]:
+        """
+        Busca clubes de tiro por nombre o descripción.
+
+        Args:
+            db (Session): Sesión de base de datos activa
+            search_term (str): Término de búsqueda para filtrar clubes
+            skip (int): Cantidad de registros a omitir (paginación)
+            limit (int): Límite de registros a devolver (paginación)
+
+        Returns:
+            List[Any]: Lista de clubes que coinciden con la búsqueda
+        """
+        # Si no hay término de búsqueda, devolver todos los clubes
+        if not search_term or search_term.strip() == "":
+            return ShootingClubRepository.get_all(self.db, skip, limit)
+
+        # Realizar la búsqueda
+        return ShootingClubRepository.search_clubs(self.db, search_term, skip, limit)
+
+    def add_member(self, club_id: UUID, user_id: UUID, current_user_id: UUID)->Tuple[Any, Optional[str]]:
+        '''
+        Agrega un miembro a un club de tiro.
+
+        Args:
+            club_id (UUID): ID del club de tiro.
+            user_id (UUID): ID del usuario a agregar.
+
+        Returns:
+            Tuple[Any, Optional[str]]: Tupla con el club actualizado y un mensaje de error (si hay error).
+        '''
+        club = ShootingClubRepository.get_by_id(self.db, club_id)
+        if not club:
+            return None, "CLUB_NOT_FOUND"
+        shooter = ShooterRepository.get_by_user_id(self.db, user_id)
+        if not shooter:
+            return None, "SHOOTER_NOT_FOUND"
+
+        current_user = UserRepository.get_by_id(self.db, current_user_id)
+        if not current_user:
+            return None, "USER_NOT_FOUND"
+
+        user_role_enum = RoleEnum.from_string(current_user.role)
+        is_admin = user_role_enum == RoleEnum.ADMIN
+        is_club_owner = str(club.chief_instructor_id) == str(current_user_id)
+
+        if not (is_admin or is_club_owner):
+            return None, "USER_NOT_AUTHORIZED_TO_ADD_MEMBER_TO_CLUB"
+
+        if shooter.club_id == club_id:
+            return None, "SHOOTER_ALREADY_IN_CLUB"
+        # Verificar si el tirador ya pertenece a otro club
+        if shooter.club_id is not None:
+            other_club = ShootingClubRepository.get_by_id(self.db, shooter.club_id)
+            club_name = other_club.name if other_club else "Desconocido"
+            return None, f"SHOOTER_ALREADY_IN_ANOTHER_CLUB: {club_name}"
+
+        try:
+            # Añadir tirador al club
+            shooter_with_data = ShootingClubRepository.add_member(self.db, club_id, user_id)
+            if not shooter_with_data:
+                return None, "ERROR_ADDING_MEMBER_TO_CLUB"
+
+            self.db.commit()
+            return shooter_with_data, None
+        except Exception as e:
+            self.db.rollback()
+            return None, f"ERROR_ADDING_MEMBER_TO_CLUB: {str(e)}"

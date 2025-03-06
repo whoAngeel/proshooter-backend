@@ -23,7 +23,8 @@ class UserModel(Base):
     shooter = relationship("ShooterModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     managed_club = relationship("ShootingClubModel", foreign_keys="[ShootingClubModel.chief_instructor_id]", back_populates="chief_instructor", uselist=False)
-
+    def __repr__(self):
+        return f"User(id={self.id}, email={self.email}, role={self.role}, is_active={self.is_active})"
 
 from src.infraestructure.database.models.shooter_model import ShooterModel
 
