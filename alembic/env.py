@@ -10,6 +10,10 @@ from src.infraestructure.database.models.user_model import UserBiometricDataMode
 from src.infraestructure.database.models.shooter_model import ShooterModel
 from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
 from src.infraestructure.database.models.shooting_club_model import ShootingClubModel
+from src.infraestructure.database.models.ammunition_model import AmmunitionModel
+from src.infraestructure.database.models.weapon_model import WeaponModel
+from src.infraestructure.database.models.target_model import TargetModel
+from src.infraestructure.database.models.weapon_ammunition_copmatibility_model import WeaponAmmunitionCompatibilityModel
 
 import os
 from dotenv import load_dotenv
