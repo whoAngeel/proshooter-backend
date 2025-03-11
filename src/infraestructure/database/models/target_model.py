@@ -1,7 +1,7 @@
 from sqlalchemy import Column, UUID, DateTime, Enum, String, Text, Boolean, func, Float, JSON
 from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
-from src.domain.enums.targer_enum import TargetType
+from src.domain.enums.target_enum import TargetType
 from uuid import uuid4
 
 class TargetModel(Base):
