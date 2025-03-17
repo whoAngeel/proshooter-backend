@@ -21,79 +21,89 @@ class TargetService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
-    async def create_target(self, target_data: TargetCreate) -> Tuple[Optional[TargetRead], Optional[str]]:
+    def create_target(self, target_data: TargetCreate) -> Tuple[Optional[TargetRead], Optional[str]]:
+        """
+        Crea un nuevo blanco de tiro.
+
+        Args:
+            target_data: Datos del blanco a crear
+            current_user_id: ID del usuario que crea el blanco (debe ser admin)
+
+        Returns:
+            Tupla con el blanco creado y un mensaje de error (si hay error)
+        """
         try:
-            target_type = target_data.target_type
-            scoring_zones = target_data.scoring_zones
+            # Verificar si ya existe un blanco con el mismo nombre
+            existing_targets = TargetRepository.search_by_name(self.db, target_data.name)
+            if any(t.name.lower() == target_data.name.lower() for t in existing_targets):
+                return None, "TARGET_WITH_SAME_NAME_ALREADY_EXISTS"
 
-            if target_type == TargetType.CONCENTRIC and scoring_zones:
-                if "rings" not in scoring_zones:
-                    return None, "MISSING_RINGS"
-            elif target_type == TargetType.IPSC and scoring_zones:
-                if "zones" not in scoring_zones:
-                    return None, "MISSING_ZONES"
-
-            # verificar si ya existe un blanco con el mismo nombre
-            existing_target = await TargetRepository.search_by_name(self.db, target_data.name)
-            if any(t.name.lower() == target_data.name.lower() for t in existing_target):
-                return None, "TARGET_ALREADY_EXISTS"
-
-            target_dict = target_data.model_dump(exclude_unset=True)
-            new_target = await TargetRepository.create(self.db, target_dict)
+            # Crear el blanco
+            target_dict = target_data.dict(exclude_unset=True)
+            new_target = TargetRepository.create(self.db, target_dict)
 
             self.db.commit()
             self.db.refresh(new_target)
-            return TargetDetail.model_validate(new_target), None
+
+            return TargetRead.from_orm(new_target), None
+
         except Exception as e:
             self.db.rollback()
             return None, f"ERROR_CREATING_TARGET: {str(e)}"
 
-    async def get_target_by_id(self, target_id: UUID) -> Tuple[Optional[TargetRead], Optional[str]]:
-        target = await TargetRepository.get_by_id(self.db, target_id)
+    def get_target_by_id(self, target_id: UUID) -> Tuple[Optional[TargetRead], Optional[str]]:
+        target = TargetRepository.get_by_id(self.db, target_id)
         if not target:
             return None, "TARGET_NOT_FOUND"
         return TargetRead.model_validate(target), None
 
-    async def get_target_detail(self, target_id : UUID) -> Tuple[Optional[TargetDetail], Optional[str]]:
-        target = await TargetRepository.get_by_id(self.db, target_id)
+    def get_target_detail(self, target_id : UUID) -> Tuple[Optional[TargetDetail], Optional[str]]:
+        target = TargetRepository.get_by_id(self.db, target_id)
         if not target:
             return None, "TARGET_NOT_FOUND"
         return TargetDetail.model_validate(target), None
 
-    async def get_all_targets(
+    def get_all_targets(
         self,
         skip: int = 0,
         limit: int = 100,
-        active_only: bool = True
+        active_only: bool = False
     ) -> List[TargetRead]:
         if active_only:
-            targets = await TargetRepository.get_active(self.db)
+            targets = TargetRepository.get_active(self.db)
         else:
-            targets = await TargetRepository.get_all(self.db, skip, limit)
+            targets = TargetRepository.get_all(self.db, skip, limit)
         return [TargetRead.model_validate(t) for t in targets]
 
-    async def get_targets_by_type(self, target_type: TargetType) -> List[TargetRead]:
-        targets = await TargetRepository.get_by_type(self.db, target_type)
+    def get_targets_by_type(self, target_type: TargetType) -> List[TargetRead]:
+        targets = TargetRepository.get_by_type(self.db, target_type)
         return [TargetRead.model_validate(t) for t in targets]
 
-    async def update_target(
+    def search_targets_by_term(self, term: str) -> List[TargetRead]:
+        try:
+            targets = TargetRepository.search_by_term(self.db, term)
+            return [TargetRead.model_validate(t) for t in targets]
+        except Exception as e:
+            return []
+
+    def update_target(
         self,
         target_id: UUID,
         target_data: TargetUpdate,
     ) -> Tuple[Optional[TargetRead], Optional[str]]:
         try:
-            existing_target = await TargetRepository.get_by_id(self.db, target_id)
+            existing_target = TargetRepository.get_by_id(self.db, target_id)
             if not existing_target:
                 return None, "TARGET_NOT_FOUND"
 
             # verificar si hay otro blanco con el mismo nombre que no sea el actual
             if target_data.name and target_data.name.lower() != existing_target.name.lower():
-                existing_targets = await TargetRepository.search_by_name(self.db, target_data.name)
+                existing_targets = TargetRepository.search_by_name(self.db, target_data.name)
                 if any(t.name.lower() == target_data.name.lower() and t.id != target_id for t in existing_targets):
                     return None, "TARGET_ALREADY_EXISTS"
 
             target_dict = target_data.model_dump(exclude_unset=True)
-            updated_target = await TargetRepository.update(self.db, target_id, target_dict)
+            updated_target = TargetRepository.update(self.db, target_id, target_dict)
             self.db.commit()
 
             return TargetRead.model_validate(updated_target), None
@@ -102,16 +112,16 @@ class TargetService:
             return None, f"ERROR_UPDATING_TARGET: {str(e)}"
 
 
-    async def delete_target(self, target_id: UUID, soft_delete: bool = True) -> Tuple[bool, Optional[str]]:
+    def delete_target(self, target_id: UUID, soft_delete: bool = True) -> Tuple[bool, Optional[str]]:
         try:
-            existing_target = await TargetRepository.get_by_id(self.db, target_id)
+            existing_target = TargetRepository.get_by_id(self.db, target_id)
             if not existing_target:
                 return False, "TARGET_NOT_FOUND"
 
             if soft_delete:
-                await TargetRepository.deactivate(self.db, target_id)
+                TargetRepository.deactivate(self.db, target_id)
             else:
-                await TargetRepository.delete(self.db, target_id)
+                TargetRepository.delete(self.db, target_id)
 
             self.db.commit()
             return True, None
@@ -120,7 +130,7 @@ class TargetService:
             self.db.rollback()
             return False, f"ERROR_DELETING_TARGET: {str(e)}"
 
-    async def search_targets(self, name: str) -> List[TargetRead]:
+    def search_targets(self, name: str) -> List[TargetRead]:
         """
         Busca blancos por nombre.
 
@@ -130,11 +140,11 @@ class TargetService:
         Returns:
             Lista de blancos que coinciden con la búsqueda
         """
-        targets = await TargetRepository.search_by_name(self.db, name)
+        targets = TargetRepository.search_by_name(self.db, name)
         return [TargetRead.model_validate(t) for t in targets]
 
     # TODO: cambiar segun la evaluacion
-    async def calculate_score(
+    def calculate_score(
         self,
         score_input: TargetScoreInput
     ) -> Tuple[Optional[TargetScoreOutput], Optional[str]]:
@@ -148,7 +158,7 @@ class TargetService:
             Tupla con la información de puntuación y un mensaje de error (si hay error)
         """
         try:
-            target, error = await self.get_target_by_id(score_input.target_id)
+            target, error = self.get_target_by_id(score_input.target_id)
             if error:
                 return None, error
 
@@ -231,31 +241,4 @@ class TargetService:
             Tupla con la puntuación obtenida y el nombre de la zona impactada
         """
         # Implementación simplificada para blancos IPSC
-        zones = scoring_zones.get("zones", [])
-
-        for zone in zones:
-            bounds = zone.get("bounds", {})
-            if bounds:
-                min_x = bounds.get("min_x", 0)
-                max_x = bounds.get("max_x", 0)
-                min_y = bounds.get("min_y", 0)
-                max_y = bounds.get("max_y", 0)
-
-                if min_x <= x <= max_x and min_y <= y <= max_y:
-                    return zone.get("score", 0), zone.get("name", "Zona desconocida")
-
-        # Verificar si impactó una zona de penalización
-        penalty_zones = scoring_zones.get("penalty_zones", [])
-        for zone in penalty_zones:
-            bounds = zone.get("bounds", {})
-            if bounds:
-                min_x = bounds.get("min_x", 0)
-                max_x = bounds.get("max_x", 0)
-                min_y = bounds.get("min_y", 0)
-                max_y = bounds.get("max_y", 0)
-
-                if min_x <= x <= max_x and min_y <= y <= max_y:
-                    return zone.get("penalty", 0), zone.get("name", "Zona de penalización")
-
-        # Si no impactó ninguna zona, es un fallo
-        return 0, "Fallo"
+        pass

@@ -1,8 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
-from sqlalchemy.future import select
-from sqlalchemy import update, delete
+from sqlalchemy import or_
 
 from src.infraestructure.database.models.target_model import TargetModel
 from src.domain.enums.target_enum import TargetType # Nota
@@ -16,7 +15,7 @@ class TargetRepository:
     """
 
     @staticmethod
-    async def create(db: Session, target_data: dict) -> TargetModel:
+    def create(db: Session, target_data: dict) -> TargetModel:
         """
         Crea un nuevo blanco en la base de datos.
 
@@ -29,11 +28,11 @@ class TargetRepository:
         """
         target = TargetModel(**target_data)
         db.add(target)
-        db.flush()
+        db.commit()
         return target
 
     @staticmethod
-    async def get_by_id(db: Session, target_id: UUID) -> Optional[TargetModel]:
+    def get_by_id(db: Session, target_id: UUID) -> Optional[TargetModel]:
         """
         Obtiene un blanco por su ID.
 
@@ -44,12 +43,11 @@ class TargetRepository:
         Returns:
             Optional[TargetModel]: El blanco encontrado o None si no existe.
         """
-        query = select(TargetModel).where(TargetModel.id == target_id)
-        result = await db.execute(query)
-        return result.scalars().first()
+        result = db.query(TargetModel).filter(TargetModel.id == target_id).first()
+        return result
 
     @staticmethod
-    async def get_all(db: Session, skip: int = 0, limit: int = 100) -> List[TargetModel]:
+    def get_all(db: Session, skip: int = 0, limit: int = 100) -> List[TargetModel]:
         """
         Obtiene todos los blancos con paginación.
 
@@ -61,12 +59,10 @@ class TargetRepository:
         Returns:
             List[TargetModel]: Lista de blancos.
         """
-        query = select(TargetModel).offset(skip).limit(limit)
-        result = await db.execute(query)
-        return result.scalars().all()
+        return db.query(TargetModel).offset(skip).limit(limit).all()
 
     @staticmethod
-    async def get_by_type(db: Session, target_type: TargetType) -> List[TargetModel]:
+    def get_by_type(db: Session, target_type: TargetType) -> List[TargetModel]:
         """
         Obtiene todos los blancos de un tipo específico.
 
@@ -77,12 +73,11 @@ class TargetRepository:
         Returns:
             List[TargetModel]: Lista de blancos del tipo especificado.
         """
-        query = select(TargetModel).where(TargetModel.target_type == target_type)
-        result = await db.execute(query)
-        return result.scalars().all()
+        result = db.query(TargetModel).filter(TargetModel.target_type == target_type).all()
+        return result
 
     @staticmethod
-    async def get_active(db: Session) -> List[TargetModel]:
+    def get_active(db: Session) -> List[TargetModel]:
         """
         Obtiene todos los blancos activos.
 
@@ -92,12 +87,11 @@ class TargetRepository:
         Returns:
             List[TargetModel]: Lista de blancos activos.
         """
-        query = select(TargetModel).where(TargetModel.is_active == True)
-        result = await db.execute(query)
-        return result.scalars().all()
+        result = db.query(TargetModel).filter(TargetModel.is_active == True).all()
+        return result
 
     @staticmethod
-    async def update(db: Session, target_id: UUID, target_data: dict) -> Optional[TargetModel]:
+    def update(db: Session, target_id: UUID, target_data: dict) -> Optional[TargetModel]:
         """
         Actualiza un blanco existente.
 
@@ -109,14 +103,18 @@ class TargetRepository:
         Returns:
             Optional[TargetModel]: El blanco actualizado o None si no existe.
         """
-        query = update(TargetModel).where(TargetModel.id == target_id).values(**target_data)
-        await db.execute(query)
+        target = db.query(TargetModel).filter(TargetModel.id == target_id).first()
+        if not target:
+            return None
 
-        # Obtener el blanco actualizado
-        return await TargetRepository.get_by_id(db, target_id)
+        for key, value in target_data.items():
+            setattr(target, key, value)
+
+        db.commit()
+        return target
 
     @staticmethod
-    async def delete(db: Session, target_id: UUID) -> bool:
+    def delete(db: Session, target_id: UUID) -> bool:
         """
         Elimina un blanco de la base de datos.
 
@@ -128,17 +126,17 @@ class TargetRepository:
             bool: True si el blanco fue eliminado, False si no existe.
         """
         # Primero verificamos que el blanco existe
-        target = await TargetRepository.get_by_id(db, target_id)
+        target = db.query(TargetModel).filter(TargetModel.id == target_id).first()
         if not target:
             return False
 
         # Eliminar el blanco
-        query = delete(TargetModel).where(TargetModel.id == target_id)
-        await db.execute(query)
+        db.delete(target)
+        db.commit()
         return True
 
     @staticmethod
-    async def deactivate(db: Session, target_id: UUID) -> Optional[TargetModel]:
+    def deactivate(db: Session, target_id: UUID) -> Optional[TargetModel]:
         """
         Desactiva un blanco (soft delete).
 
@@ -149,16 +147,16 @@ class TargetRepository:
         Returns:
             Optional[TargetModel]: El blanco desactivado o None si no existe.
         """
-        target = await TargetRepository.get_by_id(db, target_id)
+        target = db.query(TargetModel).filter(TargetModel.id == target_id).first()
         if not target:
             return None
 
         target.is_active = False
-        db.flush()
+        db.commit()
         return target
 
     @staticmethod
-    async def search_by_name(db: Session, name: str) -> List[TargetModel]:
+    def search_by_name(db: Session, name: str) -> List[TargetModel]:
         """
         Busca blancos por nombre (búsqueda parcial).
 
@@ -169,6 +167,18 @@ class TargetRepository:
         Returns:
             List[TargetModel]: Lista de blancos que coinciden con el criterio de búsqueda.
         """
-        query = select(TargetModel).where(TargetModel.name.ilike(f"%{name}%"))
-        result = await db.execute(query)
-        return result.scalars().all()
+        result = db.query(TargetModel).filter(TargetModel.name.ilike(f"%{name}%")).all()
+        return result
+
+    @staticmethod
+    def search_by_term(db: Session, term: str) -> List[TargetModel]:
+        search_pattern = f"%{term}%"
+
+        query = db.query(TargetModel).filter(
+            or_(
+                TargetModel.name.ilike(search_pattern),
+                TargetModel.description.ilike(search_pattern)
+            )
+        ).order_by(TargetModel.name)
+
+        return query.all()
