@@ -82,11 +82,11 @@ class WeaponRepository:
         return True
 
     @staticmethod
-    def toggle_desactivate(db: Session, weapon_id: UUID)-> Optional[WeaponModel]:
+    def desactivate(db: Session, weapon_id: UUID)-> Optional[WeaponModel]:
         weapon = WeaponRepository.get_by_id(db, weapon_id)
         if not weapon:
             return None
-        weapon.is_active = not weapon.is_active
+        weapon.is_active = False
         db.flush()
         return weapon
 
