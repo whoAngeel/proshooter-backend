@@ -38,7 +38,10 @@ class WeaponRead(WeaponBase):
 
 class WeaponDetail(WeaponRead):
 
-    # compatible_ammunition: Optional[List['AmmunitionRead']] = None
+    compatible_ammunition: Optional[List['AmmunitionRead']] = None
     model_config = {
         "from_attributes": True
     }
+
+from src.presentation.schemas.ammo_schema import AmmunitionRead
+WeaponDetail.model_rebuild()

@@ -98,9 +98,9 @@ class WeaponRepository:
 
         return weapon.compatible_ammunition
 
-    """ @staticmethod
+    @staticmethod
     def add_compatible_ammunition(db: Session, weapon_id: UUID, ammunition_id: UUID) -> bool:
-        from src.application.repositories.ammunition_repository import AmmunitionRepository
+        from src.infraestructure.database.repositories.ammunition_repo import AmmunitionRepository
 
         weapon = WeaponRepository.get_by_id(db, weapon_id)
         ammunition = AmmunitionRepository.get_by_id(db, ammunition_id)
@@ -117,7 +117,7 @@ class WeaponRepository:
 
     @staticmethod
     def remove_compatible_ammunition(db: Session, weapon_id: UUID, ammunition_id: UUID) -> bool:
-        from src.application.repositories.ammunition_repository import AmmunitionRepository
+        from src.infraestructure.database.repositories.ammunition_repo import AmmunitionRepository
 
         weapon = WeaponRepository.get_by_id(db, weapon_id)
         ammunition = AmmunitionRepository.get_by_id(db, ammunition_id)
@@ -134,12 +134,12 @@ class WeaponRepository:
 
     @staticmethod
     def get_by_ammunition_id(db: Session, ammunition_id: UUID) -> List[WeaponModel]:
-        from src.domain.models.ammunition_model import AmmunitionModel
-        from src.domain.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel
+        from src.infraestructure.database.models.weapon_model import WeaponModel
+        from src.infraestructure.database.models.weapon_ammunition_copmatibility_model import WeaponAmmunitionCompatibilityModel
 
         return db.query(WeaponModel).join(
             WeaponAmmunitionCompatibilityModel,
             WeaponModel.id == WeaponAmmunitionCompatibilityModel.weapon_id
         ).filter(
             WeaponAmmunitionCompatibilityModel.ammunition_id == ammunition_id
-        ).all() """
+        ).all()
