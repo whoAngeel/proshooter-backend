@@ -9,7 +9,30 @@ services:
       POSTGRES_USER: angel
       POSTGRES_PASSWORD: angel
       POSTGRES_DB: proshooter_db
+    networks:
+      - proshooter-network
 
+  api:
+    build:
+      context: .
+      dockerfile: DockerFile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://angel:angel@localhost:5432/proshooter_db
+      - SECRET_KEY=fasdfjasfsdfkasjdfoiadbasdbasd
+    networks:
+      - proshooter-network
+    restart: always
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+networks:
+  proshooter-network:
+    driver: bridge
 
 volumes:
   postgres_data:
