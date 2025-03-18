@@ -13,7 +13,7 @@ from src.infraestructure.database.models.shooting_club_model import ShootingClub
 from src.infraestructure.database.models.ammunition_model import AmmunitionModel
 from src.infraestructure.database.models.weapon_model import WeaponModel
 from src.infraestructure.database.models.target_model import TargetModel
-from src.infraestructure.database.models.weapon_ammunition_copmatibility_model import WeaponAmmunitionCompatibilityModel
+from src.infraestructure.database.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel
 
 import os
 from dotenv import load_dotenv
