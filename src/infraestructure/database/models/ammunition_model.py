@@ -42,3 +42,6 @@ class AmmunitionModel(Base):
 
     def __repr__(self):
         return f"Ammunition(name={self.name}, brand={self.brand}, caliber={self.caliber})"
+
+from src.infraestructure.database.models.weapon_model import WeaponModel
+from src.infraestructure.database.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel

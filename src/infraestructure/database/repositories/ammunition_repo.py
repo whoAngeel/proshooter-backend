@@ -93,7 +93,7 @@ class AmmunitionRepository:
     @staticmethod
     def get_by_weapon_id(db: Session, weapon_id: UUID) -> List[AmmunitionModel]:
         from src.infraestructure.database.models.weapon_model import WeaponModel
-        from src.infraestructure.database.models.weapon_ammunition_copmatibility_model import WeaponAmmunitionCompatibilityModel
+        from src.infraestructure.database.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel
 
         return db.query(AmmunitionModel).join(
             WeaponAmmunitionCompatibilityModel,

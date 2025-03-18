@@ -30,7 +30,7 @@ class WeaponModel(Base):
     # relaciones
 
     compatible_ammunition = relationship(
-        "AmmnitionModel",
+        "AmmunitionModel",
         secondary="weapon_ammunition_compatibility",
         back_populates="compatible_weapons"
     )
@@ -38,3 +38,5 @@ class WeaponModel(Base):
 
     def __repr__(self):
         return f"Weapon(name={self.name}, brand={self.brand}, model={self.model}, serial_number={self.serial_number})"
+
+from src.infraestructure.database.models.ammunition_model import AmmunitionModel

@@ -6,6 +6,7 @@ from sqlalchemy import or_
 from src.infraestructure.database.models.weapon_model import WeaponModel
 from src.domain.enums.weapon_type_enum import WeaponTypeEnum
 # from src.infraestructure.database.models.weapon_ammunition_copmatibility_model import WeaponAmmunitionCompatibilityModel
+# from src.infraestructure
 
 class WeaponRepository:
     @staticmethod
@@ -135,7 +136,7 @@ class WeaponRepository:
     @staticmethod
     def get_by_ammunition_id(db: Session, ammunition_id: UUID) -> List[WeaponModel]:
         from src.infraestructure.database.models.weapon_model import WeaponModel
-        from src.infraestructure.database.models.weapon_ammunition_copmatibility_model import WeaponAmmunitionCompatibilityModel
+        from src.infraestructure.database.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel
 
         return db.query(WeaponModel).join(
             WeaponAmmunitionCompatibilityModel,
@@ -143,3 +144,11 @@ class WeaponRepository:
         ).filter(
             WeaponAmmunitionCompatibilityModel.ammunition_id == ammunition_id
         ).all()
+
+    @staticmethod
+    def get_by_type_name(db: Session, type_name: str) -> List[WeaponModel]:
+        try:
+            enum_member = WeaponTypeEnum.from_string(type_name)
+            return db.query(WeaponModel).filter(WeaponModel.weapon_type == enum_member).all()
+        except ValueError:
+            return []

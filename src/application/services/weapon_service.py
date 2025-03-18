@@ -65,7 +65,8 @@ class WeaponService:
         caliber: Optional[str] = None
     ) -> List[WeaponRead]:
         if weapon_type:
-            weapons =- WeaponRepository.get_by_type(self.db, weapon_type)
+            weapons = WeaponRepository.get_by_type(self.db, weapon_type)
+#            weapons = WeaponRepository.get_by_type_name(self.db, "Pistola")
         elif caliber:
             weapons = WeaponRepository.get_by_caliber(self.db, caliber)
         else:
@@ -82,6 +83,18 @@ class WeaponService:
         weapon_id: UUID,
         weapon_data: WeaponUpdate,
     ) -> Tuple[Optional[WeaponRead], Optional[str]]:
+        """
+        Actualiza una arma en la base de datos.
+
+        Args:
+        weapon_id (UUID): El id de la arma a actualizar.
+        weapon_data (WeaponUpdate): La informaci n actualizada de la arma.
+
+        Returns:
+        Tuple[Optional[WeaponRead], Optional[str]]: Un tuple que contiene la arma actualizada o
+        None si no se encontr  la arma, y un mensaje de error o None si la operaci n se realiz  con
+        xito.
+        """
         try:
             existing_weapon = WeaponRepository.get_by_id(self.db, weapon_id)
             if not existing_weapon:
@@ -103,6 +116,17 @@ class WeaponService:
             return None, f"ERROR_UPDATING_WEAPON: {str(e)}"
 
     def delete_weapon(self, weapon_id: UUID, soft_delete: bool = True) -> Tuple[bool, Optional[str]]:
+        """
+        Elimina una arma de la base de datos.
+
+        Args:
+        weapon_id (UUID): El id de la arma a eliminar.
+        soft_delete (bool, optional): Si se debe eliminar l gicamente (True) o f sicamente (False). Defaults to True.
+
+        Returns:
+        Tuple[bool, Optional[str]]: Un tuple que contiene un booleano que indica si la operaci n se realiz  con xito, y
+        un mensaje de error o None si no hubo errores.
+        """
         try:
             existing_weapon = WeaponRepository.get_by_id(self.db, weapon_id)
             if not existing_weapon:
@@ -120,34 +144,46 @@ class WeaponService:
             self.db.rollback()
             return False, f"ERROR_DELETING_WEAPON: {str(e)}"
 
-    def get_compatible_ammunition(self, weapon_id: UUID)-> Tuple[Optional[List], Optional[str]]:
+    def get_compatible_ammunition(self, weapon_id: UUID) -> Tuple[Optional[List], Optional[str]]:
         weapon = WeaponRepository.get_by_id(self.db, weapon_id)
         if not weapon:
             return None, "WEAPON_NOT_FOUND"
+
         ammunition_list = WeaponRepository.get_compatible_ammunition(self.db, weapon_id)
 
-        # from src.presentation.schemas
-        # TODO : implementar el retorno de la municion compatible
+        from src.presentation.schemas.ammo_schema import AmmunitionRead
+        return [AmmunitionRead.model_validate(ammo) for ammo in ammunition_list], None
 
     def add_compatible_ammunition(
         self,
         weapon_id: UUID,
         ammunition_id: UUID,
-    )-> Tuple[bool, Optional[str]]:
+    ) -> Tuple[bool, Optional[str]]:
         try:
-            # TODO : implementar la logica para agregar municion compatible
-            pass
+            result = WeaponRepository.add_compatible_ammunition(self.db, weapon_id, ammunition_id)
+            if not result:
+                return False, "WEAPON_OR_AMMUNITION_NOT_FOUND"
+
+            self.db.commit()
+            return True, None
+
         except Exception as e:
             self.db.rollback()
-            return False, f"ERROR_ADDING_AMMUNITION: {str(e)}"
+            return False, f"ERROR_ADDING_COMPATIBILITY: {str(e)}"
 
     def remove_compatible_ammunition(
         self,
         weapon_id: UUID,
         ammunition_id: UUID,
-    )-> Tuple[bool, Optional[str]]:
+    ) -> Tuple[bool, Optional[str]]:
         try:
-            # TODO : implementar la logica para quitar municion compatible
-            pass
+            result = WeaponRepository.remove_compatible_ammunition(self.db, weapon_id, ammunition_id)
+            if not result:
+                return False, "COMPATIBILITY_NOT_FOUND"
+
+            self.db.commit()
+            return True, None
+
         except Exception as e:
             self.db.rollback()
+            return False, f"ERROR_REMOVING_COMPATIBILITY: {str(e)}"
