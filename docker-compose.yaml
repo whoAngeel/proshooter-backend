@@ -23,7 +23,7 @@ services:
     depends_on:
       - postgres
     environment:
-      - DATABASE_URL=postgresql://angel:angel@localhost:5432/proshooter_db
+      - DATABASE_URL=postgresql://angel:angel@postgres:5432/proshooter_db
       - SECRET_KEY=fasdfjasfsdfkasjdfoiadbasdbasd
     networks:
       - proshooter-network
