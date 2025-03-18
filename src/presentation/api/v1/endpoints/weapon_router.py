@@ -99,7 +99,7 @@ async def delete_weapon(
         "id": weapon_id
     }
 
-@router.get("/{weapon_id}/compatible_ammo", response_model=List[AmmunitionRead])
+@router.get("/{weapon_id}/compatible-ammunition", response_model=List[AmmunitionRead])
 async def get_compatible_ammunition(
     weapon_id: UUID = Path(...),
     weapon_service: WeaponService = Depends(),
@@ -113,7 +113,7 @@ async def get_compatible_ammunition(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
     return ammunition_list
 
-@router.post("/{weapon_id}/compatible_ammo/{ammunition_id}")
+@router.post("/{weapon_id}/compatible-ammunition/{ammunition_id}")
 async def add_compatible_ammunition(
     weapon_id: UUID = Path(...),
     ammunition_id: UUID = Path(...),
@@ -134,7 +134,7 @@ async def add_compatible_ammunition(
         "message": "Municiones compatibles agregadas correctamente",
     }
 
-@router.delete("/{weapon_id}/compatible_ammo/{ammunition_id}")
+@router.delete("/{weapon_id}/compatible-ammunition/{ammunition_id}")
 async def remove_compatible_ammunition(
     weapon_id: UUID = Path(...),
     ammunition_id: UUID = Path(...),

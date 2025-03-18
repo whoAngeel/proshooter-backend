@@ -25,7 +25,7 @@ class AmmunitionService:
             if existing:
                 return None, "AMMUNITION_ALREADY_EXISTS"
 
-            ammunition_dict = ammunition_data.dict(exclude_unset=True)
+            ammunition_dict = ammunition_data.model_dump(exclude_unset=True)
             new_ammunition = AmmunitionRepository.create(self.db, ammunition_dict)
 
             self.db.commit()
@@ -112,7 +112,7 @@ class AmmunitionService:
                 return False, "AMMUNITION_NOT_FOUND"
 
             if soft_delete:
-                AmmunitionRepository.deactivate(self.db, ammo_id)
+                AmmunitionRepository.desactivate(self.db, ammo_id)
             else:
                 AmmunitionRepository.delete(self.db, ammo_id)
 
