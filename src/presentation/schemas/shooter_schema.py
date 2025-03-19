@@ -2,10 +2,11 @@ from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
 # from .user_schemas import UserRead
-from src.infraestructure.database.models.shooter_model import ShooterClassification
+# from src.infraestructure.database.models.shooter_model import ShooterClassification, ShooterLevelEnum
+from src.domain.enums.classification_enum import ShooterLevelEnum
 
 class ShooterBase(BaseModel):
-    classification: str = "TR"
+    level: ShooterLevelEnum = ShooterLevelEnum.REGULAR
 
 class ShooterRead(ShooterBase):
     user_id: UUID

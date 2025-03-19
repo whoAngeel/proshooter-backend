@@ -60,7 +60,7 @@ class ClubMemberStatsBasic(BaseModel):
 
 class ClubMemberBasic(BaseModel):
     user_id: UUID4 = Field(..., description="ID del tirador")
-    classification: str = Field(..., description="Clasificación del tirador")
+    level: str = Field(..., description="Clasificación del tirador")
     stats: Optional[ClubMemberStatsBasic] = Field(None, description="Estadísticas básicas del tirador")
 
     model_config = {

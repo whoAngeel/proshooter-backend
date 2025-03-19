@@ -377,7 +377,7 @@ class ShootingClubRepository:
         best_shooter = None
         valid_members = 0
         classification_counts = {}
-
+        # TODO: Cambiar esto por el nivel de los miembros
         for member in members:
             # Contar clasificaciones
             classification = member.classification or "Sin clasificar"
