@@ -30,6 +30,7 @@ class UserRead(UserBase):
     personal_data: Optional["UserPersonalDataRead"] = None
     medical_data: Optional["UserMedicalDataRead"] = None
     biometric_data: Optional["UserBiometricDataRead"] = None
+
     shooter: Optional["ShooterRead"] = None
 
     class Config:
