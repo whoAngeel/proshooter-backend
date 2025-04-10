@@ -1,0 +1,20 @@
+from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+from src.infraestructure.database.session import Base
+from uuid import uuid4
+
+class ExerciseTypeModel(Base):
+    __tablename__ = "exercise_types"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    difficulty = Column(Integer, nullable=False)
+    objective = Column(String, nullable=True)
+    development = Column(String, nullable=True)
+
+    is_active = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"ExerciseType(id={self.id}, name={self.name}, description={self.description})"
