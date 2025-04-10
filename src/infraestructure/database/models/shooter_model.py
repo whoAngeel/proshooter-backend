@@ -19,6 +19,7 @@ class ShooterModel(Base):
     user = relationship("UserModel", back_populates="shooter")
     stats = relationship("ShooterStatsModel", back_populates="shooter", uselist=False, cascade="all, delete-orphan")
     club = relationship("ShootingClubModel", back_populates="members")
+    performance_logs = relationship("ShooterPerformanceLogModel", back_populates="shooter", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"Shooter(user_id={self.user_id}, club_id={self.club_id}, level={self.level}, range={self.range}, created_at={self.created_at}, updated_at={self.updated_at})"
