@@ -16,5 +16,12 @@ class ExerciseTypeModel(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Relationships
+    # practice_exercise = relationship("PracticeExerciseModel", back_populates="exercise_type", cascade="all, delete-orphan")
+    exercises = relationship("PracticeExerciseModel", back_populates="exercise_type", cascade="all, delete-orphan")
+
+
     def __repr__(self):
         return f"ExerciseType(id={self.id}, name={self.name}, description={self.description})"
+
+from ..models.practice_exercise_model import PracticeExerciseModel

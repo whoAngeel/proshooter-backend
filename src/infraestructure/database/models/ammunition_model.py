@@ -36,8 +36,10 @@ class AmmunitionModel(Base):
         secondary="weapon_ammunition_compatibility",
         back_populates="compatible_ammunition"
     )
-
-    # practice sessions
+    exercises = relationship(
+        "PracticeExerciseModel",
+        back_populates="ammunition",
+    )
 
 
     def __repr__(self):
@@ -45,3 +47,4 @@ class AmmunitionModel(Base):
 
 from src.infraestructure.database.models.weapon_model import WeaponModel
 from src.infraestructure.database.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel
+from .practice_exercise_model import PracticeExerciseModel

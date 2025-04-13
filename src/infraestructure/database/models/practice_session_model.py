@@ -15,11 +15,13 @@ class IndividualPracticeSessionModel(Base):
     total_shots_fired = Column(Integer, default=0)
     total_hits = Column(Integer, default=0)
     accuracy_percentage = Column(Float, default=0.0)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     shooter = relationship("ShooterModel", back_populates="practice_sessions")
     instructor = relationship("UserModel", foreign_keys=[instructor_id])
+    exercises = relationship("PracticeExerciseModel", back_populates="session", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<IndividualPracticeSession(id={self.id}, shooter_id={self.shooter_id}, instructor_id={self.instructor_id}, date={self.date}, location={self.location}, total_shots_fired={self.total_shots_fired}, total_hits={self.total_hits}, accuracy_percentage={self.accuracy_percentage})>"

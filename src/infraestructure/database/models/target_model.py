@@ -21,7 +21,9 @@ class TargetModel(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # relaciones
-    #practice_sessions
+    exercises = relationship("PraciceExerciseModel", back_populates="target")
 
     def __repr__(self):
         return f"Target(name={self.name}, target_type={self.target_type})"
+
+from .practice_exercise_model import PracticeExerciseModel
