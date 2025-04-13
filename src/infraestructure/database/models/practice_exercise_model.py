@@ -31,6 +31,7 @@ class PracticeExerciseModel(Base):
     target = relationship("TargetModel", back_populates="exercises")
     weapon = relationship("WeaponModel", back_populates="exercises")
     ammunition = relationship("AmmunitionModel", back_populates="exercises")
+    target_images = relationship("TargetImageModel", back_populates="exercise", cascade="all, delete-orphan")
 
 from ..models.exercise_type_model import ExerciseTypeModel
 from ..models.practice_session_model import IndividualPracticeSessionModel
