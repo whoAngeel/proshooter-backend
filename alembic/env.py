@@ -16,6 +16,7 @@ from src.infraestructure.database.models.target_model import TargetModel
 from src.infraestructure.database.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel
 from src.infraestructure.database.models.exercise_type_model import ExerciseTypeModel
 from src.infraestructure.database.models.shooter_performance_log_model import ShooterPerformanceLogModel
+from src.infraestructure.database.models.practice_session_model import IndividualPracticeSessionModel
 
 import os
 from dotenv import load_dotenv

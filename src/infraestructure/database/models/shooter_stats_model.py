@@ -1,4 +1,4 @@
-from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, Float, String
+from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, Float, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
 
@@ -23,6 +23,7 @@ class ShooterStatsModel(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     shooter = relationship("ShooterModel", back_populates="stats")
+
 
     def __repr__(self):
         return f"ShooterStats(shooter_id={self.shooter_id})"
