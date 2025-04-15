@@ -24,7 +24,7 @@ router = APIRouter(
 @router.post("/", response_model=ExerciseTypeRead, status_code=status.HTTP_201_CREATED)
 async def create_exercise_type(
     exercise_type_data: ExerciseTypeCreate,
-    exercise_type_service: ExerciseTypeService = Depends(),
+    service: ExerciseTypeService = Depends(),
     current_user: dict = Depends(get_current_user)
 ):
     '''
@@ -36,7 +36,7 @@ async def create_exercise_type(
     if current_user.role != RoleEnum.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para crear tipos de ejercicio")
 
-    exercise_type, error = exercise_type_service.create_exercise_type(exercise_type_data)
+    exercise_type, error = service.create_exercise_type(exercise_type_data)
     if error:
         status_code = status.HTTP_400_BAD_REQUEST
         if error == "EXERCISE_TYPE_NAME_ALREADY_EXISTS":

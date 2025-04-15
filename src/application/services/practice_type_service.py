@@ -5,6 +5,7 @@ from uuid import UUID
 import math
 
 from src.infraestructure.database.repositories.exercise_type_repo import ExerciseTypeRepository
+from src.infraestructure.database.models.exercise_type_model import ExerciseTypeModel
 from src.infraestructure.database.session import get_db
 from src.presentation.schemas.exercise_type_schema import (
     ExerciseTypeCreate,
@@ -22,7 +23,7 @@ class ExerciseTypeService:
     def create_exercise_type(self, exercise_type_data: ExerciseTypeCreate) -> Tuple[Optional[ExerciseTypeRead], Optional[str]]:
         try:
             # Verificar si el tipo de ejercicio ya existe
-            existing = self.db.query(ExerciseTypeRepository).filter_by(
+            existing = self.db.query(ExerciseTypeModel).filter_by(
                 name = exercise_type_data.name
             ).first()
 
@@ -78,9 +79,9 @@ class ExerciseTypeService:
         elif filter_params.difficulty is not None:
             total = len(exercise_types)
         else:
-            query = self.db.query(ExerciseTypeRepository)
+            query = self.db.query(ExerciseTypeModel)
             if filter_params.active_only:
-                query = query.filter(ExerciseTypeRepository.is_active == True)
+                query = query.filter(ExerciseTypeModel.is_active == True)
             total = query.count()
 
         page = (filter_params.skip // filter_params.limit) + 1
@@ -108,9 +109,9 @@ class ExerciseTypeService:
 
             # verificar si hay un cambio de nombre y si ya existe otro con ese nombre
             if exercise_type_data and exercise_type_data != existing_exercise_type.name:
-                name_exists = self.db.query(ExerciseTypeRepository).filter_by(
+                name_exists = self.db.query(ExerciseTypeModel).filter_by(
                     name = exercise_type_data.name
-                ).filter(ExerciseTypeRepository.id != exercise_type_id).first()
+                ).filter(ExerciseTypeModel.id != exercise_type_id).first()
                 if name_exists:
                     return None, "EXERCISE_TYPE_NAME_ALREADY_EXISTS"
             # preparar los datos para actualizar

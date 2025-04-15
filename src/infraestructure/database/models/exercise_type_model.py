@@ -1,4 +1,4 @@
-from sqlalchemy import Column, UUID, DateTime, func, Integer, String, Boolean
+from sqlalchemy import Column, UUID, DateTime, func, Integer, String, Boolean, Text
 from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
 from uuid import uuid4
@@ -7,7 +7,7 @@ class ExerciseTypeModel(Base):
     __tablename__ = "exercise_types"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name = Column(String, nullable=False)
-    description = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
     difficulty = Column(Integer, nullable=False)
     objective = Column(String, nullable=True)
     development = Column(String, nullable=True)
