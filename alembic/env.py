@@ -19,6 +19,9 @@ from src.infraestructure.database.models.shooter_performance_log_model import Sh
 from src.infraestructure.database.models.practice_session_model import IndividualPracticeSessionModel
 from src.infraestructure.database.models.practice_exercise_model import PracticeExerciseModel
 from src.infraestructure.database.models.evaluation_model import PracticeEvaluationModel
+from src.infraestructure.database.models.target_image_model import TargetImageModel
+from src.infraestructure.database.models.target_analysis_model import TargetAnalysisModel
+from src.infraestructure.database.models.shooting_recommendation_model import ShootingRecommendationModel
 
 import os
 from dotenv import load_dotenv

@@ -4,6 +4,7 @@ from src.infraestructure.database.session import Base
 from src.domain.enums.target_enum import TargetType
 from uuid import uuid4
 
+
 class TargetModel(Base):
 
     __tablename__ = "targets"
@@ -21,7 +22,7 @@ class TargetModel(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # relaciones
-    exercises = relationship("PraciceExerciseModel", back_populates="target")
+    exercises = relationship("PracticeExerciseModel", back_populates="target")
 
     def __repr__(self):
         return f"Target(name={self.name}, target_type={self.target_type})"

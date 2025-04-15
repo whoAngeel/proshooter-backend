@@ -11,7 +11,7 @@ class IndividualPracticeSessionModel(Base):
     shooter_id = Column(UUID(as_uuid=True), ForeignKey("shooters.user_id"), nullable=False)
     instructor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.now())
-    location = Column(String, nullable=False, default="Sin especificar")
+    location = Column(String, nullable=False, default="Not specified")
     total_shots_fired = Column(Integer, default=0)
     total_hits = Column(Integer, default=0)
     accuracy_percentage = Column(Float, default=0.0)
@@ -22,10 +22,12 @@ class IndividualPracticeSessionModel(Base):
     shooter = relationship("ShooterModel", back_populates="practice_sessions")
     instructor = relationship("UserModel", foreign_keys=[instructor_id])
     exercises = relationship("PracticeExerciseModel", back_populates="session", cascade="all, delete-orphan")
-
+    evaluation = relationship("PracticeEvaluationModel", back_populates="session", uselist=False, cascade="all, delete-orphan")
     def __repr__(self):
         return f"<IndividualPracticeSession(id={self.id}, shooter_id={self.shooter_id}, instructor_id={self.instructor_id}, date={self.date}, location={self.location}, total_shots_fired={self.total_shots_fired}, total_hits={self.total_hits}, accuracy_percentage={self.accuracy_percentage})>"
 
 
 from ..models.user_model import UserModel
 from ..models.shooter_model import ShooterModel
+from ..models.practice_exercise_model import PracticeExerciseModel
+from ..models.evaluation_model import PracticeEvaluationModel

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, String
+from sqlalchemy import Column, UUID, DateTime, func, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
 from uuid import uuid4
@@ -12,7 +12,7 @@ class ExerciseTypeModel(Base):
     objective = Column(String, nullable=True)
     development = Column(String, nullable=True)
 
-    is_active = Column(Integer, default=1, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

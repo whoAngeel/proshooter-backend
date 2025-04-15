@@ -8,6 +8,7 @@ from .endpoints import target_router as target
 from .endpoints import weapon_router as weapon
 from .endpoints import ammo_router as ammo
 from .endpoints import profile_router as profile
+from .endpoints import practice_type_router as practice_type
 router = APIRouter()
 
 router.include_router(users.router)
@@ -18,3 +19,4 @@ router.include_router(target.router)
 router.include_router(weapon.router)
 router.include_router(ammo.router)
 router.include_router(profile.router)
+router.include_router(practice_type.router)

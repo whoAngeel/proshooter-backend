@@ -22,9 +22,12 @@ class ShooterModel(Base):
     performance_logs = relationship("ShooterPerformanceLogModel", back_populates="shooter", cascade="all, delete-orphan")
     practice_sessions = relationship("IndividualPracticeSessionModel", back_populates="shooter", cascade="all, delete-orphan")
 
+
     def __repr__(self):
         return f"Shooter(user_id={self.user_id}, club_id={self.club_id}, level={self.level}, range={self.range}, created_at={self.created_at}, updated_at={self.updated_at})"
 
 from src.infraestructure.database.models.user_model import UserModel
 from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
 from src.infraestructure.database.models.shooting_club_model import ShootingClubModel
+from ..models.shooter_performance_log_model import ShooterPerformanceLogModel
+from .practice_session_model import IndividualPracticeSessionModel
