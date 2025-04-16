@@ -12,7 +12,7 @@ class ExerciseTypeRepository:
     Este repositorio proporciona métodos para crear, leer, actualizar y eliminar
     tipos de ejercicios en la base de datos, así como para buscar ejercicios por diferentes criterios.
     """
-    
+
     @staticmethod
     def create(db: Session, exercise_type_data: dict) -> ExerciseTypeModel:
         """
@@ -30,18 +30,18 @@ class ExerciseTypeRepository:
         db.commit()
         db.refresh(exercise_type)
         return exercise_type
-    
+
     @staticmethod
     def get_by_id(db: Session, exercise_type_id: UUID)-> Optional[ExerciseTypeModel]:
         return db.query(ExerciseTypeModel).filter(ExerciseTypeModel.id == exercise_type_id).first()
-    
+
     @staticmethod
     def get_all(db: Session, skip: int = 0, limit: int = 100, active_only: bool = False) -> List[ExerciseTypeModel]:
         query = db.query(ExerciseTypeModel)
         if active_only:
             query = query.filter(ExerciseTypeModel.is_active == True)
         return query.offset(skip).limit(limit).all()
-    
+
     @staticmethod
     def search_by_term(db: Session, term: str)-> List[ExerciseTypeModel]:
         """
@@ -62,14 +62,14 @@ class ExerciseTypeRepository:
                 ExerciseTypeModel.objective.ilike(search_term)
             )
         ).all()
-        
+
     @staticmethod
     def get_by_difficulty(db: Session, difficulty: int) -> List[ExerciseTypeModel]:
         return db.query(ExerciseTypeModel).filter(
             ExerciseTypeModel.difficulty == difficulty,
             ExerciseTypeModel.is_active == True
         ).all()
-        
+
     @staticmethod
     def update(db: Session, exercise_type_id: UUID, exercise_type_data: dict) -> Optional[ExerciseTypeModel]:
         """
@@ -86,43 +86,44 @@ class ExerciseTypeRepository:
         exercise_type = ExerciseTypeRepository.get_by_id(db, exercise_type_id)
         if not exercise_type:
             return None
-        
+
         for key, value in exercise_type_data.items():
             if hasattr(exercise_type, key):
                 setattr(exercise_type, key, value)
-                
+
         db.commit()
         db.refresh(exercise_type)
-        
+
         return exercise_type
-    
+
     @staticmethod
     def delete(db: Session, exercise_type_id: UUID)-> bool:
         exercise_type = db.query(ExerciseTypeModel).filter(
             ExerciseTypeModel.id == exercise_type_id
         ).first()
-        
+
         if not exercise_type:
             return False
-        
+
         db.delete(exercise_type)
         db.commit()
-        
+
+
         return True
-    
+
     @staticmethod
     def desactivate(db: Session, exercise_type_id: UUID)-> bool:
         exercise_type = db.query(ExerciseTypeModel).filter(
             ExerciseTypeModel.id == exercise_type_id
         ).first()
-        
+
         if not exercise_type:
             return False
-        
+
         exercise_type.is_active = False
         db.commit()
         return True
-    
+
     @staticmethod
     def get_exercises_by_type(db: Session, exercise_type_id: UUID) -> List:
         """
@@ -136,10 +137,8 @@ class ExerciseTypeRepository:
             List: Lista de ejercicios del tipo especificado.
         """
         exercise_type = db.query(ExerciseTypeModel).filter(ExerciseTypeModel.id == exercise_type_id).first()
-        
+
         if not exercise_type or not exercise_type.exercises:
             return []
-            
+
         return exercise_type.exercises
-        
-        

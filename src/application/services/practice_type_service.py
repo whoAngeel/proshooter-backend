@@ -64,7 +64,7 @@ class ExerciseTypeService:
     def get_all_exercise_types(self, filter_params: ExerciseTypeFilter)->ExerciseTypeList:
         if filter_params.search:
             exercise_types = ExerciseTypeRepository.search_by_term(self.db, filter_params.search)
-        elif filter_params.diffculty is not None:
+        elif filter_params.difficulty is not None:
             exercise_types = ExerciseTypeRepository.get_by_difficulty(self.db, filter_params.difficulty)
         else:
             exercise_types = ExerciseTypeRepository.get_all(
@@ -85,7 +85,7 @@ class ExerciseTypeService:
             total = query.count()
 
         page = (filter_params.skip // filter_params.limit) + 1
-        pages = math.cell(total / filter_params.limit) if total > 0 else 1
+        pages = math.ceil(total / filter_params.limit) if total > 0 else 1
 
         items = [ExerciseTypeRead.model_validate(exercise_type) for exercise_type in exercise_types]
 
