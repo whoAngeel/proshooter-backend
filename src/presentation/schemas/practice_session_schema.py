@@ -87,8 +87,26 @@ class IndividualPracticeSessionDetail(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class IndividualPracticeSessionDetailLite(BaseModel):
+
+    date: datetime = Field(default_factory=datetime.utcnow)
+    location: str
+    total_shots_fired: int = 0
+    total_hits: int = 0
+
+    id: UUID
+    accuracy_percentage: float
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    shooter: Optional[ShooterInfo] = None
+    instructor: Optional[InstructorInfo] = None
+
+    model_config = {"from_attributes": True}
+
 class IndividualPracticeSessionList(BaseModel):
-    items: List[IndividualPracticeSessionRead]
+    # items: List[IndividualPracticeSessionRead]
+    items: List[IndividualPracticeSessionDetailLite]
     total: int
     page: int
     size: int

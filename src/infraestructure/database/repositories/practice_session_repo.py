@@ -2,7 +2,8 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func, between, desc
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
 
 from ..models.practice_session_model import IndividualPracticeSessionModel as PracticeSessionModel
 from ..models.shooter_model import ShooterModel
@@ -115,7 +116,7 @@ class PracticeSessionRepository:
     @staticmethod
     def get_statistics(db: Session, shooter_id: UUID, period: Optional[str] = None) -> dict:
         # Determina el rango de fechas según el período
-        end_date = datetime.now()
+        end_date = datetime.now(timezone.utc)
         start_date = None
 
         if period == "week":
@@ -141,20 +142,6 @@ class PracticeSessionRepository:
 
         stats = query.first()
 
-        # Obtiene las ubicaciones más frecuentes
-        locations_query = db.query(
-            PracticeSessionModel.location,
-            func.count(PracticeSessionModel.id).label("count")
-        ).filter(
-            PracticeSessionModel.shooter_id == shooter_id
-        ).group_by(
-            PracticeSessionModel.location
-        ).order_by(
-            desc("count")
-        ).limit(3)
-
-        top_locations = [{"location": loc, "count": count} for loc, count in locations_query]
-
         # Calcula métricas adicionales
         return {
             "total_sessions": stats.total_sessions if stats.total_sessions else 0,
@@ -162,7 +149,6 @@ class PracticeSessionRepository:
             "total_shots": stats.total_shots if stats.total_shots else 0,
             "total_hits": stats.total_hits if stats.total_hits else 0,
             "hit_percentage": (stats.total_hits / stats.total_shots * 100) if stats.total_shots and stats.total_shots > 0 else 0.0,
-            "top_locations": top_locations,
             "period": period if period else "all_time",
             "shooter_id": str(shooter_id)
         }
