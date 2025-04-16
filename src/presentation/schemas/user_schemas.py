@@ -72,6 +72,12 @@ class UserPersonalDataBase(BaseModel):
     state: Optional[str] = None
     country: Optional[str] = None
 
+class UserPersonalDataBaseLite(BaseModel):
+    first_name: str
+    second_name: Optional[str] = None
+    last_name1: str
+    last_name2: Optional[str] = None
+
 
 
 
@@ -90,7 +96,7 @@ class UserPersonalDataUpdate(UserPersonalDataBase):
 class UserPersonalDataCreate(UserPersonalDataBase):
     pass
 
-class UserPersonalDataReadLite(UserPersonalDataBase):
+class UserPersonalDataReadLite(BaseModel):
     user_id: UUID
     first_name: Optional[str] = None
     second_name: Optional[str] = None
@@ -99,6 +105,8 @@ class UserPersonalDataReadLite(UserPersonalDataBase):
 
     class Config:
         from_attributes = True
+
+
 
 class UserPersonalDataRead(UserPersonalDataBase):
     user_id: UUID
