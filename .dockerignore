@@ -7,7 +7,6 @@ backup_20250318_002708.sql
 postgres-init
 alembic.ini
 ENTITIES.md
-requirements.txt
 postgres.Dockerfile
 data
 Dockerfile-multi-stage

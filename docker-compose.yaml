@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:14-alpine
+    container_name: proshooter_bd
     ports:
       - "5432:5432"
     volumes:
@@ -20,6 +21,7 @@ services:
       - proshooter-network
 
   api:
+    container_name: proshooter_api
     build:
       context: .
       dockerfile: Dockerfile

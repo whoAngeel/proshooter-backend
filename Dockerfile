@@ -15,8 +15,12 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# INSTALL DEPENDENCIES
-COPY ./requirements.txt /app/
+# Copiar todo el proyecto primero
+COPY . .
+
+# Copiar el archivo de requisitos
+COPY requirements.txt .
+
 # Install basic packages first
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 # Now install the requirements with verbose output to see any errors clearly
@@ -31,5 +35,3 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
-
-# CMD ["uvicorn", "src.main:app","--reload", "--host", "0.0.0.0", "--port", "8000"]
