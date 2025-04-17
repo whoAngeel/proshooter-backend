@@ -5,6 +5,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U angel -d proshooter_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
     environment:
       POSTGRES_USER: angel
       POSTGRES_PASSWORD: angel
