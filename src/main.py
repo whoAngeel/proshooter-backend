@@ -11,5 +11,6 @@ app = FastAPI(title=settings.PROJECT_NAME, version=settings.VERSION, description
 def health_check():
     return {"status": "ok"}
 
+# print("Estoy corriendo")
 
 app.include_router(router_v1)

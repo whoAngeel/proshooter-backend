@@ -11,11 +11,11 @@ ENV POSTGRES_DB=proshooter_db
 EOF
 
 # Construye y etiqueta las imágenes
-docker build -t subkey/proshooter-backend:latest -f postgres.Dockerfile .
+docker build -t subkey/proshooter-db:latest -f postgres.Dockerfile .
 docker-compose build api
-docker tag $(docker-compose images -q api) subkey/proshooter-backend:latest
+docker tag proshooter-api:latest subkey/proshooter-api:latest
 
 # Sube las imágenes a Docker Hub
 docker login
-docker push subkey/proshooter-backend:latest
-docker push subkey/proshooter-backend:latest
+docker push subkey/proshooter-db:latest
+docker push subkey/proshooter-api:latest
