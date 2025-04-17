@@ -28,14 +28,18 @@ services:
     volumes:
       - ./:/app
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://angel:angel@postgres:5432/proshooter_db
       - SECRET_KEY=fasdfjasfsdfkasjdfoiadbasdbasd
     networks:
       - proshooter-network
+    env_file:
+      - .env
     restart: always
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      bash -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
 
 networks:
   proshooter-network:
