@@ -12,10 +12,13 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 12 * 60  # 12 horas en minutos
 
+    HOST: str = os.getenv("HOST", "0.0.0.0")
+    PORT: int = int(os.getenv("PORT", "8000"))
+
+    CORS_ORIGINS: list = ["*"]
+
     class Config:
         env_file = ".env"
-
-
-
+        case_sensitive = True
 
 settings = Settings()

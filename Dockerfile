@@ -16,7 +16,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # INSTALL DEPENDENCIES
-COPY requirements.txt .
+COPY ./requirements.txt /app/
 # Install basic packages first
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 # Now install the requirements with verbose output to see any errors clearly
