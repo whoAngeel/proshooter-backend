@@ -1,12 +1,20 @@
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
-from src.infraestructure.database.session import get_db
+from fastapi import FastAPI
 from src.infraestructure.config.settings import settings
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.presentation.api.v1.routers import router as router_v1
 
 app = FastAPI(title=settings.PROJECT_NAME, version=settings.VERSION, description="API para la gestion de practicas de tiro")
 
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
