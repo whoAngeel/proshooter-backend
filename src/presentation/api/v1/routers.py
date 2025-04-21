@@ -10,6 +10,7 @@ from .endpoints import ammo_router as ammo
 from .endpoints import profile_router as profile
 from .endpoints import practice_type_router as practice_type
 from .endpoints import practice_session_router as practice_session
+from .endpoints import practice_exercise_router as practice_exercise
 router = APIRouter()
 
 router.include_router(users.router)
@@ -22,3 +23,4 @@ router.include_router(ammo.router)
 router.include_router(profile.router)
 router.include_router(practice_type.router)
 router.include_router(practice_session.router)
+router.include_router(practice_exercise.router)

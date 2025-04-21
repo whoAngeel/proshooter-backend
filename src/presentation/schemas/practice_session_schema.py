@@ -16,12 +16,27 @@ class InstructorInfo(BaseModel):
     # full_name: str
     model_config = {"from_attributes" : True}
 
-class ExerciseInfo(BaseModel):
+class PracticeExerciseBase(BaseModel):
+    session_id: UUID
+    exercise_type_id: UUID
+    target_id: UUID
+    weapon_id: UUID
+    ammunition_id: UUID
+    distance: str
+    firing_cadence: Optional[str] = None
+    time_limit: Optional[str] = None
+    ammunition_allocated: int = 0
+    ammunition_used: int = 0
+    hits: int = 0
+    reaction_time: Optional[float] = None
+
+class PracticeExerciseRead(PracticeExerciseBase):
     id: UUID
-    exercise_type: str
-    distance: int
-    hits: int
     accuracy_percentage: float
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
 
 class EvaluationInfo(BaseModel):
     id: UUID
@@ -70,7 +85,7 @@ class IndividualPracticeSessionRead(IndividualPracticeSessionBase):
 class IndividualPracticeSessionDetail(BaseModel):
     shooter_id: UUID
     instructor_id: Optional[UUID] = None
-    date: datetime = Field(default_factory=datetime.utcnow)
+    date: datetime
     location: str
     total_shots_fired: int = 0
     total_hits: int = 0
@@ -82,14 +97,14 @@ class IndividualPracticeSessionDetail(BaseModel):
 
     shooter: Optional[ShooterInfo] = None
     instructor: Optional[InstructorInfo] = None
-    exercises: Optional[List[ExerciseInfo]] = None
+    exercises: Optional[List[PracticeExerciseRead]] = None
     evaluation: Optional[EvaluationInfo] = None
 
     model_config = {"from_attributes": True}
 
 class IndividualPracticeSessionDetailLite(BaseModel):
 
-    date: datetime = Field(default_factory=datetime.utcnow)
+    date: datetime = Field(default_factory=datetime.now())
     location: str
     total_shots_fired: int = 0
     total_hits: int = 0

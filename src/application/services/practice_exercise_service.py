@@ -61,7 +61,7 @@ class PracticeExerciseService:
             # convertir lo datos a diccionario para crear el ejercicio
             exercise_dict = exercise_data.model_dump()
 
-            new_exercise = PracticeExerciseRepository.create(self.db, exercise_data)
+            new_exercise = PracticeExerciseRepository.create(self.db, exercise_dict)
 
             self._update_session_totals(session.id)
 

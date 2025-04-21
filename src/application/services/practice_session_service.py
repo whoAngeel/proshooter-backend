@@ -60,8 +60,8 @@ class PracticeSessionService:
         if not session:
             return None, "PRACTICE_SESSION_NOT_FOUND"
 
-        # return IndividualPracticeSessionDetail.model_validate(session), None
-        return session, None
+        return IndividualPracticeSessionDetail.model_validate(session), None
+        # return session, None
 
     def get_all_sessions(self, filter_params: IndividualPracticeSessionFilter) -> IndividualPracticeSessionList:
         sessions = []

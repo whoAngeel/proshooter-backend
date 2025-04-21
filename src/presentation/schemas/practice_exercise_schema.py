@@ -14,7 +14,7 @@ class ExerciseTypeInfo(BaseModel):
 
 
 class TargetInfo(BaseModel):
-    id = UUID
+    id: UUID
     name: str
     target_type: str
     description: Optional[str] = None
@@ -51,7 +51,7 @@ class SessionInfo(BaseModel):
     model_config = {"from_attributes": True}
 
 class PracticeExerciseBase(BaseModel):
-    session_id: UUID # TODO: revisar este campo
+    session_id: UUID
     exercise_type_id: UUID
     target_id: UUID
     weapon_id: UUID
@@ -98,7 +98,7 @@ class PracticeExerciseUpdate(BaseModel):
 
 class PracticeExerciseRead(PracticeExerciseBase):
     id: UUID
-    accuracy_percentage = float
+    accuracy_percentage: float
     created_at: datetime
     updated_at: Optional[datetime] = None
 
