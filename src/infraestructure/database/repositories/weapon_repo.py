@@ -152,3 +152,12 @@ class WeaponRepository:
             return db.query(WeaponModel).filter(WeaponModel.weapon_type == enum_member).all()
         except ValueError:
             return []
+
+    @staticmethod
+    def check_compatibility(db: Session, weapon_id: UUID, ammunition_id: UUID) -> bool:
+        from src.infraestructure.database.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel
+
+        return db.query(WeaponAmmunitionCompatibilityModel).filter(
+            WeaponAmmunitionCompatibilityModel.weapon_id == weapon_id,
+            WeaponAmmunitionCompatibilityModel.ammunition_id == ammunition_id
+        ).first() is not None
