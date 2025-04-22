@@ -176,3 +176,7 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 /data
+
+proshooter_backup.dump
+proshooter_backup.sql
+proshooter_db_backup.sql

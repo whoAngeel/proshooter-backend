@@ -1,70 +1,38 @@
 #!/bin/bash
-# update-images.sh
 
-# Colores para salida
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+echo "Actualizando imágenes de Pro Shooter..."
 
-echo -e "${YELLOW}Actualizando imágenes de Pro Shooter API...${NC}"
+# Asegurarse de que los contenedores estén corriendo
+docker-compose up -d
 
-# Parámetros
-DOCKER_USERNAME="tuusuario"  # Reemplaza con tu nombre de usuario
-VERSION=$(date +"%Y%m%d.%H%M")  # Versión basada en fecha y hora
-UPDATE_DB=false
+# Esperar a que los servicios estén disponibles
+echo "Esperando a que los servicios estén disponibles..."
+sleep 10
 
-# Procesar argumentos
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --with-db) UPDATE_DB=true ;;
-        --username) DOCKER_USERNAME="$2"; shift ;;
-        *) echo "Argumento desconocido: $1"; exit 1 ;;
-    esac
-    shift
-done
+# Crear backup de la base de datos
+echo "Creando respaldo de la base de datos..."
+docker-compose exec -T postgres pg_dump -U angel -d proshooter_db > db_backup.sql
 
-# Verificar si los contenedores están en ejecución
-if ! docker-compose ps | grep -q "api"; then
-    echo "Los contenedores no están en ejecución. Iniciando..."
-    docker-compose up -d
-    sleep 5
+# Verificar el tamaño del backup
+backup_size=$(wc -c < db_backup.sql)
+echo "Tamaño del backup: $backup_size bytes"
+
+if [ $backup_size -lt 1000 ]; then
+    echo "ADVERTENCIA: El archivo de backup parece muy pequeño. Verifica que contenga datos."
+    exit 1
 fi
 
-# Actualización de la base de datos si se especifica
-if $UPDATE_DB; then
-    echo -e "${YELLOW}Actualizando la base de datos...${NC}"
+# Construir y subir la imagen de PostgreSQL
+echo "Construyendo imagen de PostgreSQL con datos..."
+docker build -t subkey/proshooter-db:latest -f postgres.Dockerfile .
+echo "Subiendo imagen de PostgreSQL a Docker Hub..."
+docker push subkey/proshooter-db:latest
 
-    # Aplicar migraciones si existen
-    docker-compose exec -T api alembic upgrade head
-
-    echo -e "${YELLOW}Creando backup de la base de datos...${NC}"
-    docker-compose exec -T postgres pg_dump -U angel proshooter_db > db_backup.sql
-
-    echo -e "${YELLOW}Construyendo imagen de PostgreSQL...${NC}"
-    docker build -t ${DOCKER_USERNAME}/proshooter-postgres:latest -f postgres.Dockerfile .
-    docker tag ${DOCKER_USERNAME}/proshooter-postgres:latest ${DOCKER_USERNAME}/proshooter-postgres:${VERSION}
-fi
-
-# Construir imagen de la API
-echo -e "${YELLOW}Construyendo imagen de la API...${NC}"
+# Construir y subir la imagen de la API
+echo "Construyendo imagen de la API..."
 docker-compose build api
-docker tag $(docker-compose images -q api) ${DOCKER_USERNAME}/proshooter-api:latest
-docker tag $(docker-compose images -q api) ${DOCKER_USERNAME}/proshooter-api:${VERSION}
+docker tag $(docker-compose images -q api) subkey/proshooter-api:latest
+echo "Subiendo imagen de la API a Docker Hub..."
+docker push subkey/proshooter-api:latest
 
-# Subir imágenes
-echo -e "${YELLOW}Subiendo imágenes a Docker Hub...${NC}"
-docker login
-
-if $UPDATE_DB; then
-    docker push ${DOCKER_USERNAME}/proshooter-postgres:latest
-    docker push ${DOCKER_USERNAME}/proshooter-postgres:${VERSION}
-fi
-
-docker push ${DOCKER_USERNAME}/proshooter-api:latest
-docker push ${DOCKER_USERNAME}/proshooter-api:${VERSION}
-
-echo -e "${GREEN}¡Imágenes actualizadas con éxito!${NC}"
-echo -e "API: ${DOCKER_USERNAME}/proshooter-api:latest (${VERSION})"
-if $UPDATE_DB; then
-    echo -e "DB: ${DOCKER_USERNAME}/proshooter-postgres:latest (${VERSION})"
-fi
+echo "¡Imágenes actualizadas con éxito!"
