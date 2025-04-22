@@ -16,27 +16,7 @@ class InstructorInfo(BaseModel):
     # full_name: str
     model_config = {"from_attributes" : True}
 
-class PracticeExerciseBase(BaseModel):
-    session_id: UUID
-    exercise_type_id: UUID
-    target_id: UUID
-    weapon_id: UUID
-    ammunition_id: UUID
-    distance: str
-    firing_cadence: Optional[str] = None
-    time_limit: Optional[str] = None
-    ammunition_allocated: int = 0
-    ammunition_used: int = 0
-    hits: int = 0
-    reaction_time: Optional[float] = None
 
-class PracticeExerciseRead(PracticeExerciseBase):
-    id: UUID
-    accuracy_percentage: float
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    model_config = {"from_attributes": True}
 
 class EvaluationInfo(BaseModel):
     id: UUID
@@ -97,10 +77,12 @@ class IndividualPracticeSessionDetail(BaseModel):
 
     shooter: Optional[ShooterInfo] = None
     instructor: Optional[InstructorInfo] = None
-    exercises: Optional[List[PracticeExerciseRead]] = None
+    exercises: Optional[List["PracticeExerciseDetail"]] = None
     evaluation: Optional[EvaluationInfo] = None
 
     model_config = {"from_attributes": True}
+
+from .practice_exercise_schema import PracticeExerciseDetail
 
 class IndividualPracticeSessionDetailLite(BaseModel):
 

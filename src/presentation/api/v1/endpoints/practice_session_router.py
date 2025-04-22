@@ -97,7 +97,8 @@ async def get_recent_sessions(
 @router.get("/{session_id}", response_model=IndividualPracticeSessionDetail)
 async def get_practice_session(
     session_id: UUID = Path(..., description="ID de la sesión de práctica a obtener"),
-    session_service: PracticeSessionService = Depends()
+    session_service: PracticeSessionService = Depends(),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Obtiene los detalles de una sesión de práctica específica.

@@ -206,9 +206,9 @@ class PracticeExerciseRepository:
                 )
             )
 
-            return query.order_by(
-                desc(PracticeExerciseModel.created_at)
-            ).offset(skip).limit(limit).all()
+        return query.order_by(
+            desc(PracticeExerciseModel.created_at)
+        ).offset(skip).limit(limit).all()
 
     @staticmethod
     def count_by_criteria(db: Session, filter_params: dict) -> int:
@@ -332,7 +332,7 @@ class PracticeExerciseRepository:
         query = db.query(
             func.count(PracticeExerciseModel.id).label("total_exercises"),
             func.avg(PracticeExerciseModel.accuracy_percentage).label("avg_accuracy"),
-            func.sum(PracticeExerciseModel.ammunition_used).label("tatal_ammunition_used"),
+            func.sum(PracticeExerciseModel.ammunition_used).label("total_ammunition_used"),
             func.sum(PracticeExerciseModel.hits).label("total_hits"),
             func.avg(PracticeExerciseModel.reaction_time).label("avg_reaction_time")
         )
@@ -414,6 +414,28 @@ class PracticeExerciseRepository:
             WeaponModel.name
         ).order_by(desc('count')).all()
 
+        # por municion
+        ammunition_stats = db.query(
+            AmmunitionModel.name,
+            func.count(PracticeExerciseModel.id).label("count"),
+            func.avg(PracticeExerciseModel.accuracy_percentage).label("avg_accuracy")
+        ).join(
+            AmmunitionModel,
+            PracticeExerciseModel.ammunition_id == AmmunitionModel.id
+        )
+
+        if shooter_id:
+            ammunition_stats = ammunition_stats.join(
+                IndividualPracticeSessionModel,
+                PracticeExerciseModel.session_id == IndividualPracticeSessionModel.id
+            ).filter(
+                IndividualPracticeSessionModel.shooter_id == shooter_id
+            )
+
+        ammunition_stats = ammunition_stats.group_by(
+            AmmunitionModel.name
+        ).order_by(desc('count')).all()
+
         return {
             "total_exercises": stats.total_exercises if stats.total_exercises else 0,
             "avg_accuracy": float(stats.avg_accuracy) if stats.avg_accuracy else 0.0,
@@ -435,7 +457,12 @@ class PracticeExerciseRepository:
                 "name": w.name,
                 "count": w.count,
                 "avg_accuracy": float(w.avg_accuracy) if w.avg_accuracy else 0.0,
-            } for w in weapon_stats]
+            } for w in weapon_stats],
+            "by_ammunition": [{
+                "name": a.name,
+                "count": a.count,
+                "avg_accuracy": float(a.avg_accuracy) if a.avg_accuracy else 0.0,
+            } for a in ammunition_stats]
         }
 
     @staticmethod
@@ -533,7 +560,7 @@ class PracticeExerciseRepository:
                     "id" :str(row[0]),
                     "name": row[1],
                     "exercises_count": row[2],
-                    "avg_accuracy": float[row[3]] if row[3] else 0.0,
+                    "avg_accuracy": float(row[3]) if row[3] else 0.0,
                     "total_ammunition": row[4] if row[4] else 0,
                     "total_hits": row[5] if row[5] else 0,
                     "hit_percentage": (row[5]/ row[4] * 100) if row[4] and row[4] > 0 else 0.0

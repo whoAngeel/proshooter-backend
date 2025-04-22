@@ -127,10 +127,10 @@ class PracticeExerciseStatistics(BaseModel):
     total_hits: int
     hit_percentage: float
     avg_reaction_time: Optional[float] = None
-    by_distance: Optional[Dict[str, Any]] = None
+    by_distance: Optional[List[Dict[str, Any]]] = None
     by_exercise_type: Optional[List[Dict[str, Any]]] = None
     by_weapon: Optional[List[Dict[str, Any]]] = None
-    by_ammunition: Optional[List[Dict[str, Any]]] = None
+    # by_ammunition: Optional[List[Dict[str, Any]]] = None
 
 # Esquema para analisis especificos
 class PerformanceAnalysis(BaseModel):
