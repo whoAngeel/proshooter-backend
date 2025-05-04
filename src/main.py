@@ -15,10 +15,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
-
-# print("Estoy corriendo")
+    return {
+        "status": "ok",
+        "host": settings.HOST,
+        "port": settings.PORT
+    }
 
 app.include_router(router_v1)

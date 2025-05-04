@@ -1,4 +1,4 @@
-from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, String, Float
+from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, String, Float, Boolean
 from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
 import uuid
@@ -15,6 +15,8 @@ class IndividualPracticeSessionModel(Base):
     total_shots_fired = Column(Integer, default=0)
     total_hits = Column(Integer, default=0)
     accuracy_percentage = Column(Float, default=0.0)
+
+    evaluation_pending = Column(Boolean, default=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

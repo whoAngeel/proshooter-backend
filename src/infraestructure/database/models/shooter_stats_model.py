@@ -17,6 +17,14 @@ class ShooterStatsModel(Base):
     average_hit_factor = Column(Float, default=0, nullable=False)
     effectiveness = Column(Float, default=0, nullable=False)
 
+    trend_accuracy = Column(Float, default=0.0) # Tendencia de precision
+    last_10_sessions_avg = Column(Float, default=0.0) # promedio de las ultimas 10 sesiones
+
+    # campos especificos por tipo de ejercicio
+    precision_exercise_accuracy = Column(Float, default=0.0)
+    reaction_exercise_accuracy = Column(Float, default=0.0)
+    movement_exercise_accuracy = Column(Float, default=0.0)
+
     common_error_zones = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
