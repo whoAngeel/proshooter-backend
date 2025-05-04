@@ -189,4 +189,88 @@ class PracticeEvaluationRepository:
         return ratings
 
     @staticmethod
-    def check_classification_change_criteria(db: Session, shooter_id: UUID, curre)
+    def check_classification_change_criteria(db: Session, shooter_id: UUID, current_level: ShooterLevelEnum) -> Dict[str, Any]:
+        # determina si un irador cumple criterios para cambio de clasificacion
+        # obtenemos las ultimas 5 evaluaciones
+        recent_evaluations = PracticeEvaluationRepository.get_shooter_evaluation_history(db, shooter_id, limit=5)
+        if len(recent_evaluations) <3:
+            return {
+                "should_change": False,
+                "reason": "Evaluaciones insuficientes (Minimo 3 evaluaciones requeridas)",
+                "suggested_level": current_level
+            }
+
+        # determinar nivel promedio de las evaluaciones recientes
+        classfications = [eval.classification for eval in recent_evaluations]
+
+        # contamos cuantas evaluaciones estan en cada nivel
+        level_counts = {}
+        for level in ShooterLevelEnum:
+            level_counts[level] = classfications.count(level)
+
+        # determinamos el nivel mas frecuente
+        most_common_level = max(level_counts, key=level_counts.get)
+
+        # si el nivel mas comun es diferente al actual y aparece al menos en 3 evaluaciones
+        if most_common_level != current_level and level_counts[most_common_level] >= 3:
+            return {
+                "should_change":True,
+                "reason": f"Consistent performance in {most_common_level.name} level in {level_counts[most_common_level]} of last 5 evaluations",
+                "suggested_level": most_common_level
+            }
+
+        return {
+            "should_change": False,
+            "reason": f"La clasificacion actual sigue siendo apropiada",
+            "suggested_level": current_level
+        }
+
+    @staticmethod
+    def get_recent_evaluations_trend(db: Session, shooter_id: UUID, limit: int = 10)-> Dict[str, Any]:
+        # analiza la tendencia de las evaluaciones recientes de un tirador
+        evaluations = PracticeEvaluationRepository.get_shooter_evaluation_history(db, shooter_id, limit=limit)
+        if not evaluations or len(evaluations) < 2:
+            return {
+                "trend": "insufficient_data",
+                "scores": [],
+                "improving": None
+            }
+
+        # extraer puntuaciones en orden cronologico (del masa antiguo al mas reciente)
+        scores = [eval.final_score for eval in reversed(evaluations)]
+
+        # calcular tendencia usando regrecion lineal simple
+        n = len(scores)
+        indices = list(range(n))
+
+        # calcular pendiente
+        mean_x = sum(indices) / n
+        mean_y = sum(scores) / n
+
+        numerator = sum((indices[i]- mean_x) * (scores[i] - mean_y) for i in range(n))
+        denominator = sum((indices[i] - mean_x) ** 2 for i in range(n))
+
+        slope = numerator / denominator if denominator != 0 else 0
+
+        return {
+            "trend": "improving" if slope > 0 else "declining" if slope < 0 else "stable",
+            "scores": scores,
+            "improving": slope > 0,
+            "trend_value": slope
+        }
+
+'''
+Gestionar el estado de evaluación pendiente en las sesiones relacionadas.
+Obtener el historial de evaluaciones de un tirador para análisis de tendencias.
+Analizar la distribución de clasificaciones para un tirador.
+Identificar y cuantificar las zonas de problema más frecuentes.
+Calcular promedios de calificaciones específicas (postura, agarre, etc.).
+Determinar si un tirador cumple con los criterios para un cambio de clasificación.
+Analizar tendencias en las evaluaciones recientes.
+
+Los métodos más complejos incluyen algoritmos para:
+
+Calcular distribuciones y frecuencias de zonas problemáticas con ponderación
+Determinar si se deben aplicar cambios de clasificación basados en patrones consistentes
+Calcular tendencias mediante técnicas simplificadas de regresión lineal
+'''
