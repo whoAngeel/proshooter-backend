@@ -11,6 +11,7 @@ class ShooterStatsModel(Base):
     # average_score = Column(Integer, default=0, nullable=False)
     reaction_shots = Column(Integer, default=0, nullable=False)
     presicion_shots = Column(Integer, default=0, nullable=False)
+
     draw_time_avg = Column(Float, default=0, nullable=False)
     reload_time_avg = Column(Float, default=0, nullable=False)
 

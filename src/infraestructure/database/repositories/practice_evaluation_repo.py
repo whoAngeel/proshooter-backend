@@ -162,7 +162,49 @@ class PracticeEvaluationRepository:
 
     @staticmethod
     def get_issue_zones_frequency(db: Session, shooter_id: UUID)->Dict[str, int]:
-        pass
+        # analiza las zonas problematicas mas frecuentes en als evaluaciones del tirador
+        primary_zones = db.query(
+            PracticeEvaluationModel.primary_issue_zone,
+            func.count(PracticeEvaluationModel.id).label("count")
+        ).join(
+            IndividualPracticeSessionModel,
+            PracticeEvaluationModel.session_id == IndividualPracticeSessionModel.id
+        ).filter(
+            and_(
+                IndividualPracticeSessionModel.shooter_id == shooter_id,
+                PracticeEvaluationModel.primary_issue_zone.isnot(None)
+            )
+        ).group_by(
+            PracticeEvaluationModel.primary_issue_zone
+        ).all()
+
+        secondary_zones = db.query(
+            PracticeEvaluationModel.secondary_issue_zone,
+            func.count(PracticeEvaluationModel.id).label("count")
+        ).join(
+            IndividualPracticeSessionModel,
+            PracticeEvaluationModel.session_id == IndividualPracticeSessionModel.id
+        ).filter(
+            and_(
+                IndividualPracticeSessionModel.shooter_id == shooter_id,
+                PracticeEvaluationModel.secondary_issue_zone.isnot(None)
+            )
+        ).group_by(
+            PracticeEvaluationModel.secondary_issue_zone
+        ).all()
+
+        zones_frecuency = {}
+        for zone, count in primary_zones:
+            zones_frecuency[zone] = count
+
+        for zone, count in secondary_zones:
+            if zone in zones_frecuency:
+                zones_frecuency[zone] += count * 0.5 # damos menor peso a zonas secundarias
+            else:
+                zones_frecuency[zone] = count * 0.5
+
+
+        return zones_frecuency
 
     @staticmethod
     def get_average_ratings(db: Session, shooter_id: UUID)-> Dict[str, float]:

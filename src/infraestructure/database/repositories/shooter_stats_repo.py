@@ -20,22 +20,22 @@ class ShooterStatsRepository:
         return new_shooter_stats
 
     @staticmethod
-    def edit(db: Session, shooter_id: UUID, data_in: ShooterStatsUpdate):
+    def update(db: Session, shooter_id: UUID, data_in: ShooterStatsUpdate):
         shooter_stats = db.query(ShooterStatsModel).filter(ShooterStatsModel.shooter_id == shooter_id).first()
 
         if not shooter_stats:
             return None
 
-        # actualizar los campos que no vienen vacios
-        if data_in.total_shots:
-            shooter_stats.total_shots = shooter_stats.shots
-        if data_in.accuracy:
-            shooter_stats.accuracy = shooter_stats.accuracy
-        if data_in.average_hit_factor:
-            shooter_stats.average_hit_factor = shooter_stats.average_hit_factor
-        if data_in.effectiveness:
-            shooter_stats.effectiveness = shooter_stats.effectiveness
+        for key, value in data_in.items():
+            if hasattr(shooter_stats, key):
+                setattr(shooter_stats, key, value)
 
         db.commit()
         db.refresh(shooter_stats)
         return shooter_stats
+
+    @staticmethod
+    def get_by_shooter_id(db: Session, shooter_id: UUID):
+        return db.query(ShooterStatsModel).filter(ShooterStatsModel.shooter_id == shooter_id).first()
+
+    # TODO: implementar metodo para cambiar el nivel ()
