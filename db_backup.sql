@@ -148,7 +148,8 @@ CREATE TABLE public.individual_practice_sessions (
     total_hits integer,
     accuracy_percentage double precision,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    evaluation_pending boolean
 );
 
 
@@ -168,7 +169,19 @@ CREATE TABLE public.practice_evaluations (
     weaknesses character varying,
     recomendations character varying,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    posture_rating integer,
+    grip_rating integer,
+    sight_alignment_rating integer,
+    trigger_control_rating integer,
+    breathing_rating integer,
+    primary_issue_zone character varying,
+    secondary_issue_zone character varying,
+    avg_reaction_time double precision,
+    avg_draw_time double precision,
+    avg_reload_time double precision,
+    hit_factor double precision,
+    date timestamp without time zone NOT NULL
 );
 
 
@@ -234,7 +247,12 @@ CREATE TABLE public.shooter_stats (
     effectiveness double precision NOT NULL,
     common_error_zones character varying,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    trend_accuracy double precision,
+    last_10_sessions_avg double precision,
+    precision_exercise_accuracy double precision,
+    reaction_exercise_accuracy double precision,
+    movement_exercise_accuracy double precision
 );
 
 
@@ -468,7 +486,7 @@ ALTER TABLE public.weapons OWNER TO angel;
 --
 
 COPY public.alembic_version (version_num) FROM stdin;
-b186523e1e25
+52363926f2d2
 \.
 
 
@@ -495,9 +513,9 @@ dd68ff64-d5f7-4118-a11e-95060b886e44	EVALUACIÓN DE PRECISION LVL. 2	El tiro de 
 -- Data for Name: individual_practice_sessions; Type: TABLE DATA; Schema: public; Owner: angel
 --
 
-COPY public.individual_practice_sessions (id, shooter_id, instructor_id, date, location, total_shots_fired, total_hits, accuracy_percentage, created_at, updated_at) FROM stdin;
-15b01cd8-ec79-451b-b2a2-080297119765	8056ea85-5ccb-4719-907c-55f45d0139c4	cd908e5e-ab7c-4ef8-b2d2-cec083c513b6	2025-04-21 21:04:52.285418	No especificada	148	104	70.27027027027027	2025-04-21 21:04:52.283545+00	2025-04-22 02:48:48.006859+00
-da0f10a3-b3d2-43d4-8615-68d29bf0564c	8056ea85-5ccb-4719-907c-55f45d0139c4	cd908e5e-ab7c-4ef8-b2d2-cec083c513b6	2025-04-22 00:27:13.02242	No especificada	223	165	73.99103139013454	2025-04-22 00:27:13.019051+00	2025-04-22 03:14:56.025476+00
+COPY public.individual_practice_sessions (id, shooter_id, instructor_id, date, location, total_shots_fired, total_hits, accuracy_percentage, created_at, updated_at, evaluation_pending) FROM stdin;
+15b01cd8-ec79-451b-b2a2-080297119765	8056ea85-5ccb-4719-907c-55f45d0139c4	cd908e5e-ab7c-4ef8-b2d2-cec083c513b6	2025-04-21 21:04:52.285418	No especificada	148	104	70.27027027027027	2025-04-21 21:04:52.283545+00	2025-04-22 02:48:48.006859+00	\N
+da0f10a3-b3d2-43d4-8615-68d29bf0564c	8056ea85-5ccb-4719-907c-55f45d0139c4	cd908e5e-ab7c-4ef8-b2d2-cec083c513b6	2025-04-22 00:27:13.02242	No especificada	223	165	73.99103139013454	2025-04-22 00:27:13.019051+00	2025-04-22 03:14:56.025476+00	\N
 \.
 
 
@@ -505,7 +523,7 @@ da0f10a3-b3d2-43d4-8615-68d29bf0564c	8056ea85-5ccb-4719-907c-55f45d0139c4	cd908e
 -- Data for Name: practice_evaluations; Type: TABLE DATA; Schema: public; Owner: angel
 --
 
-COPY public.practice_evaluations (id, session_id, evaluator_id, final_score, classification, strengths, weaknesses, recomendations, created_at, updated_at) FROM stdin;
+COPY public.practice_evaluations (id, session_id, evaluator_id, final_score, classification, strengths, weaknesses, recomendations, created_at, updated_at, posture_rating, grip_rating, sight_alignment_rating, trigger_control_rating, breathing_rating, primary_issue_zone, secondary_issue_zone, avg_reaction_time, avg_draw_time, avg_reload_time, hit_factor, date) FROM stdin;
 \.
 
 
@@ -543,22 +561,22 @@ COPY public.shooter_performance_logs (id, shooter_id, metric_type, metric_value,
 -- Data for Name: shooter_stats; Type: TABLE DATA; Schema: public; Owner: angel
 --
 
-COPY public.shooter_stats (shooter_id, total_shots, accuracy, reaction_shots, presicion_shots, draw_time_avg, reload_time_avg, average_hit_factor, effectiveness, common_error_zones, created_at, updated_at) FROM stdin;
-b15f2ca5-fc34-4dd9-a3f2-ab20ef5adb4e	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:23.45775+00	\N
-d085ac34-cf29-4e29-8073-3706f33bd9ce	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:24.335909+00	\N
-c9ec8ee3-a3a2-4ffa-baf5-3118f7c1aeb9	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:25.194526+00	\N
-166cf21c-36a1-48f6-89dc-2039a3b0b830	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:25.971196+00	\N
-efbb5904-76b3-40a2-9d69-6fd6341dbd1c	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:26.665704+00	\N
-05a61ec7-f03f-4355-bbb7-8a457507032a	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:27.366691+00	\N
-7f339557-2f6a-49e1-980d-5b617ab0c14d	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:28.043699+00	\N
-70df5cc6-16ce-4970-bc3c-704f68182d76	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:28.66806+00	\N
-4b793194-7331-418e-aa99-81e5048fb43f	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:29.286383+00	\N
-98c625c7-e253-4a11-928d-591f9d7aeb3d	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:29.876596+00	\N
-330e9640-bc50-410f-a6a5-2a30b0c9e012	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:30.454675+00	\N
-cd908e5e-ab7c-4ef8-b2d2-cec083c513b6	0	0	0	0	0	0	0	0	\N	2025-04-19 00:20:36.482791+00	\N
-c06c19df-eb1a-4e45-8302-4666c7448d1e	0	0	0	0	0	0	0	0	\N	2025-04-19 00:20:42.451919+00	\N
-c58bc32b-a0c9-42fc-9c6b-870640695d8a	0	0	0	0	0	0	0	0	\N	2025-04-19 00:20:46.267197+00	\N
-8056ea85-5ccb-4719-907c-55f45d0139c4	0	0	0	0	0	0	0	0	\N	2025-04-19 00:20:48.83205+00	\N
+COPY public.shooter_stats (shooter_id, total_shots, accuracy, reaction_shots, presicion_shots, draw_time_avg, reload_time_avg, average_hit_factor, effectiveness, common_error_zones, created_at, updated_at, trend_accuracy, last_10_sessions_avg, precision_exercise_accuracy, reaction_exercise_accuracy, movement_exercise_accuracy) FROM stdin;
+b15f2ca5-fc34-4dd9-a3f2-ab20ef5adb4e	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:23.45775+00	\N	\N	\N	\N	\N	\N
+d085ac34-cf29-4e29-8073-3706f33bd9ce	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:24.335909+00	\N	\N	\N	\N	\N	\N
+c9ec8ee3-a3a2-4ffa-baf5-3118f7c1aeb9	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:25.194526+00	\N	\N	\N	\N	\N	\N
+166cf21c-36a1-48f6-89dc-2039a3b0b830	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:25.971196+00	\N	\N	\N	\N	\N	\N
+efbb5904-76b3-40a2-9d69-6fd6341dbd1c	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:26.665704+00	\N	\N	\N	\N	\N	\N
+05a61ec7-f03f-4355-bbb7-8a457507032a	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:27.366691+00	\N	\N	\N	\N	\N	\N
+7f339557-2f6a-49e1-980d-5b617ab0c14d	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:28.043699+00	\N	\N	\N	\N	\N	\N
+70df5cc6-16ce-4970-bc3c-704f68182d76	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:28.66806+00	\N	\N	\N	\N	\N	\N
+4b793194-7331-418e-aa99-81e5048fb43f	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:29.286383+00	\N	\N	\N	\N	\N	\N
+98c625c7-e253-4a11-928d-591f9d7aeb3d	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:29.876596+00	\N	\N	\N	\N	\N	\N
+330e9640-bc50-410f-a6a5-2a30b0c9e012	0	0	0	0	0	0	0	0	\N	2025-04-17 05:45:30.454675+00	\N	\N	\N	\N	\N	\N
+cd908e5e-ab7c-4ef8-b2d2-cec083c513b6	0	0	0	0	0	0	0	0	\N	2025-04-19 00:20:36.482791+00	\N	\N	\N	\N	\N	\N
+c06c19df-eb1a-4e45-8302-4666c7448d1e	0	0	0	0	0	0	0	0	\N	2025-04-19 00:20:42.451919+00	\N	\N	\N	\N	\N	\N
+c58bc32b-a0c9-42fc-9c6b-870640695d8a	0	0	0	0	0	0	0	0	\N	2025-04-19 00:20:46.267197+00	\N	\N	\N	\N	\N	\N
+8056ea85-5ccb-4719-907c-55f45d0139c4	0	0	0	0	0	0	0	0	\N	2025-04-19 00:20:48.83205+00	\N	\N	\N	\N	\N	\N
 \.
 
 

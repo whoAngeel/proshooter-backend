@@ -4,8 +4,21 @@ from src.infraestructure.database.session import get_db
 from src.infraestructure.auth.jwt_config import get_current_user
 from uuid import UUID
 
+from typing import List
+from pydantic import UUID4
+
 from src.application.services.shooting_club_service import ShootingClubService
-from src.presentation.schemas.shootingclub_schema import *
+from src.presentation.schemas.shootingclub_schema import (
+    ShootingClubDetail,
+    ShootingClubRead,
+    ShootingClubUpdate,
+    ShootingClubCreate,
+    ShootingClubWithChiefInstructor,
+    ShootingClubStatistics,
+    ShooterClubAssignment,
+    ShootingClubWithBasicStats,
+    ClubMemberDetail
+)
 from src.domain.enums.role_enum import RoleEnum
 
 
@@ -13,7 +26,7 @@ router = APIRouter(prefix="/shooting_clubs", tags=["shooting_clubs"])
 
 @router.post("/", response_model=ShootingClubRead)
 async def create_club(
-    club_data: ShootingClubBase,
+    club_data: ShootingClubCreate,
     current_user = Depends(get_current_user),
     club_service: ShootingClubService = Depends()
 ):

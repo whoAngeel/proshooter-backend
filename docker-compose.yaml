@@ -32,9 +32,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      - DATABASE_URL=postgresql://angel:angel@postgres:5432/proshooter_db
-      - SECRET_KEY=fasdfjasfsdfkasjdfoiadbasdbasd
+    # environment:
+    #   - DATABASE_URL=postgresql://angel:angel@postgres:5432/proshooter_db
+    #   - SECRET_KEY=fasdfjasfsdfkasjdfoiadbasdbasd
     networks:
       - proshooter-network
     env_file:

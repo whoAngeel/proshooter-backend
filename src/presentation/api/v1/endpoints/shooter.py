@@ -21,7 +21,7 @@ def get_shooter_by_id(shooter_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="El tirador no existe")
     return shooter
 
-@router.patch("/{shooter_id}/promote", response_model=ShooterReadLite, status_code=201)
+@router.patch("/{shooter_id}/promote", response_model=ShooterReadLite)
 def promote_user(
     shooter_id: UUID,
     new_role: str = Body(..., embed=True),

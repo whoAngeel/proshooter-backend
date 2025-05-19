@@ -3,20 +3,20 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .user_schemas import UserReadLite, UserPersonalDataReadLite
+from .practice_exercise_schema import PracticeExerciseDetail
+
 class ShooterInfo(BaseModel):
     user_id: UUID
-
     range: Optional[str]
-    user: Optional["UserReadLite"]
+    user: Optional[UserReadLite] = None
+
     model_config = {"from_attributes": True}
 
 class InstructorInfo(BaseModel):
     id: UUID
-    personal_data: Optional["UserPersonalDataReadLite"]
-    # full_name: str
-    model_config = {"from_attributes" : True}
-
-
+    personal_data: Optional[UserPersonalDataReadLite] = None
+    model_config = {"from_attributes": True}
 
 class EvaluationInfo(BaseModel):
     id: UUID
@@ -24,16 +24,13 @@ class EvaluationInfo(BaseModel):
     classification: str
 
 class IndividualPracticeSessionBase(BaseModel):
-    # shooter_id: UUID
     instructor_id: Optional[UUID] = None
     date: datetime = Field(default_factory=datetime.utcnow)
     location: str
     total_shots_fired: int = 0
     total_hits: int = 0
 
-
 class IndividualPracticeSessionCreate(IndividualPracticeSessionBase):
-    # shooter_id: UUID
     @model_validator(mode='after')
     def validate_hits_not_greater_than_shots(self) -> 'IndividualPracticeSessionCreate':
         if self.total_hits > self.total_shots_fired:
@@ -77,16 +74,13 @@ class IndividualPracticeSessionDetail(BaseModel):
 
     shooter: Optional[ShooterInfo] = None
     instructor: Optional[InstructorInfo] = None
-    exercises: Optional[List["PracticeExerciseDetail"]] = None
+    exercises: Optional[List[PracticeExerciseDetail]] = None
     evaluation: Optional[EvaluationInfo] = None
 
     model_config = {"from_attributes": True}
 
-from .practice_exercise_schema import PracticeExerciseDetail
-
 class IndividualPracticeSessionDetailLite(BaseModel):
-
-    date: datetime = Field(default_factory=datetime.now())
+    date: datetime = Field(default_factory=datetime.utcnow)
     location: str
     total_shots_fired: int = 0
     total_hits: int = 0
@@ -102,7 +96,6 @@ class IndividualPracticeSessionDetailLite(BaseModel):
     model_config = {"from_attributes": True}
 
 class IndividualPracticeSessionList(BaseModel):
-    # items: List[IndividualPracticeSessionRead]
     items: List[IndividualPracticeSessionDetailLite]
     total: int
     page: int
@@ -120,7 +113,6 @@ class IndividualPracticeSessionFilter(BaseModel):
     skip: int = 0
     limit: int = 100
 
-
 class IndividualPracticeSessionStatistics(BaseModel):
     total_sessions: int
     avg_accuracy: float
@@ -129,7 +121,3 @@ class IndividualPracticeSessionStatistics(BaseModel):
     hit_percentage: float
     period: str
     shooter_id: UUID
-
-
-from .user_schemas import UserReadLite, UserPersonalDataReadLite
-UserReadLite.model_rebuild()

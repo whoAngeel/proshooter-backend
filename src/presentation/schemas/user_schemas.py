@@ -1,6 +1,6 @@
-from pydantic import BaseModel, EmailStr ,Field
+from pydantic import BaseModel, EmailStr ,Field, UUID4
 from typing import Optional, TYPE_CHECKING
-from uuid import UUID
+
 from src.domain.enums.role_enum import RoleEnum
 from datetime import datetime, date
 # from .shooter_schema import ShooterRead
@@ -17,14 +17,13 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=6, description="El password debe tener al menos 6 caracteres")
 
 class UserReadLiteNoPersonalData(BaseModel):
-    id: UUID
+    id: UUID4
     email: EmailStr  # 🔥 No incluye personal_data
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class UserRead(UserBase):
-    id: UUID
+    id: UUID4
     created_at: datetime
     updated_at: Optional[datetime] = None
     personal_data: Optional["UserPersonalDataRead"] = None
@@ -33,33 +32,32 @@ class UserRead(UserBase):
 
     shooter: Optional["ShooterRead"] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
-class UserReadLiteNoPersonalData(BaseModel):
-    id: UUID
-    email: EmailStr  # 🔥 No incluye personal_data
+class UserPersonalDataReadLite(BaseModel):
+    user_id: UUID4
+    first_name: Optional[str] = None
+    second_name: Optional[str] = None
+    last_name1: Optional[str] = None
+    last_name2: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
+
 
 class UserReadLite(BaseModel):
-    id: UUID
+    id: UUID4
     email: EmailStr
     role: RoleEnum
-    personal_data: Optional["UserPersonalDataReadLite"] = None  # 🔥 Relación con datos personales
+    personal_data: Optional[UserPersonalDataReadLite] = None  # Usar comillas
 
-    class Config:
-        from_attributes = True
-
+    model_config = {"from_attributes": True}
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[RoleEnum] = None
     is_active: Optional[bool] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 class UserPersonalDataBase(BaseModel):
     first_name: str
@@ -97,22 +95,20 @@ class UserPersonalDataCreate(UserPersonalDataBase):
     pass
 
 class UserPersonalDataReadLite(BaseModel):
-    user_id: UUID
+    user_id: UUID4
     first_name: Optional[str] = None
     second_name: Optional[str] = None
     last_name1: Optional[str] = None
     last_name2: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 
 class UserPersonalDataRead(UserPersonalDataBase):
-    user_id: UUID
+    user_id: UUID4
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 # ------------ SCHEMAS PARA MEDICAL DATA ------------
 class UserMedicalDataBase(BaseModel):
@@ -131,9 +127,8 @@ class UserMedicalDataUpdate(UserMedicalDataBase):
     emergency_contact: Optional[str] = None
 
 class UserMedicalDataRead(UserMedicalDataBase):
-    user_id: UUID
-    class Config:
-        from_attributes = True
+    user_id: UUID4
+    model_config = {"from_attributes": True}
 
 # ------------ SCHEMAS PARA BIOMETRIC DATA ------------
 class UserBiometricDataBase(BaseModel):
@@ -161,9 +156,9 @@ class UserBiometricDataUpdate(UserBiometricDataBase):
     respiratory_rate: Optional[str] = None
 
 class UserBiometricDataRead(UserBiometricDataBase):
-    user_id: UUID
-    class Config:
-        from_attributes = True
+    user_id: UUID4
+    model_config = {"from_attributes": True}
 
 from src.presentation.schemas.shooter_schema import ShooterRead
 UserRead.model_rebuild()
+UserReadLite.model_rebuild()
