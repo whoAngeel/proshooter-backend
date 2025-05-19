@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:14-alpine
@@ -6,13 +8,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U angel -d proshooter_db"]
       interval: 5s
       timeout: 5s
       retries: 5
-
     environment:
       POSTGRES_USER: angel
       POSTGRES_PASSWORD: angel
@@ -29,12 +29,10 @@ services:
       - "8000:8000"
     volumes:
       - ./:/app
+      - ./logs:/app/logs  # Volumen adicional para logs
     depends_on:
       postgres:
         condition: service_healthy
-    # environment:
-    #   - DATABASE_URL=postgresql://angel:angel@postgres:5432/proshooter_db
-    #   - SECRET_KEY=fasdfjasfsdfkasjdfoiadbasdbasd
     networks:
       - proshooter-network
     env_file:
@@ -45,9 +43,30 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    restart: always
+    # En desarrollo, usamos restart: unless-stopped en lugar de always
+    # para evitar ciclos infinitos de reinicio durante el desarrollo
+    restart: unless-stopped
+
+    # Separamos los comandos de migración e inicio
+    # Para desarrollo (ambiente por defecto)
     command: >
-      bash -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+      bash -c "
+        # Ejecutamos migraciones
+        alembic upgrade head &&
+        # Iniciamos el servidor
+        uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+    # Perfil para producción
+    # profiles:
+    #   - production
+    # En producción, comentaríamos la sección command anterior y
+    # descomentaríamos esta para usar una configuración más estable
+    # command: >
+    #   bash -c "
+    #     alembic upgrade head &&
+    #     uvicorn src.main:app --host 0.0.0.0 --port 8000
+    #   "
 
 networks:
   proshooter-network:
@@ -55,3 +74,5 @@ networks:
 
 volumes:
   postgres_data:
+  # Volumen para los logs si decides implementarlo
+  # logs:
