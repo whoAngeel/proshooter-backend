@@ -32,7 +32,7 @@ class PracticeEvaulationBase(BaseModel):
     session_id: UUID
     evaluator_id: Optional[UUID] = None
     final_score: float = Field(ge=0, le=100)
-    classification: ShooterLevelEnum
+    classification: Optional[ShooterLevelEnum] = None
     strengths: Optional[str] = None
     weaknesses: Optional[str] = None
     recomendations: Optional[str] = None
