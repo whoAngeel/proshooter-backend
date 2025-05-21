@@ -77,9 +77,9 @@ async def create_evaluation(
     return evaluation
 
 
-@router.get("/", response_model=PracticeEvaluationDetail)
+@router.get("/{evaluation_id}", response_model=PracticeEvaluationDetail)
 async def get_evaluation(
-    evaluation_id: UUID = Query(..., description="ID de la evaluación a recuperar"),
+    evaluation_id: UUID = Path(..., description="ID de la evaluación a recuperar"),
     service: PracticeEvaluationService = Depends(),
     current_user: dict = Depends(get_current_user),
 ):
@@ -217,7 +217,7 @@ async def list_evaluations(
     return evaluation_service.get_all_evaluations(filter_params)
 
 
-@router.put("/", response_model=PracticeEvaluationRead)
+@router.put("/{evaluation_id}", response_model=PracticeEvaluationRead)
 async def update_evaluation(
     evaluation_data: PracticeEvaluationUpdate,
     evaluation_id: UUID = Path(..., description="ID de la evaluación a actualizar"),
