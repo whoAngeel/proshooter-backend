@@ -438,9 +438,9 @@ class ShooterRepository:
             # Definimos un mapeo numérico para comparar niveles
             level_values = {
                 ShooterLevelEnum.REGULAR: 1,
-                ShooterLevelEnum.MEDIUM: 2,
-                ShooterLevelEnum.TRUSTWORTHY: 3,
-                ShooterLevelEnum.EXPERT: 4,
+                ShooterLevelEnum.MEDIO: 2,
+                ShooterLevelEnum.CONFIABLE: 3,
+                ShooterLevelEnum.EXPERTO: 4,
             }
 
             if level_values[latest_level] > level_values[initial_level]:
