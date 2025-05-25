@@ -3,28 +3,48 @@ from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
 from src.domain.enums.classification_enum import ShooterLevelEnum
 
+
 class ShooterModel(Base):
     __tablename__ = "shooters"
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete="CASCADE"), primary_key=True)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
     club_id = Column(UUID(as_uuid=True), ForeignKey("shooting_clubs.id"), nullable=True)
     # classification = Column(String, nullable=False, default="TR")
-    level = Column(Enum(ShooterLevelEnum), nullable=False, default=ShooterLevelEnum.REGULAR)
+    level = Column(
+        Enum(ShooterLevelEnum), nullable=False, default=ShooterLevelEnum.REGULAR
+    )
     range = Column(String)
 
+    nickname = Column(String, unique=True, nullable=True)
+    license_file = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     user = relationship("UserModel", back_populates="shooter")
-    stats = relationship("ShooterStatsModel", back_populates="shooter", uselist=False, cascade="all, delete-orphan")
+    stats = relationship(
+        "ShooterStatsModel",
+        back_populates="shooter",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     club = relationship("ShootingClubModel", back_populates="members")
-    performance_logs = relationship("ShooterPerformanceLogModel", back_populates="shooter", cascade="all, delete-orphan")
-    practice_sessions = relationship("IndividualPracticeSessionModel", back_populates="shooter", cascade="all, delete-orphan")
-
+    performance_logs = relationship(
+        "ShooterPerformanceLogModel",
+        back_populates="shooter",
+        cascade="all, delete-orphan",
+    )
+    practice_sessions = relationship(
+        "IndividualPracticeSessionModel",
+        back_populates="shooter",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"Shooter(user_id={self.user_id}, club_id={self.club_id}, level={self.level}, range={self.range}, created_at={self.created_at}, updated_at={self.updated_at})"
+
 
 from src.infraestructure.database.models.user_model import UserModel
 from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
