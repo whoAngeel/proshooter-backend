@@ -17,7 +17,7 @@ class ShooterModel(Base):
     )
     range = Column(String)
 
-    nickname = Column(String, unique=True, nullable=True)
+    nickname = Column(String, unique=True, nullable=True, index=True)
     license_file = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

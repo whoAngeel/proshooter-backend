@@ -18,6 +18,8 @@ class ShooterBase(BaseModel):
     level: ShooterLevelEnum = ShooterLevelEnum.REGULAR
     range: Optional[str] = None
     club_id: Optional[UUID] = None
+    nickname: Optional[str] = None
+    license_file: Optional[str] = None
 
 
 class ShooterCreate(ShooterBase):
@@ -65,6 +67,8 @@ class ShooterDetail(ShooterRead):
     evaluation_count: Optional[int] = None
     recent_progress: Optional[str] = None  # Improving, Stable, Declining
     club_name: Optional[str] = None
+    nickname: Optional[str] = None
+    license_file: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
