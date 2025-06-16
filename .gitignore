@@ -180,3 +180,5 @@ pyrightconfig.json
 proshooter_backup.dump
 proshooter_backup.sql
 proshooter_db_backup.sql
+
+.env.*
