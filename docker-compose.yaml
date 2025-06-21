@@ -1,29 +1,27 @@
-# docker-compose.yaml
 
 services:
-  db:
+  postgres:
     image: postgres:15-alpine
-    container_name: proshooter_db_${ENV:-dev}
+    container_name: proshooter_db
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
-      - proshooter_db_data_${ENV:-dev}:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
     networks:
-      - proshooter_network
+      - proshooter-network
     restart: unless-stopped
 
   api:
-    container_name: proshooter_api_${ENV:-dev}
-    image: ${API_IMAGE:-subkey/proshooter-api:latest}
+    container_name: proshooter_api
     build:
       context: .
       dockerfile: Dockerfile
@@ -31,30 +29,22 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
-      # Solo en desarrollo montamos el código fuente
-      - ${VOLUME_MOUNT:-./:/app}
-      - ./logs:/app/logs
+      # Solo montar código en desarrollo
+      - "${VOLUME_MOUNT:-}"
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
-    networks:
-      - proshooter_network
     env_file:
-      - .env.${ENV:-dev}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - .env.dev
+    networks:
+      - proshooter-network
     restart: unless-stopped
-    command: ${START_COMMAND:-uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload}
+    # El comando se ejecuta desde tu variable de entorno
+    command: ${START_COMMAND}
 
 networks:
-  proshooter_network:
+  proshooter-network:
     driver: bridge
 
 volumes:
-  proshooter_db_data_dev:
-  proshooter_db_data_staging:
-  proshooter_db_data_prod:
+  postgres_data:
