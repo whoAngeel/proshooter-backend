@@ -13,7 +13,7 @@ from src.presentation.schemas.practice_session_schema import (
     IndividualPracticeSessionDetail,
     IndividualPracticeSessionList,
     IndividualPracticeSessionStatistics,
-    IndividualPracticeSessionFilter
+    IndividualPracticeSessionFilter,
 )
 
 router = APIRouter(
@@ -22,14 +22,19 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.post("/", response_model=IndividualPracticeSessionRead, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/",
+    response_model=IndividualPracticeSessionRead,
+    status_code=status.HTTP_201_CREATED,
+)
 # @router.post("/",  status_code=status.HTTP_201_CREATED)
 async def create_practice_session(
     session_data: IndividualPracticeSessionCreate,
     service: PracticeSessionService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-    '''
+    """
     Crea una nueva sesion de practica individual
 
     Este endpoint permite la creacion de una nueva sesion de practica de tiro para un tirador especifico
@@ -48,13 +53,13 @@ async def create_practice_session(
         400: Datos de entrada inválidos
         404: Tirador o instructor no encontrado
 
-    '''
+    """
     current_user_id = current_user.id
 
     if current_user.role != RoleEnum.TIRADOR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Solo los tiradores pueden crear sesiones de practica. Tu rol actual es: {current_user.role}"
+            detail=f"Solo los tiradores pueden crear sesiones de practica. Tu rol actual es: {current_user.role}",
         )
 
     session, error = service.create_session(session_data, current_user_id)
@@ -62,19 +67,18 @@ async def create_practice_session(
         status_code = status.HTTP_400_BAD_REQUEST
         if error == "SHOOTER_NOT_FOUND" or error == "INSTRUCTOR_NOT_FOUND":
             status_code = status.HTTP_404_NOT_FOUND
-        raise HTTPException(
-            status_code=status_code,
-            detail=error
-        )
+        raise HTTPException(status_code=status_code, detail=error)
     return session
 
 
 @router.get("/recent", response_model=List[IndividualPracticeSessionRead])
 async def get_recent_sessions(
     shooter_id: Optional[UUID] = Query(None, description="Filtrar por ID del tirador"),
-    limit: int = Query(5, ge=1, le=20, description="Número máximo de sesiones a devolver"),
+    limit: int = Query(
+        5, ge=1, le=20, description="Número máximo de sesiones a devolver"
+    ),
     session_service: PracticeSessionService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Obtiene las sesiones de práctica más recientes.
@@ -98,7 +102,7 @@ async def get_recent_sessions(
 async def get_practice_session(
     session_id: UUID = Path(..., description="ID de la sesión de práctica a obtener"),
     session_service: PracticeSessionService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Obtiene los detalles de una sesión de práctica específica.
@@ -120,27 +124,39 @@ async def get_practice_session(
     session, error = session_service.get_session_by_id(session_id)
 
     if error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
 
     return session
+
 
 @router.get("/", response_model=IndividualPracticeSessionList)
 async def list_practice_sessions(
     shooter_id: Optional[UUID] = Query(None, description="Filtrar por ID del tirador"),
-    instructor_id: Optional[UUID] = Query(None, description="Filtrar por ID del instructor"),
+    instructor_id: Optional[UUID] = Query(
+        None, description="Filtrar por ID del instructor"
+    ),
     location: Optional[str] = Query(None, description="Filtrar por ubicación"),
-    start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
+    start_date: Optional[datetime] = Query(
+        None, description="Fecha de inicio para filtrar"
+    ),
     end_date: Optional[datetime] = Query(None, description="Fecha final para filtrar"),
-    min_accuracy: Optional[float] = Query(None, ge=0, le=100, description="Precisión mínima"),
-    max_accuracy: Optional[float] = Query(None, ge=0, le=100, description="Precisión máxima"),
-    search: Optional[str] = Query(None, description="Término de búsqueda en ubicación o nombre del tirador"),
-    skip: int = Query(0, ge=0, description="Número de registros a omitir (para paginación)"),
-    limit: int = Query(100, ge=1, le=100, description="Número máximo de registros a devolver"),
+    min_accuracy: Optional[float] = Query(
+        None, ge=0, le=100, description="Precisión mínima"
+    ),
+    max_accuracy: Optional[float] = Query(
+        None, ge=0, le=100, description="Precisión máxima"
+    ),
+    search: Optional[str] = Query(
+        None, description="Término de búsqueda en ubicación o nombre del tirador"
+    ),
+    skip: int = Query(
+        0, ge=0, description="Número de registros a omitir (para paginación)"
+    ),
+    limit: int = Query(
+        100, ge=1, le=100, description="Número máximo de registros a devolver"
+    ),
     session_service: PracticeSessionService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Lista sesiones de práctica con opciones de filtrado y paginación.
@@ -185,17 +201,20 @@ async def list_practice_sessions(
         max_accuracy=max_accuracy,
         search=search,
         skip=skip,
-        limit=limit
+        limit=limit,
     )
     # TODO: Testear cuando haya mas datos
     return session_service.get_all_sessions(filter_params)
 
+
 @router.put("/{session_id}", response_model=IndividualPracticeSessionRead)
 async def update_practice_session(
     session_data: IndividualPracticeSessionUpdate,
-    session_id: UUID = Path(..., description="ID de la sesión de práctica a actualizar"),
+    session_id: UUID = Path(
+        ..., description="ID de la sesión de práctica a actualizar"
+    ),
     service: PracticeSessionService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Actualiza una sesión de práctica existente.
@@ -227,18 +246,16 @@ async def update_practice_session(
         status_code = status.HTTP_400_BAD_REQUEST
         if error == "PRACTICE_SESSION_NOT_FOUND" or error == "INSTRUCTOR_NOT_FOUND":
             status_code = status.HTTP_404_NOT_FOUND
-        raise HTTPException(
-            status_code=status_code,
-            detail=error
-        )
+        raise HTTPException(status_code=status_code, detail=error)
 
     return session
 
-@router.delete('/{session_id}')
+
+@router.delete("/{session_id}")
 async def delete_practice_session(
     session_id: UUID = Path(..., description="ID de la sesion de practica"),
     service: PracticeSessionService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Elimina una sesión de práctica.
@@ -261,7 +278,7 @@ async def delete_practice_session(
     if current_user.role != RoleEnum.ADMIN:
         return HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo los administradores pueden realizar esta acción"
+            detail="Solo los administradores pueden realizar esta acción",
         )
 
     success, error = service.delete_session(session_id)
@@ -270,19 +287,30 @@ async def delete_practice_session(
         status_code = status.HTTP_400_BAD_REQUEST
         if error == "PRACTICE_SESSION_NOT_FOUND":
             status_code = status.HTTP_404_NOT_FOUND
-        raise HTTPException(
-            status_code=status_code,
-            detail=error
+        raise HTTPException(status_code=status_code, detail=error)
+
+    return {
+        "detail": (
+            f"{session_id} deleted successfully"
+            if success
+            else "Error deleting session"
         )
+    }
 
-    return {"detail": f"{f"{session_id} deleted successfully" if success else "Error deleting session"}"}
 
-@router.get("/shooter/{shooter_id}/statistics", response_model=IndividualPracticeSessionStatistics)
+@router.get(
+    "/shooter/{shooter_id}/statistics",
+    response_model=IndividualPracticeSessionStatistics,
+)
 async def get_shooter_statistics(
-    shooter_id: UUID = Path(..., description="ID del tirador para obtener estadísticas"),
-    period: Optional[str] = Query(None, description="Período para las estadísticas (week, month, year)"),
+    shooter_id: UUID = Path(
+        ..., description="ID del tirador para obtener estadísticas"
+    ),
+    period: Optional[str] = Query(
+        None, description="Período para las estadísticas (week, month, year)"
+    ),
     session_service: PracticeSessionService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Obtiene estadísticas de sesiones de práctica para un tirador específico.
@@ -316,9 +344,6 @@ async def get_shooter_statistics(
         elif error == "INVALID_PERIOD":
             status_code = status.HTTP_400_BAD_REQUEST
 
-        raise HTTPException(
-            status_code=status_code,
-            detail=error
-        )
+        raise HTTPException(status_code=status_code, detail=error)
 
     return stats

@@ -20,6 +20,8 @@ class ShooterBase(BaseModel):
     club_id: Optional[UUID] = None
     nickname: Optional[str] = None
     license_file: Optional[str] = None
+    nickname: Optional[str] = None
+    license_file: Optional[str] = None
 
 
 class ShooterCreate(ShooterBase):
