@@ -8,6 +8,20 @@ from alembic import context
 from src.infraestructure.database.session import Base
 from src.infraestructure.database.models.user_model import UserBiometricDataModel, UserMedicalDataModel, UserModel, UserPersonalDataModel
 from src.infraestructure.database.models.shooter_model import ShooterModel
+from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
+from src.infraestructure.database.models.shooting_club_model import ShootingClubModel
+from src.infraestructure.database.models.ammunition_model import AmmunitionModel
+from src.infraestructure.database.models.weapon_model import WeaponModel
+from src.infraestructure.database.models.target_model import TargetModel
+from src.infraestructure.database.models.weapon_ammunition_compatibility_model import WeaponAmmunitionCompatibilityModel
+from src.infraestructure.database.models.exercise_type_model import ExerciseTypeModel
+from src.infraestructure.database.models.shooter_performance_log_model import ShooterPerformanceLogModel
+from src.infraestructure.database.models.practice_session_model import IndividualPracticeSessionModel
+from src.infraestructure.database.models.practice_exercise_model import PracticeExerciseModel
+from src.infraestructure.database.models.evaluation_model import PracticeEvaluationModel
+from src.infraestructure.database.models.target_image_model import TargetImageModel
+from src.infraestructure.database.models.target_analysis_model import TargetAnalysisModel
+from src.infraestructure.database.models.shooting_recommendation_model import ShootingRecommendationModel
 
 import os
 from dotenv import load_dotenv

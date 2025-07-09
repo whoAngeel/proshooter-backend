@@ -14,10 +14,14 @@ from src.presentation.schemas.user_schemas import (
     UserMedicalDataCreate,
     UserMedicalDataUpdate,
     UserPersonalDataCreate,
-    UserPersonalDataUpdate
+    UserPersonalDataUpdate,
 )
+from fastapi import HTTPException
+from src.domain.enums.role_enum import RoleEnum
+from src.application.services.shooter_service import ShooterRepository
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 class UserService:
     @staticmethod
@@ -26,26 +30,46 @@ class UserService:
         if existing_user:
             return None
         hashed_password = pwd_context.hash(user_data.password)
-        return UserRepository.create_user_with_shooter(db, user_data, hashed_password)
+        return UserRepository.register(db, user_data, hashed_password)
 
     @staticmethod
-    def get_user(db:Session, user_id: UUID):
+    def get_user(db: Session, user_id: UUID):
         return UserRepository.get_by_id(db, user_id)
 
     @staticmethod
-    def get_users(db:Session):
+    def get_users(db: Session):
         return UserRepository.get_all(db)
 
     @staticmethod
-    def toggle_active(db:Session, user_id: UUID):
+    def toggle_active(db: Session, user_id: UUID):
         user = UserRepository.get_by_id(db, user_id)
         if not user:
             return None
         return UserRepository.toggle_active(db, user_id)
 
+    @staticmethod
+    def promote_role(db: Session, user_id: UUID, new_role: str):
+        """
+        Servicio para promover el rol de un usuario.
+
+        Args:
+            db: Sesión de base de datos
+            user_id: ID del usuario a promover
+            new_role: Nuevo rol al que se quiere promover
+
+        Returns:
+            Tupla (usuario_actualizado, mensaje_error)
+        """
+        return UserRepository.promote_role(db, user_id, new_role)
+
+    # TODO: validar los requisitos para promover a un tirador
+
+    # Verificar si tiene registro como tirador
 
     @staticmethod
-    def create_personal_data(db: Session, user_id: UUID, data_in: UserPersonalDataCreate):
+    def create_personal_data(
+        db: Session, user_id: UUID, data_in: UserPersonalDataCreate
+    ):
         user = UserRepository.get_by_id(db, user_id)
         if not user:
             return None, "USER_NOT_FOUND"
@@ -57,7 +81,9 @@ class UserService:
         return created_data, None
 
     @staticmethod
-    def update_personal_data(db: Session, user_id: UUID, data_in: UserPersonalDataUpdate):
+    def update_personal_data(
+        db: Session, user_id: UUID, data_in: UserPersonalDataUpdate
+    ):
         user = UserRepository.get_by_id(db, user_id)
         if not user:
             return None, "USER_NOT_FOUND"
@@ -89,24 +115,31 @@ class UserService:
 
         return updated_medical_data, None
 
-
     @staticmethod
-    def create_biometric_data(db: Session, user_id: UUID, data_in: UserBiometricDataCreate):
+    def create_biometric_data(
+        db: Session, user_id: UUID, data_in: UserBiometricDataCreate
+    ):
         user = UserRepository.get_by_id(db, user_id)
         if not user:
             return None, "USER_NOT_FOUND"
-        existing_biometric_data = UserBiometricDataRepository.get_by_user_id(db, user_id)
+        existing_biometric_data = UserBiometricDataRepository.get_by_user_id(
+            db, user_id
+        )
         if existing_biometric_data:
             return None, "BIO_METRIC_DATA_ALREADY_EXISTS"
         new_biometric_data = UserBiometricDataRepository.create(db, user_id, data_in)
         return new_biometric_data, None
 
     @staticmethod
-    def update_biometric_data(db: Session, user_id: UUID, data_in: UserBiometricDataCreate):
+    def update_biometric_data(
+        db: Session, user_id: UUID, data_in: UserBiometricDataCreate
+    ):
         user = UserRepository.get_by_id(db, user_id)
         if not user:
             return None, "USER_NOT_FOUND"
-        updated_biometric_data = UserBiometricDataRepository.update(db, user_id, data_in)
+        updated_biometric_data = UserBiometricDataRepository.update(
+            db, user_id, data_in
+        )
         if not updated_biometric_data:
             return None, "BIO_METRIC_DATA_NOT_FOUND"
         return updated_biometric_data, None

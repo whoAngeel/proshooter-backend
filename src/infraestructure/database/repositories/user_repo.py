@@ -1,7 +1,11 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from uuid import UUID
+from typing import Dict
 from passlib.context import CryptContext
+from sqlalchemy.exc import SQLAlchemyError
+from src.domain.enums.role_enum import RoleEnum
 from src.infraestructure.database.models.user_model import (
     UserModel,
     UserMedicalDataModel,
@@ -17,7 +21,9 @@ from src.presentation.schemas.user_schemas import (
     UserMedicalDataUpdate,
     UserBiometricDataUpdate
 )
-
+from src.infraestructure.database.repositories.shooter_stats_repo import ShooterStatsRepository
+from src.infraestructure.database.repositories.shooter_repo import ShooterRepository
+from fastapi import HTTPException
 class UserRepository:
     @staticmethod
     def get_by_id(db: Session, user_id: UUID):
@@ -40,8 +46,8 @@ class UserRepository:
         )
 
         db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
+        db.flush()
+        # db.refresh(new_user)
         return new_user
 
     @staticmethod
@@ -53,29 +59,90 @@ class UserRepository:
         return user
 
     @staticmethod
-    def create_user_with_shooter(db: Session, user_data: UserCreate, hashed_password: str):
-        new_user = UserModel(
-            email=user_data.email,
-            hashed_password=hashed_password
-        )
-
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-
-        new_shooter = ShooterModel(
-            user_id = new_user.id
-        )
-
-        db.add(new_shooter)
-        db.commit()
-        db.refresh(new_shooter)
-
-        return new_user
+    def update(db:Session, user: UserModel) -> UserModel:
+        db.add(user)
+        db.flush()
+        db.refresh(user)
+        return user
 
 
+    @staticmethod
+    def register(db: Session, user_data: UserCreate, hashed_password: str) -> UserModel:
+        try:
+            new_user = UserRepository.create(db, user_data, hashed_password)
+            db.refresh(new_user)
+            ShooterRepository.create(db, new_user.id)
+            ShooterStatsRepository.create(db, new_user.id)
+            db.commit()
+            return new_user
+        except IntegrityError as ie:
+            db.rollback()
+            raise None
+        except Exception as e:
+            db.rollback()
+            raise None
 
+    @staticmethod
+    def promote_role(db: Session, user_id: UUID, new_role: str):
+        """
+        Promueve a un usuario a un nuevo rol siguiendo la jerarquía establecida.
 
+        Args:
+            db: Sesión de base de datos
+            user_id: ID del usuario a promover
+            new_role: Nuevo rol deseado
+
+        Returns:
+            Tupla (usuario_actualizado, mensaje_error)
+        """
+        # Obtener el usuario
+        user = UserRepository.get_by_id(db, user_id)
+        if not user:
+            return None, "USER_NOT_FOUND"
+
+        # Verificar que el usuario esté activo
+        if not user.is_active:
+            return None, "USER_NOT_ACTIVE"
+
+        # Verificar que el nuevo rol sea válido usando el enum
+        try:
+            new_role_enum = RoleEnum.from_string(new_role)
+        except ValueError:
+            return None, "INVALID_ROLE"
+
+        # Obtener el rol actual como enum
+        current_role_enum = RoleEnum.from_string(user.role)
+
+        # Definir las promociones válidas
+        valid_promotions = {
+            RoleEnum.TIRADOR: [RoleEnum.INSTRUCTOR],
+            RoleEnum.INSTRUCTOR: [RoleEnum.INSTRUCTOR_JEFE],
+            RoleEnum.INSTRUCTOR_JEFE: [],  # No puede ser promovido a un rol superior
+            RoleEnum.ADMIN: []  # Los administradores no pueden ser promovidos
+        }
+        # Verificar que la promoción siga la jerarquía correcta
+        if new_role_enum not in valid_promotions.get(current_role_enum, []):
+            return None, f"INVALID_PROMOTION:{current_role_enum}>{new_role_enum}"
+
+        try:
+            # Iniciar transacción
+            db.begin_nested()
+
+            # Actualizar el rol del usuario
+            user.role = new_role
+            db.add(user)
+            db.flush()
+            db.refresh(user)
+
+            # Confirmar la transacción
+            db.commit()
+
+            return user, None
+        except Exception as e:
+            # Revertir la transacción en caso de error
+            db.rollback()
+            print(f"Error al promover rol: {str(e)}")
+            return None, "DATABASE_ERROR"
 
 class UserPersonalDataRepository:
     @staticmethod
@@ -168,6 +235,7 @@ class UserMedicalDataRepository:
         if data_in.emergency_contact:
             medical_data_db.emergency_contact = data_in.emergency_contact
 
+
         db.commit()
         db.refresh(medical_data_db)
         return medical_data_db
@@ -209,6 +277,14 @@ class UserBiometricDataRepository:
             biometric_data_db.hand_dominance = data_in.hand_dominance
         if data_in.eye_sight:
             biometric_data_db.eye_sight = data_in.eye_sight
+        if data_in.time_sleep:
+            biometric_data_db.time_sleep = data_in.time_sleep
+        if data_in.blood_pressure:
+            biometric_data_db.blood_pressure = data_in.blood_pressure
+        if data_in.heart_rate:
+            biometric_data_db.heart_rate = data_in.heart_rate
+        if data_in.respiratory_rate:
+            biometric_data_db.respiratory_rate = data_in.respiratory_rate
 
         db.commit()
         db.refresh(biometric_data_db)
