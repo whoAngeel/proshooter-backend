@@ -1,49 +1,54 @@
 
 services:
   postgres:
-    image: postgres:15-alpine
-    container_name: proshooter_db
+    image: postgres:15
+    container_name: proshooter_postgres
+    environment:
+      POSTGRES_USER: angel
+      POSTGRES_PASSWORD: angel
+      POSTGRES_DB: proshooter_db_dev
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      - ./init-db:/docker-entrypoint-initdb.d  # Scripts de inicialización
+    networks:
+      - proshooter_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U angel -d proshooter_db_dev"]
+      interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - proshooter-network
-    restart: unless-stopped
+
 
   api:
+    build: .
     container_name: proshooter_api
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: ${BUILD_TARGET:-development}
+    environment:
+      ENV: dev
+      DB_PORT: 5432
+      API_PORT: 8000
+      POSTGRES_USER: angel
+      POSTGRES_PASSWORD: angel
+      POSTGRES_DB: proshooter_db_dev
+      BUILD_TARGET: development
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+      SECRET_KEY: n83iPiObXhiauePC3IVbDeTlj8uTzPTd
+      DATABASE_URL: postgresql://angel:angel@postgres:5432/proshooter_db_dev
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "3000:8000"
     volumes:
-      # Solo montar código en desarrollo
-      - "${VOLUME_MOUNT:-}"
+      - ./:/app
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env.dev
     networks:
-      - proshooter-network
-    restart: unless-stopped
-    # El comando se ejecuta desde tu variable de entorno
-    command: ${START_COMMAND}
+      - proshooter_network
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
 
 networks:
-  proshooter-network:
+  proshooter_network:
     driver: bridge
 
 volumes:

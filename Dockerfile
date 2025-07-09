@@ -1,28 +1,25 @@
-FROM python:3.11-slim AS base
+# Dockerfile
+FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    gcc \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
+# Establecer directorio de trabajo
 WORKDIR /app
 
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar archivos de dependencias
 COPY requirements.txt .
+
+# Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Etapa de desarrollo
-FROM base AS development
-RUN pip install debugpy pytest
+# Copiar el código de la aplicación
 COPY . .
-EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-# Etapa de producción
-FROM base AS production
-COPY . .
-RUN useradd -m -r -s /bin/false appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# Exponer el puerto
 EXPOSE 8000
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Comando por defecto (se puede sobrescribir en docker-compose)
+CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"]
