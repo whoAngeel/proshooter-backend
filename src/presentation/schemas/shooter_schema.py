@@ -35,6 +35,7 @@ class ShooterUpdate(BaseModel):
 
     level: Optional[ShooterLevelEnum] = None
     range: Optional[str] = None
+    nickname: Optional[str] = None
     club_id: Optional[UUID] = None
 
 

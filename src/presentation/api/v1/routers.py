@@ -12,8 +12,10 @@ from .endpoints import practice_type_router as practice_type
 from .endpoints import practice_session_router as practice_session
 from .endpoints import practice_exercise_router as practice_exercise
 from .endpoints import practice_evaluation_router as practice_evaluation
-router = APIRouter()
+from .endpoints import health_router as health
 
+router = APIRouter()
+router.include_router(health.router)
 router.include_router(users.router)
 router.include_router(shooter.router)
 router.include_router(auth.router)
