@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: subkey/proshooter-db:latest
+    container_name: proshooter_db_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: proshooter_db_prod
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: quTBg7FtWz
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d proshooter_db_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - proshooter-network
+    restart: unless-stopped
+
+  api:
+    image: subkey/proshooter-api:latest
+    container_name: proshooter_api_prod
+    ports:
+      - "80:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://admin:quTBg7FtWz@postgres:5432/proshooter_db_prod
+      - SECRET_KEY=n83iPiObXhiauePC3IVbDeTlj8uTzPTd
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - ENV=prod
+    networks:
+      - proshooter-network
+    restart: unless-stopped
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 4"
+
+networks:
+  proshooter-network:
+    driver: bridge
+
+volumes:
+  postgres_data_prod:
