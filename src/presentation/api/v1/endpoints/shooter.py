@@ -30,6 +30,47 @@ router = APIRouter(
 )
 
 
+# Endpoint para validar si un nickname está disponible
+@router.get("/validate-nickname", summary="Valida si un nickname está disponible")
+async def validate_nickname(
+    nickname: str = Query(
+        ..., min_length=3, max_length=32, description="Nickname a validar"
+    ),
+    shooter_service: ShooterService = Depends(),
+):
+    """
+    Verifica si un nickname de tirador está disponible.
+    Retorna {"available": true/false}
+    """
+    is_available = shooter_service.is_nickname_available(nickname)
+    return {"available": is_available}
+
+
+# Endpoint para obtener todos los tiradores con paginación
+@router.get("/", response_model=ShooterList)
+async def get_all_shooters(
+    skip: int = Query(0, ge=0, description="Índice de inicio de la página"),
+    limit: int = Query(
+        100, ge=1, le=500, description="Cantidad de tiradores por página (máx 500)"
+    ),
+    shooter_service: ShooterService = Depends(),
+):
+    """
+    Obtiene una lista paginada de todos los tiradores.
+
+    Permite filtrar y paginar los resultados.
+
+    Parámetros:
+        skip: Índice de inicio (offset)
+        limit: Cantidad de resultados por página (default 100)
+    Retorna:
+        Lista paginada de tiradores
+    """
+    filter_params = ShooterFilter(skip=skip, limit=limit)
+    shooters = shooter_service.get_all_shooters(filter_params)
+    return shooters
+
+
 @router.get("/{user_id}", response_model=ShooterDetail)
 async def get_shooter(
     user_id: UUID = Path(..., description="ID del usuario/tirador a obtener"),

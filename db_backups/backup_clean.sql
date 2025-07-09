@@ -1,3 +1,9 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 15.13
+-- Dumped by pg_dump version 15.13
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -11,7 +17,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: ammotype; Type: TYPE; Schema: public; Owner: angel
+-- Name: ammotype; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.ammotype AS ENUM (
@@ -26,10 +32,8 @@ CREATE TYPE public.ammotype AS ENUM (
 );
 
 
-ALTER TYPE public.ammotype OWNER TO angel;
-
 --
--- Name: shooterlevelenum; Type: TYPE; Schema: public; Owner: angel
+-- Name: shooterlevelenum; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.shooterlevelenum AS ENUM (
@@ -40,10 +44,8 @@ CREATE TYPE public.shooterlevelenum AS ENUM (
 );
 
 
-ALTER TYPE public.shooterlevelenum OWNER TO angel;
-
 --
--- Name: targettype; Type: TYPE; Schema: public; Owner: angel
+-- Name: targettype; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.targettype AS ENUM (
@@ -52,10 +54,8 @@ CREATE TYPE public.targettype AS ENUM (
 );
 
 
-ALTER TYPE public.targettype OWNER TO angel;
-
 --
--- Name: weapontypeenum; Type: TYPE; Schema: public; Owner: angel
+-- Name: weapontypeenum; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.weapontypeenum AS ENUM (
@@ -70,14 +70,12 @@ CREATE TYPE public.weapontypeenum AS ENUM (
 );
 
 
-ALTER TYPE public.weapontypeenum OWNER TO angel;
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: alembic_version; Type: TABLE; Schema: public; Owner: angel
+-- Name: alembic_version; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.alembic_version (
@@ -85,10 +83,8 @@ CREATE TABLE public.alembic_version (
 );
 
 
-ALTER TABLE public.alembic_version OWNER TO angel;
-
 --
--- Name: ammunition; Type: TABLE; Schema: public; Owner: angel
+-- Name: ammunition; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.ammunition (
@@ -107,10 +103,8 @@ CREATE TABLE public.ammunition (
 );
 
 
-ALTER TABLE public.ammunition OWNER TO angel;
-
 --
--- Name: exercise_types; Type: TABLE; Schema: public; Owner: angel
+-- Name: exercise_types; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.exercise_types (
@@ -126,10 +120,8 @@ CREATE TABLE public.exercise_types (
 );
 
 
-ALTER TABLE public.exercise_types OWNER TO angel;
-
 --
--- Name: individual_practice_sessions; Type: TABLE; Schema: public; Owner: angel
+-- Name: individual_practice_sessions; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.individual_practice_sessions (
@@ -147,10 +139,8 @@ CREATE TABLE public.individual_practice_sessions (
 );
 
 
-ALTER TABLE public.individual_practice_sessions OWNER TO angel;
-
 --
--- Name: practice_evaluations; Type: TABLE; Schema: public; Owner: angel
+-- Name: practice_evaluations; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.practice_evaluations (
@@ -179,10 +169,8 @@ CREATE TABLE public.practice_evaluations (
 );
 
 
-ALTER TABLE public.practice_evaluations OWNER TO angel;
-
 --
--- Name: practice_exercises; Type: TABLE; Schema: public; Owner: angel
+-- Name: practice_exercises; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.practice_exercises (
@@ -205,10 +193,8 @@ CREATE TABLE public.practice_exercises (
 );
 
 
-ALTER TABLE public.practice_exercises OWNER TO angel;
-
 --
--- Name: shooter_performance_logs; Type: TABLE; Schema: public; Owner: angel
+-- Name: shooter_performance_logs; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.shooter_performance_logs (
@@ -223,10 +209,8 @@ CREATE TABLE public.shooter_performance_logs (
 );
 
 
-ALTER TABLE public.shooter_performance_logs OWNER TO angel;
-
 --
--- Name: shooter_stats; Type: TABLE; Schema: public; Owner: angel
+-- Name: shooter_stats; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.shooter_stats (
@@ -250,10 +234,8 @@ CREATE TABLE public.shooter_stats (
 );
 
 
-ALTER TABLE public.shooter_stats OWNER TO angel;
-
 --
--- Name: shooters; Type: TABLE; Schema: public; Owner: angel
+-- Name: shooters; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.shooters (
@@ -268,10 +250,8 @@ CREATE TABLE public.shooters (
 );
 
 
-ALTER TABLE public.shooters OWNER TO angel;
-
 --
--- Name: shooting_clubs; Type: TABLE; Schema: public; Owner: angel
+-- Name: shooting_clubs; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.shooting_clubs (
@@ -285,10 +265,8 @@ CREATE TABLE public.shooting_clubs (
 );
 
 
-ALTER TABLE public.shooting_clubs OWNER TO angel;
-
 --
--- Name: shooting_recommendations; Type: TABLE; Schema: public; Owner: angel
+-- Name: shooting_recommendations; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.shooting_recommendations (
@@ -305,10 +283,8 @@ CREATE TABLE public.shooting_recommendations (
 );
 
 
-ALTER TABLE public.shooting_recommendations OWNER TO angel;
-
 --
--- Name: target_analyses; Type: TABLE; Schema: public; Owner: angel
+-- Name: target_analyses; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.target_analyses (
@@ -325,10 +301,8 @@ CREATE TABLE public.target_analyses (
 );
 
 
-ALTER TABLE public.target_analyses OWNER TO angel;
-
 --
--- Name: target_images; Type: TABLE; Schema: public; Owner: angel
+-- Name: target_images; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.target_images (
@@ -343,10 +317,8 @@ CREATE TABLE public.target_images (
 );
 
 
-ALTER TABLE public.target_images OWNER TO angel;
-
 --
--- Name: targets; Type: TABLE; Schema: public; Owner: angel
+-- Name: targets; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.targets (
@@ -363,10 +335,8 @@ CREATE TABLE public.targets (
 );
 
 
-ALTER TABLE public.targets OWNER TO angel;
-
 --
--- Name: user_biometric_data; Type: TABLE; Schema: public; Owner: angel
+-- Name: user_biometric_data; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.user_biometric_data (
@@ -384,10 +354,8 @@ CREATE TABLE public.user_biometric_data (
 );
 
 
-ALTER TABLE public.user_biometric_data OWNER TO angel;
-
 --
--- Name: user_medical_data; Type: TABLE; Schema: public; Owner: angel
+-- Name: user_medical_data; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.user_medical_data (
@@ -401,10 +369,8 @@ CREATE TABLE public.user_medical_data (
 );
 
 
-ALTER TABLE public.user_medical_data OWNER TO angel;
-
 --
--- Name: user_personal_data; Type: TABLE; Schema: public; Owner: angel
+-- Name: user_personal_data; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.user_personal_data (
@@ -424,10 +390,8 @@ CREATE TABLE public.user_personal_data (
 );
 
 
-ALTER TABLE public.user_personal_data OWNER TO angel;
-
 --
--- Name: users; Type: TABLE; Schema: public; Owner: angel
+-- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.users (
@@ -441,10 +405,8 @@ CREATE TABLE public.users (
 );
 
 
-ALTER TABLE public.users OWNER TO angel;
-
 --
--- Name: weapon_ammunition_compatibility; Type: TABLE; Schema: public; Owner: angel
+-- Name: weapon_ammunition_compatibility; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.weapon_ammunition_compatibility (
@@ -455,10 +417,8 @@ CREATE TABLE public.weapon_ammunition_compatibility (
 );
 
 
-ALTER TABLE public.weapon_ammunition_compatibility OWNER TO angel;
-
 --
--- Name: weapons; Type: TABLE; Schema: public; Owner: angel
+-- Name: weapons; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.weapons (
@@ -476,10 +436,8 @@ CREATE TABLE public.weapons (
 );
 
 
-ALTER TABLE public.weapons OWNER TO angel;
-
 --
--- Data for Name: alembic_version; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: alembic_version; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.alembic_version (version_num) FROM stdin;
@@ -488,7 +446,7 @@ COPY public.alembic_version (version_num) FROM stdin;
 
 
 --
--- Data for Name: ammunition; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: ammunition; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.ammunition (id, name, brand, caliber, ammo_type, grain_weight, velocity, description, price_per_round, is_active, created_at, updated_at) FROM stdin;
@@ -500,7 +458,7 @@ e42e0f37-5552-475b-bc16-b4684b9db90e	9mm Luger Punta hueca	Speer	9mm	HOLLOW_POIN
 
 
 --
--- Data for Name: exercise_types; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: exercise_types; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.exercise_types (id, name, description, difficulty, objective, development, is_active, created_at, updated_at) FROM stdin;
@@ -509,7 +467,7 @@ COPY public.exercise_types (id, name, description, difficulty, objective, develo
 
 
 --
--- Data for Name: individual_practice_sessions; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: individual_practice_sessions; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.individual_practice_sessions (id, shooter_id, instructor_id, date, location, total_shots_fired, total_hits, accuracy_percentage, created_at, updated_at, evaluation_pending) FROM stdin;
@@ -519,7 +477,7 @@ f981188b-b599-45cd-82f8-9338442758d3	1b9db5f4-7062-46b3-a399-edbabe0ae740	3e2ccb
 
 
 --
--- Data for Name: practice_evaluations; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: practice_evaluations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.practice_evaluations (id, session_id, evaluator_id, final_score, classification, strengths, weaknesses, recomendations, created_at, updated_at, posture_rating, grip_rating, sight_alignment_rating, trigger_control_rating, breathing_rating, primary_issue_zone, secondary_issue_zone, avg_reaction_time, avg_draw_time, avg_reload_time, hit_factor, date) FROM stdin;
@@ -529,7 +487,7 @@ fa66cb8a-a655-4495-840c-08f50a3d555d	d2f4af45-cf8a-4e9c-8002-0bf78657cb1c	\N	97.
 
 
 --
--- Data for Name: practice_exercises; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: practice_exercises; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.practice_exercises (id, session_id, exercise_type_id, distance, firing_cadence, time_limit, ammunition_allocated, ammunition_used, hits, accuracy_percentage, reaction_time, created_at, updated_at, target_id, weapon_id, ammunition_id) FROM stdin;
@@ -540,7 +498,7 @@ d40a699e-feb2-4d26-9d5d-34fba6265177	d2f4af45-cf8a-4e9c-8002-0bf78657cb1c	576d5c
 
 
 --
--- Data for Name: shooter_performance_logs; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: shooter_performance_logs; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.shooter_performance_logs (id, shooter_id, metric_type, metric_value, context, notes, created_at, updated_at) FROM stdin;
@@ -548,7 +506,7 @@ COPY public.shooter_performance_logs (id, shooter_id, metric_type, metric_value,
 
 
 --
--- Data for Name: shooter_stats; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: shooter_stats; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.shooter_stats (shooter_id, total_shots, accuracy, reaction_shots, presicion_shots, draw_time_avg, reload_time_avg, average_hit_factor, effectiveness, common_error_zones, created_at, updated_at, trend_accuracy, last_10_sessions_avg, precision_exercise_accuracy, reaction_exercise_accuracy, movement_exercise_accuracy) FROM stdin;
@@ -578,7 +536,7 @@ e80d49ad-3d95-4084-b781-2b18ea7e190a	0	0	0	0	0	0	0	0	\N	2025-05-21 01:58:41.5207
 
 
 --
--- Data for Name: shooters; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: shooters; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.shooters (user_id, club_id, level, range, created_at, updated_at, nickname, license_file) FROM stdin;
@@ -608,7 +566,7 @@ e80d49ad-3d95-4084-b781-2b18ea7e190a	\N	REGULAR	\N	2025-05-21 01:58:41.520785+00
 
 
 --
--- Data for Name: shooting_clubs; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: shooting_clubs; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.shooting_clubs (id, name, description, chief_instructor_id, is_active, created_at, updated_at) FROM stdin;
@@ -616,7 +574,7 @@ COPY public.shooting_clubs (id, name, description, chief_instructor_id, is_activ
 
 
 --
--- Data for Name: shooting_recommendations; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: shooting_recommendations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.shooting_recommendations (id, analysis_id, primary_issue_zone, primary_issue_zone_description, secondary_issue_zone, secondary_issue_zone_description, recommended_exercises, recommendation_description, created_at, updated_at) FROM stdin;
@@ -624,7 +582,7 @@ COPY public.shooting_recommendations (id, analysis_id, primary_issue_zone, prima
 
 
 --
--- Data for Name: target_analyses; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: target_analyses; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.target_analyses (id, target_image_id, analysis_timestamp, total_impacts_detected, zone_distribution, impact_coordinates, analysis_confidence, analysis_method, created_at, updated_at) FROM stdin;
@@ -632,7 +590,7 @@ COPY public.target_analyses (id, target_image_id, analysis_timestamp, total_impa
 
 
 --
--- Data for Name: target_images; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: target_images; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.target_images (id, exercise_id, file_path, file_size, content_type, uploaded_at, created_at, updated_at) FROM stdin;
@@ -640,7 +598,7 @@ COPY public.target_images (id, exercise_id, file_path, file_size, content_type, 
 
 
 --
--- Data for Name: targets; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: targets; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.targets (id, name, target_type, description, scoring_zones, dimensions, distance_recommended, is_active, created_at, updated_at) FROM stdin;
@@ -649,7 +607,7 @@ COPY public.targets (id, name, target_type, description, scoring_zones, dimensio
 
 
 --
--- Data for Name: user_biometric_data; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: user_biometric_data; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.user_biometric_data (user_id, height, weight, hand_dominance, eye_sight, time_sleep, blood_pressure, heart_rate, respiratory_rate, created_at, updated_at) FROM stdin;
@@ -657,7 +615,7 @@ COPY public.user_biometric_data (user_id, height, weight, hand_dominance, eye_si
 
 
 --
--- Data for Name: user_medical_data; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: user_medical_data; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.user_medical_data (user_id, blood_type, allergies, medical_conditions, emergency_contact, created_at, updated_at) FROM stdin;
@@ -665,7 +623,7 @@ COPY public.user_medical_data (user_id, blood_type, allergies, medical_condition
 
 
 --
--- Data for Name: user_personal_data; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: user_personal_data; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.user_personal_data (user_id, first_name, second_name, last_name1, last_name2, phone_number, date_of_birth, city, state, country, created_at, updated_at, genre) FROM stdin;
@@ -677,7 +635,7 @@ e371cdf0-cebd-489d-8fef-569eee2cca26	Kevin	Alize	Pollich	\N	782-863-1797	2001-11
 
 
 --
--- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.users (id, email, hashed_password, role, is_active, created_at, updated_at) FROM stdin;
@@ -707,7 +665,7 @@ e80d49ad-3d95-4084-b781-2b18ea7e190a	Cheyenne_Lesch@yahoo.com	$2b$12$Av5eNjHxylk
 
 
 --
--- Data for Name: weapon_ammunition_compatibility; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: weapon_ammunition_compatibility; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.weapon_ammunition_compatibility (id, weapon_id, ammunition_id, created_at) FROM stdin;
@@ -718,7 +676,7 @@ b83346a3-fcf0-41e3-8ec8-ba32b5d1b8e5	3253672d-7540-4ace-888f-c4caf7e616ad	59d137
 
 
 --
--- Data for Name: weapons; Type: TABLE DATA; Schema: public; Owner: angel
+-- Data for Name: weapons; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.weapons (id, name, brand, model, serial_number, weapon_type, caliber, description, is_active, created_at, updated_at) FROM stdin;
@@ -728,7 +686,7 @@ fdf40c58-128a-4505-a771-c22ac45fc20f	Glock 19	Glock	Gen 5	G19-GEN5-12345	PISTOL	
 
 
 --
--- Name: alembic_version alembic_version_pkc; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: alembic_version alembic_version_pkc; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.alembic_version
@@ -736,7 +694,7 @@ ALTER TABLE ONLY public.alembic_version
 
 
 --
--- Name: ammunition ammunition_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: ammunition ammunition_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.ammunition
@@ -744,7 +702,7 @@ ALTER TABLE ONLY public.ammunition
 
 
 --
--- Name: exercise_types exercise_types_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: exercise_types exercise_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.exercise_types
@@ -752,7 +710,7 @@ ALTER TABLE ONLY public.exercise_types
 
 
 --
--- Name: individual_practice_sessions individual_practice_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: individual_practice_sessions individual_practice_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.individual_practice_sessions
@@ -760,7 +718,7 @@ ALTER TABLE ONLY public.individual_practice_sessions
 
 
 --
--- Name: practice_evaluations practice_evaluations_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_evaluations practice_evaluations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_evaluations
@@ -768,7 +726,7 @@ ALTER TABLE ONLY public.practice_evaluations
 
 
 --
--- Name: practice_exercises practice_exercises_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_exercises practice_exercises_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_exercises
@@ -776,7 +734,7 @@ ALTER TABLE ONLY public.practice_exercises
 
 
 --
--- Name: shooter_performance_logs shooter_performance_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooter_performance_logs shooter_performance_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooter_performance_logs
@@ -784,7 +742,7 @@ ALTER TABLE ONLY public.shooter_performance_logs
 
 
 --
--- Name: shooter_stats shooter_stats_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooter_stats shooter_stats_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooter_stats
@@ -792,7 +750,7 @@ ALTER TABLE ONLY public.shooter_stats
 
 
 --
--- Name: shooters shooters_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooters shooters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooters
@@ -800,7 +758,7 @@ ALTER TABLE ONLY public.shooters
 
 
 --
--- Name: shooting_clubs shooting_clubs_chief_instructor_id_key; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooting_clubs shooting_clubs_chief_instructor_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooting_clubs
@@ -808,7 +766,7 @@ ALTER TABLE ONLY public.shooting_clubs
 
 
 --
--- Name: shooting_clubs shooting_clubs_name_key; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooting_clubs shooting_clubs_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooting_clubs
@@ -816,7 +774,7 @@ ALTER TABLE ONLY public.shooting_clubs
 
 
 --
--- Name: shooting_clubs shooting_clubs_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooting_clubs shooting_clubs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooting_clubs
@@ -824,7 +782,7 @@ ALTER TABLE ONLY public.shooting_clubs
 
 
 --
--- Name: shooting_recommendations shooting_recommendations_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooting_recommendations shooting_recommendations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooting_recommendations
@@ -832,7 +790,7 @@ ALTER TABLE ONLY public.shooting_recommendations
 
 
 --
--- Name: target_analyses target_analyses_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: target_analyses target_analyses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.target_analyses
@@ -840,7 +798,7 @@ ALTER TABLE ONLY public.target_analyses
 
 
 --
--- Name: target_images target_images_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: target_images target_images_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.target_images
@@ -848,7 +806,7 @@ ALTER TABLE ONLY public.target_images
 
 
 --
--- Name: targets targets_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: targets targets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.targets
@@ -856,7 +814,7 @@ ALTER TABLE ONLY public.targets
 
 
 --
--- Name: user_biometric_data user_biometric_data_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: user_biometric_data user_biometric_data_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_biometric_data
@@ -864,7 +822,7 @@ ALTER TABLE ONLY public.user_biometric_data
 
 
 --
--- Name: user_medical_data user_medical_data_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: user_medical_data user_medical_data_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_medical_data
@@ -872,7 +830,7 @@ ALTER TABLE ONLY public.user_medical_data
 
 
 --
--- Name: user_personal_data user_personal_data_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: user_personal_data user_personal_data_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_personal_data
@@ -880,7 +838,7 @@ ALTER TABLE ONLY public.user_personal_data
 
 
 --
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -888,7 +846,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: weapon_ammunition_compatibility weapon_ammunition_compatibility_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: weapon_ammunition_compatibility weapon_ammunition_compatibility_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.weapon_ammunition_compatibility
@@ -896,7 +854,7 @@ ALTER TABLE ONLY public.weapon_ammunition_compatibility
 
 
 --
--- Name: weapons weapons_pkey; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: weapons weapons_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.weapons
@@ -904,7 +862,7 @@ ALTER TABLE ONLY public.weapons
 
 
 --
--- Name: weapons weapons_serial_number_key; Type: CONSTRAINT; Schema: public; Owner: angel
+-- Name: weapons weapons_serial_number_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.weapons
@@ -912,21 +870,21 @@ ALTER TABLE ONLY public.weapons
 
 
 --
--- Name: ix_shooters_nickname; Type: INDEX; Schema: public; Owner: angel
+-- Name: ix_shooters_nickname; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX ix_shooters_nickname ON public.shooters USING btree (nickname);
 
 
 --
--- Name: ix_users_email; Type: INDEX; Schema: public; Owner: angel
+-- Name: ix_users_email; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX ix_users_email ON public.users USING btree (email);
 
 
 --
--- Name: individual_practice_sessions individual_practice_sessions_instructor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: individual_practice_sessions individual_practice_sessions_instructor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.individual_practice_sessions
@@ -934,7 +892,7 @@ ALTER TABLE ONLY public.individual_practice_sessions
 
 
 --
--- Name: individual_practice_sessions individual_practice_sessions_shooter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: individual_practice_sessions individual_practice_sessions_shooter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.individual_practice_sessions
@@ -942,7 +900,7 @@ ALTER TABLE ONLY public.individual_practice_sessions
 
 
 --
--- Name: practice_evaluations practice_evaluations_evaluator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_evaluations practice_evaluations_evaluator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_evaluations
@@ -950,7 +908,7 @@ ALTER TABLE ONLY public.practice_evaluations
 
 
 --
--- Name: practice_evaluations practice_evaluations_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_evaluations practice_evaluations_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_evaluations
@@ -958,7 +916,7 @@ ALTER TABLE ONLY public.practice_evaluations
 
 
 --
--- Name: practice_exercises practice_exercises_ammunition_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_exercises practice_exercises_ammunition_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_exercises
@@ -966,7 +924,7 @@ ALTER TABLE ONLY public.practice_exercises
 
 
 --
--- Name: practice_exercises practice_exercises_exercise_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_exercises practice_exercises_exercise_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_exercises
@@ -974,7 +932,7 @@ ALTER TABLE ONLY public.practice_exercises
 
 
 --
--- Name: practice_exercises practice_exercises_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_exercises practice_exercises_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_exercises
@@ -982,7 +940,7 @@ ALTER TABLE ONLY public.practice_exercises
 
 
 --
--- Name: practice_exercises practice_exercises_target_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_exercises practice_exercises_target_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_exercises
@@ -990,7 +948,7 @@ ALTER TABLE ONLY public.practice_exercises
 
 
 --
--- Name: practice_exercises practice_exercises_weapon_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: practice_exercises practice_exercises_weapon_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.practice_exercises
@@ -998,7 +956,7 @@ ALTER TABLE ONLY public.practice_exercises
 
 
 --
--- Name: shooter_performance_logs shooter_performance_logs_shooter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooter_performance_logs shooter_performance_logs_shooter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooter_performance_logs
@@ -1006,7 +964,7 @@ ALTER TABLE ONLY public.shooter_performance_logs
 
 
 --
--- Name: shooter_stats shooter_stats_shooter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooter_stats shooter_stats_shooter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooter_stats
@@ -1014,7 +972,7 @@ ALTER TABLE ONLY public.shooter_stats
 
 
 --
--- Name: shooters shooters_club_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooters shooters_club_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooters
@@ -1022,7 +980,7 @@ ALTER TABLE ONLY public.shooters
 
 
 --
--- Name: shooters shooters_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooters shooters_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooters
@@ -1030,7 +988,7 @@ ALTER TABLE ONLY public.shooters
 
 
 --
--- Name: shooting_clubs shooting_clubs_chief_instructor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooting_clubs shooting_clubs_chief_instructor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooting_clubs
@@ -1038,7 +996,7 @@ ALTER TABLE ONLY public.shooting_clubs
 
 
 --
--- Name: shooting_recommendations shooting_recommendations_analysis_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: shooting_recommendations shooting_recommendations_analysis_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.shooting_recommendations
@@ -1046,7 +1004,7 @@ ALTER TABLE ONLY public.shooting_recommendations
 
 
 --
--- Name: target_analyses target_analyses_target_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: target_analyses target_analyses_target_image_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.target_analyses
@@ -1054,7 +1012,7 @@ ALTER TABLE ONLY public.target_analyses
 
 
 --
--- Name: target_images target_images_exercise_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: target_images target_images_exercise_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.target_images
@@ -1062,7 +1020,7 @@ ALTER TABLE ONLY public.target_images
 
 
 --
--- Name: user_biometric_data user_biometric_data_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: user_biometric_data user_biometric_data_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_biometric_data
@@ -1070,7 +1028,7 @@ ALTER TABLE ONLY public.user_biometric_data
 
 
 --
--- Name: user_medical_data user_medical_data_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: user_medical_data user_medical_data_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_medical_data
@@ -1078,7 +1036,7 @@ ALTER TABLE ONLY public.user_medical_data
 
 
 --
--- Name: user_personal_data user_personal_data_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: user_personal_data user_personal_data_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_personal_data
@@ -1086,7 +1044,7 @@ ALTER TABLE ONLY public.user_personal_data
 
 
 --
--- Name: weapon_ammunition_compatibility weapon_ammunition_compatibility_ammunition_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: weapon_ammunition_compatibility weapon_ammunition_compatibility_ammunition_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.weapon_ammunition_compatibility
@@ -1094,7 +1052,7 @@ ALTER TABLE ONLY public.weapon_ammunition_compatibility
 
 
 --
--- Name: weapon_ammunition_compatibility weapon_ammunition_compatibility_weapon_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: angel
+-- Name: weapon_ammunition_compatibility weapon_ammunition_compatibility_weapon_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.weapon_ammunition_compatibility
@@ -1104,3 +1062,4 @@ ALTER TABLE ONLY public.weapon_ammunition_compatibility
 --
 -- PostgreSQL database dump complete
 --
+

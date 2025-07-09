@@ -51,6 +51,10 @@ class ShooterRepository:
         )
 
     @staticmethod
+    def get_by_nickname(db: Session, nickname: str) -> Optional[ShooterModel]:
+        return db.query(ShooterModel).filter(ShooterModel.nickname == nickname).first()
+
+    @staticmethod
     def get_by_club(
         db: Session, club_id: UUID, skip: int = 0, limit: int = 100
     ) -> List[ShooterModel]:

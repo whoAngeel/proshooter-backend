@@ -15,7 +15,7 @@ from src.presentation.schemas.practice_exercise_schema import (
     PracticeExerciseList,
     PracticeExerciseStatistics,
     PracticeExerciseFilter,
-    PerformanceAnalysis
+    PerformanceAnalysis,
 )
 
 router = APIRouter(
@@ -24,11 +24,14 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.post("/", response_model=PracticeExerciseRead, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/", response_model=PracticeExerciseRead, status_code=status.HTTP_201_CREATED
+)
 async def create_exercise(
     exercise_data: PracticeExerciseCreate,
     service: PracticeExerciseService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Crea un nuevo ejercicio de práctica de tiro.
@@ -80,9 +83,11 @@ async def create_exercise(
 
 @router.get("/statistics", response_model=PracticeExerciseStatistics)
 async def get_exercise_statistics(
-    shooter_id: Optional[UUID] = Query(None, description="ID del tirador para filtrar estadísticas"),
+    shooter_id: Optional[UUID] = Query(
+        None, description="ID del tirador para filtrar estadísticas"
+    ),
     service: PracticeExerciseService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Obtiene estadísticas agregadas de ejercicios de práctica.
@@ -117,18 +122,16 @@ async def get_exercise_statistics(
         if error == "SHOOTER_NOT_FOUND":
             status_code = status.HTTP_404_NOT_FOUND
 
-        raise HTTPException(
-            status_code=status_code,
-            detail=error
-        )
+        raise HTTPException(status_code=status_code, detail=error)
 
     return stats
+
 
 @router.get("/{exercise_id}", response_model=PracticeExerciseDetail)
 async def get_exercise(
     exercise_id: UUID = Path(..., description="ID del ejercicio de práctica a obtener"),
     service: PracticeExerciseService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Obtiene los detalles de un ejercicio de práctica específico.
@@ -150,33 +153,38 @@ async def get_exercise(
     exercise, error = service.get_exercise_by_id(exercise_id)
 
     if error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
 
     return exercise
 
-@router.get('/', response_model=PracticeExerciseList)
+
+@router.get("/", response_model=PracticeExerciseList)
 async def get_exercises(
     session_id: Optional[UUID] = Query(None, description="ID de la sesión de práctica"),
     shooter_id: Optional[UUID] = Query(None, description="ID del tirador"),
-    exercise_type_id: Optional[UUID] = Query(None, description="ID del tipo de ejercicio"),
+    exercise_type_id: Optional[UUID] = Query(
+        None, description="ID del tipo de ejercicio"
+    ),
     target_id: Optional[UUID] = Query(None, description="ID del blanco"),
     weapon_id: Optional[UUID] = Query(None, description="ID del arma"),
     ammunition_id: Optional[UUID] = Query(None, description="ID de la municion"),
-    distance: Optional[str] = Query(None, description="Distancia en metros, ej. 15 metros"),
+    distance: Optional[str] = Query(
+        None, description="Distancia en metros, ej. 15 metros"
+    ),
     min_accuracy: Optional[float] = Query(None, description="Precision minima"),
     max_accuracy: Optional[float] = Query(None, description="Precision maxima"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio"),
     end_date: Optional[datetime] = Query(None, description="Fecha final"),
     search: Optional[str] = Query(None, description="Termino de busqueda"),
-    skip: int = Query(0, ge=0, description="Numero de registros a omitir (para la paginacion)"),
-    limit: int = Query(100, ge=1, le=100, description="Numero maximo de registros a devolver"),
+    skip: int = Query(
+        0, ge=0, description="Numero de registros a omitir (para la paginacion)"
+    ),
+    limit: int = Query(
+        100, ge=1, le=100, description="Numero maximo de registros a devolver"
+    ),
     service: PracticeExerciseService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-
     """
     Lista ejercicios de práctica con opciones avanzadas de filtrado y paginación.
 
@@ -221,18 +229,18 @@ async def get_exercises(
         end_date=end_date,
         search=search,
         skip=skip,
-        limit=limit
+        limit=limit,
     )
 
     return service.get_all_exercises(filter_params)
 
 
-@router.put('/{exercise_id}', response_model=PracticeExerciseRead)
+@router.put("/{exercise_id}", response_model=PracticeExerciseRead)
 async def update_exercise(
     exercise_data: PracticeExerciseUpdate,
     exercise_id: UUID,
     service: PracticeExerciseService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Actualiza un ejercicio de práctica existente.
@@ -272,24 +280,24 @@ async def update_exercise(
             "EXERCISE_TYPE_NOT_FOUND",
             "TARGET_NOT_FOUND",
             "WEAPON_NOT_FOUND",
-            "AMMUNITION_NOT_FOUND"
+            "AMMUNITION_NOT_FOUND",
         ]:
             status_code = status.HTTP_404_NOT_FOUND
         elif error == "WEAPON_AMMUNITION_NOT_COMPATIBLE":
             status_code = status.HTTP_409_CONFLICT
 
-        raise HTTPException(
-            status_code=status_code,
-            detail=error
-        )
+        raise HTTPException(status_code=status_code, detail=error)
 
     return exercise
 
-@router.delete('/{exercise_id}')
+
+@router.delete("/{exercise_id}")
 async def delete_exercise(
-    exercise_id: UUID = Path(..., description="ID del ejercicio de practica a eliminar"),
+    exercise_id: UUID = Path(
+        ..., description="ID del ejercicio de practica a eliminar"
+    ),
     service: PracticeExerciseService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Elimina un ejercicio de práctica.
@@ -312,7 +320,7 @@ async def delete_exercise(
     if current_user.role != RoleEnum.ADMIN:
         return HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo los administradores pueden realizar esta acción"
+            detail="Solo los administradores pueden realizar esta acción",
         )
 
     success, error = service.delete_exercise(exercise_id)
@@ -321,21 +329,19 @@ async def delete_exercise(
         status_code = status.HTTP_400_BAD_REQUEST
         if error == "EXERCISE_NOT_FOUND":
             status_code = status.HTTP_404_NOT_FOUND
-        raise HTTPException(
-            status_code=status_code,
-            detail=error
-        )
+        raise HTTPException(status_code=status_code, detail=error)
 
     return {
-        "message": f"{"Ejercicio eliminado exitosamente" if success else "Error en la eliminación"}",
-        "id": exercise_id
+        "message": f"{'Ejercicio eliminado exitosamente' if success else 'Error en la eliminación'}",
+        "id": exercise_id,
     }
+
 
 @router.get("/session/{session_id}", response_model=List[PracticeExerciseRead])
 async def get_session_exercises(
     session_id: UUID = Path(..., description="ID de la sesión de práctica"),
     service: PracticeExerciseService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Obtiene todos los ejercicios realizados en una sesión de práctica específica.
@@ -359,21 +365,22 @@ async def get_session_exercises(
     exercises, error = service.get_session_exercises(session_id)
 
     if error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
 
     return exercises
 
 
-
 @router.get("/analysis/{category}", response_model=PerformanceAnalysis)
 async def get_performance_analysis(
-    category: str = Path(..., description="Categoría de análisis: 'weapon', 'target', 'ammunition', 'distance' o 'exercise_type'"),
-    shooter_id: Optional[UUID] = Query(None, description="ID del tirador para filtrar el análisis"),
+    category: str = Path(
+        ...,
+        description="Categoría de análisis: 'weapon', 'target', 'ammunition', 'distance' o 'exercise_type'",
+    ),
+    shooter_id: Optional[UUID] = Query(
+        None, description="ID del tirador para filtrar el análisis"
+    ),
     service: PracticeExerciseService = Depends(),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Obtiene análisis de rendimiento por categoría específica.
@@ -407,9 +414,6 @@ async def get_performance_analysis(
         if error == "SHOOTER_NOT_FOUND":
             status_code = status.HTTP_404_NOT_FOUND
 
-        raise HTTPException(
-            status_code=status_code,
-            detail=error
-        )
+        raise HTTPException(status_code=status_code, detail=error)
 
     return analysis

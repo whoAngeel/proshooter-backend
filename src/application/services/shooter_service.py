@@ -34,6 +34,15 @@ class ShooterService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
+    def is_nickname_available(self, nickname: str) -> bool:
+        """
+        Verifica si el nickname está disponible (no existe en la base de datos).
+        """
+        if not nickname:
+            return False
+        shooter = ShooterRepository.get_by_nickname(self.db, nickname)
+        return shooter is None
+
     def get_shooter_by_id(
         self, user_id: UUID
     ) -> Tuple[Optional[ShooterDetail], Optional[str]]:
@@ -119,6 +128,14 @@ class ShooterService:
                 club = ShootingClubRepository.get_by_id(self.db, shooter_data.club_id)
                 if not club:
                     return None, "CLUB_NOT_FOUND"
+
+            # Validar nickname único si se actualiza
+            if shooter_data.nickname:
+                shooter_with_nick = ShooterRepository.get_by_nickname(
+                    self.db, shooter_data.nickname
+                )
+                if shooter_with_nick and shooter_with_nick.user_id != user_id:
+                    return None, "NICKNAME_ALREADY_EXISTS"
 
             # Convertir los datos a diccionario para actualizar
             shooter_dict = shooter_data.model_dump(
