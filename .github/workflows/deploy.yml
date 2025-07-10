@@ -19,10 +19,18 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build and Push Docker Image
+    - name: Build and Push API Image
       uses: docker/build-push-action@v4
       with:
         context: .
+        push: true
+        tags: subkey/proshooter-api:latest
+
+    - name: Build and Push DB Image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile.db
         push: true
         tags: subkey/proshooter-api:latest
 
@@ -32,8 +40,9 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
+        debug: true
         script: |
           docker pull subkey/proshooter-api:latest
-          docker-compose -f docker-compose.prod.yml down
-          docker-compose -f docker-compose.prod.yml up -d
+          docker-compose -f docker-compose.prod.yaml down
+          docker-compose -f docker-compose.prod.yaml up -d
           docker system prune -f

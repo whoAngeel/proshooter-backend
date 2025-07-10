@@ -6,8 +6,14 @@ FROM postgres:15-alpine
 # ENV POSTGRES_USER=admin
 # ENV POSTGRES_PASSWORD=quTBg7FtWz
 # # PostgreSQL ejecuta automáticamente cualquier .sql que encuentre aquí
-COPY db_backups/data_only.sql /docker-entrypoint-initdb.d/01-restore-data.sql
+COPY ./init-db/*.sql /docker-entrypoint-initdb.d/
+
+# COPY db_backups/data_only.sql /docker-entrypoint-initdb.d/01-restore-data.sql
 # COPY db_backups/fix-permission.sql /docker-entrypoint-initdb.d/02-fix-permissions.sql
+
+# ENV POSTGRES_DB=proshooter_db_prod
+# ENV POSTGRES_USER=angel
+# ENV POSTGRES_PASSWORD=angel
 
 # Etiquetas para documentar la imagen
 LABEL description="PostgreSQL con datos de ProShooter API incluidos"
