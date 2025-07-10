@@ -23,7 +23,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "host": settings.HOST, "port": settings.PORT}
+    return {"status": "SUCCESSFUL", "host": settings.HOST, "port": settings.PORT}
 
 
 app.include_router(router_v1)
