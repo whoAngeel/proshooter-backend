@@ -2,15 +2,14 @@ version: '3.8'
 
 services:
   postgres:
-    image: subkey/proshooter-db:latest  # Tu imagen personalizada
+    image: subkey/proshooter-db:latest
     container_name: proshooter_postgres_prod
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}      # Desde tu .env
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Desde tu .env
-      POSTGRES_DB: ${POSTGRES_DB}          # Desde tu .env
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d  # Para tu backup
     networks:
       - proshooter_network_prod
     restart: unless-stopped

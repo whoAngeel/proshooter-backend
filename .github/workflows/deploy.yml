@@ -32,7 +32,15 @@ jobs:
         context: .
         file: ./Dockerfile.db
         push: true
-        tags: subkey/proshooter-api:latest
+        tags: subkey/proshooter-db:latest
+
+    - name: Build and Push DB Image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile.db
+        push: true
+        tags: subkey/proshooter-db:latest
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.7
@@ -43,6 +51,7 @@ jobs:
         debug: true
         script: |
           docker pull subkey/proshooter-api:latest
+          docker pull subkey/proshooter-db:latest
           docker-compose -f docker-compose.prod.yaml down
           docker-compose -f docker-compose.prod.yaml up -d
           docker system prune -f
