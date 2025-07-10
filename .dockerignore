@@ -21,3 +21,6 @@
 # Dockerfile
 # venv
 # proshooter_backup.sql
+.env
+.env.dev
+.env.prod

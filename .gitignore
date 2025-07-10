@@ -182,3 +182,7 @@ proshooter_backup.sql
 proshooter_db_backup.sql
 
 .env.*
+.env
+.env.dev
+.env.prod
+.env.staging
