@@ -9,7 +9,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
     - uses: actions/checkout@v3
@@ -51,8 +50,16 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         debug: true
         script: |
+          cd /home/ubuntu/proshooter-api
+          echo "=== Verificando ubicación actual ==="
+          pwd
+          ls -la
+          echo "=== Ejecutando deployment ==="
+          docker-compose -f docker-compose.prod.yaml down
+          docker rmi subkey/proshooter-api:latest || true
+          docker rmi subkey/proshooter-db:latest || true
           docker pull subkey/proshooter-api:latest
           docker pull subkey/proshooter-db:latest
-          docker-compose -f docker-compose.prod.yaml down
-          docker-compose -f docker-compose.prod.yaml up -d --force-recreate
-          docker system prune -f
+          docker-compose -f docker-compose.prod.yaml up -d
+          echo "=== Verificando resultado ==="
+          docker ps
