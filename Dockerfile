@@ -14,6 +14,7 @@ COPY requirements.txt .
 
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install alembic
 
 # Copiar el código de la aplicación
 COPY . .
