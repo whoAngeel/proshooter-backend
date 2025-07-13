@@ -79,6 +79,34 @@ class ShooterService:
         except Exception as e:
             return None, f"ERROR_GETTING_SHOOTER: {str(e)}"
 
+    def update_shooter_nickname(
+        self, db: Session, user_id: UUID, nickname: str
+    ) -> Tuple[Optional[ShooterRead], Optional[str]]:
+        try:
+            # Verificar que el tirador existe
+            existing_shooter = ShooterRepository.get_by_id(db, user_id)
+            if not existing_shooter:
+                return None, "SHOOTER_NOT_FOUND"
+
+            # Verificar que el nickname es único
+            if nickname:
+                shooter_with_nick = ShooterRepository.get_by_nickname(db, nickname)
+                if shooter_with_nick and shooter_with_nick.user_id != user_id:
+                    return None, "NICKNAME_ALREADY_EXISTS"
+
+            # Actualizar el nickname
+            updated_shooter = ShooterRepository.update(
+                db, user_id=user_id, shooter_data={"nickname": nickname}
+            )
+
+            if not updated_shooter:
+                return None, "ERROR_UPDATING_NICKNAME"
+
+            return ShooterRead.model_validate(updated_shooter), None
+        except Exception as e:
+            db.rollback()
+            return None, f"ERROR_UPDATING_NICKNAME: {str(e)}"
+
     def get_all_shooters(self, filter_params: ShooterFilter) -> ShooterList:
         try:
             # Convertir los parámetros de filtro a un diccionario
