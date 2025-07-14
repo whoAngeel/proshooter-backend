@@ -147,13 +147,14 @@ def update_biometric_data(
 
 @router.patch("/shooter-nickname")
 def update_shooter_nickname(
-    db: Session = Depends(get_db),
     nickname: str = Body(..., embed=True, min_length=3, max_length=20),
+    shooter_service: ShooterService = Depends(),
     current_user: dict = Depends(get_current_user),
 ):
     user_id = current_user.id
-    service = ShooterService()
-    updated_shooter, error_code = service.update_shooter_nickname(db, user_id, nickname)
+    updated_shooter, error_code = shooter_service.update_shooter_nickname(
+        user_id, nickname
+    )
     if error_code == "SHOOTER_NOT_FOUND":
         raise HTTPException(status_code=404, detail="El tirador no existe")
     if error_code == "NICKNAME_ALREADY_EXISTS":
@@ -163,3 +164,46 @@ def update_shooter_nickname(
     if error_code:
         raise HTTPException(status_code=500, detail=error_code)
     return {"message": "Apodo actualizado correctamente", "data": updated_shooter}
+
+
+from fastapi import File, UploadFile
+
+
+@router.patch("/shooter-license-file")
+async def update_shooter_license_file(
+    file: UploadFile = File(...),
+    shooter_service: ShooterService = Depends(),
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = current_user.id
+
+    from src.infraestructure.utils.s3_utils import upload_file_to_s3
+
+    bucket_name = "proshooter"
+    try:
+        file_url = upload_file_to_s3(
+            file,
+            bucket_name=bucket_name,
+            folder="licenses",
+            allowed_types=["image/png", "image/jpeg", "application/pdf"],
+        )
+
+        updated_shooter, error_code = shooter_service.update_licence_file(
+            user_id, file_url
+        )
+        if error_code == "SHOOTER_NOT_FOUND":
+            raise HTTPException(status_code=404, detail="El tirador no existe")
+        if error_code == "INVALID_FILE_URL":
+            raise HTTPException(status_code=400, detail="URL del archivo inválida")
+        if error_code == "ERROR_UPDATING_LICENSE_FILE":
+            raise HTTPException(
+                status_code=404, detail="Error al actualizar el archivo de licencia"
+            )
+        if error_code:
+            raise HTTPException(status_code=500, detail=error_code)
+        return {
+            "message": "Archivo de licencia actualizado correctamente",
+            "license_file": file_url,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

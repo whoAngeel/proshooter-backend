@@ -31,3 +31,5 @@ httpx>=0.25.2
 pydantic[email]
 
 python-multipart
+boto3>=1.30.0  # Para manejar S3 y otros servicios de AWS
+aiofiles>=23.1.0  # Para manejar archivos de forma asíncrona

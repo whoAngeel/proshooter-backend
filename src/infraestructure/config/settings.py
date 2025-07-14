@@ -23,6 +23,11 @@ class Settings(BaseSettings):
         "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
     )
 
+    # AWS S3
+    AWS_ACCESS_KEY: str
+    AWS_SECRET_ACCESS_KEY: str
+    AWS_REGION: str = "us-east-1"
+
     # Servidor
     HOST: str = "0.0.0.0"
     API_PORT: int = 8000
@@ -40,12 +45,12 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list = ["*"]
 
     # Entorno
-    ENV: str = "dev"
+    ENV: str = "development"
     DEBUG: bool = True
     LOG_LEVEL: str = "DEBUG"
 
     class Config:
-        env_file = ".env.dev"
+        env_file = ".env"
         case_sensitive = True
         extra = "forbid"
 

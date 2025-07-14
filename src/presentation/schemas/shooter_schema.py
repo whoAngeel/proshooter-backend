@@ -47,6 +47,8 @@ class ShooterRead(ShooterBase):
     updated_at: Optional[datetime] = None
     user: Optional[UserReadLiteNoPersonalData] = None
     stats: Optional[ShooterStatsRead] = None
+    nickname: Optional[str] = None
+    license_file: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
