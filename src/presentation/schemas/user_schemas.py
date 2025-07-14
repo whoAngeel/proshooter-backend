@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, UUID4
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
 from src.domain.enums.role_enum import RoleEnum
 from datetime import datetime, date
@@ -40,6 +40,23 @@ class UserRead(UserBase):
     shooter: Optional["ShooterRead"] = None
 
     model_config = {"from_attributes": True}
+
+
+class UserList(BaseModel):
+    users: List[UserRead]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+
+class UserFilter(BaseModel):
+    email: Optional[str] = (None,)
+    role: Optional[RoleEnum] = None
+    is_active: Optional[bool] = None
+    search: Optional[str] = None
+    skip: int = 0
+    limit: int = 100
 
 
 class UserPersonalDataReadLite(BaseModel):

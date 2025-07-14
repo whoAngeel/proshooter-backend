@@ -1,8 +1,8 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import select, func, or_, and_, desc, case
 from sqlalchemy.exc import IntegrityError
 from uuid import UUID
-from typing import Dict
+from typing import Dict, List, Optional, Any
 from passlib.context import CryptContext
 from sqlalchemy.exc import SQLAlchemyError
 from src.domain.enums.role_enum import RoleEnum
@@ -19,27 +19,32 @@ from src.presentation.schemas.user_schemas import (
     UserPersonalDataUpdate,
     UserMedicalDataCreate,
     UserMedicalDataUpdate,
-    UserBiometricDataUpdate
+    UserBiometricDataUpdate,
 )
-from src.infraestructure.database.repositories.shooter_stats_repo import ShooterStatsRepository
+from src.infraestructure.database.repositories.shooter_stats_repo import (
+    ShooterStatsRepository,
+)
 from src.infraestructure.database.repositories.shooter_repo import ShooterRepository
 from fastapi import HTTPException
+
+
 class UserRepository:
     @staticmethod
     def get_by_id(db: Session, user_id: UUID):
         return db.get(UserModel, user_id)
 
+    @staticmethod
+    def get_by_email(db: Session, email: str):
+        return db.execute(
+            select(UserModel).where(UserModel.email == email)
+        ).scalar_one_or_none()
 
     @staticmethod
-    def get_by_email(db:Session, email: str):
-        return db.execute(select(UserModel).where(UserModel.email==email)).scalar_one_or_none()
-
-    @staticmethod
-    def get_all(db:Session):
+    def get_all(db: Session):
         return db.execute(select(UserModel)).scalars().all()
 
     @staticmethod
-    def create(db:Session, user_data: UserCreate, hashed_password: str):
+    def create(db: Session, user_data: UserCreate, hashed_password: str):
         new_user = UserModel(
             email=user_data.email,
             hashed_password=hashed_password,
@@ -51,7 +56,7 @@ class UserRepository:
         return new_user
 
     @staticmethod
-    def toggle_active(db:Session, user_id: UUID):
+    def toggle_active(db: Session, user_id: UUID):
         user = UserRepository.get_by_id(db, user_id)
         user.is_active = not user.is_active
         db.commit()
@@ -59,12 +64,11 @@ class UserRepository:
         return user
 
     @staticmethod
-    def update(db:Session, user: UserModel) -> UserModel:
+    def update(db: Session, user: UserModel) -> UserModel:
         db.add(user)
         db.flush()
         db.refresh(user)
         return user
-
 
     @staticmethod
     def register(db: Session, user_data: UserCreate, hashed_password: str) -> UserModel:
@@ -118,7 +122,7 @@ class UserRepository:
             RoleEnum.TIRADOR: [RoleEnum.INSTRUCTOR],
             RoleEnum.INSTRUCTOR: [RoleEnum.INSTRUCTOR_JEFE],
             RoleEnum.INSTRUCTOR_JEFE: [],  # No puede ser promovido a un rol superior
-            RoleEnum.ADMIN: []  # Los administradores no pueden ser promovidos
+            RoleEnum.ADMIN: [],  # Los administradores no pueden ser promovidos
         }
         # Verificar que la promoción siga la jerarquía correcta
         if new_role_enum not in valid_promotions.get(current_role_enum, []):
@@ -144,9 +148,71 @@ class UserRepository:
             print(f"Error al promover rol: {str(e)}")
             return None, "DATABASE_ERROR"
 
+    @staticmethod
+    def search_by_combined_criteria(
+        db: Session, filter_params: dict, skip: int = 0, limit: int = 100
+    ) -> list:
+        query = db.query(UserModel).options(joinedload(UserModel.personal_data))
+
+        # Filtros directos
+        if filter_params.get("email"):
+            query = query.filter(UserModel.email.ilike(f"%{filter_params['email']}%"))
+        if filter_params.get("role"):
+            query = query.filter(UserModel.role == filter_params["role"])
+        if filter_params.get("is_active") is not None:
+            query = query.filter(UserModel.is_active == filter_params["is_active"])
+
+        # Búsqueda por nombre/apellido
+        if filter_params.get("search"):
+            search_term = f"%{filter_params['search']}%"
+            query = query.join(
+                UserPersonalDataModel, UserModel.id == UserPersonalDataModel.user_id
+            ).filter(
+                or_(
+                    UserPersonalDataModel.first_name.ilike(search_term),
+                    UserPersonalDataModel.second_name.ilike(search_term),
+                    UserPersonalDataModel.last_name1.ilike(search_term),
+                    UserPersonalDataModel.last_name2.ilike(search_term),
+                )
+            )
+
+        # Ordenar por apellido y nombre
+        query = query.join(
+            UserPersonalDataModel, UserModel.id == UserPersonalDataModel.user_id
+        ).order_by(UserPersonalDataModel.last_name1, UserPersonalDataModel.first_name)
+
+        return query.offset(skip).limit(limit).all()
+
+    @staticmethod
+    def count_by_criteria(db: Session, filter_params: dict) -> int:
+        query = db.query(func.count(UserModel.id))
+
+        if filter_params.get("email"):
+            query = query.filter(UserModel.email.ilike(f"%{filter_params['email']}%"))
+        if filter_params.get("role"):
+            query = query.filter(UserModel.role == filter_params["role"])
+        if filter_params.get("is_active") is not None:
+            query = query.filter(UserModel.is_active == filter_params["is_active"])
+
+        if filter_params.get("search"):
+            search_term = f"%{filter_params['search']}%"
+            query = query.join(
+                UserPersonalDataModel, UserModel.id == UserPersonalDataModel.user_id
+            ).filter(
+                or_(
+                    UserPersonalDataModel.first_name.ilike(search_term),
+                    UserPersonalDataModel.second_name.ilike(search_term),
+                    UserPersonalDataModel.last_name1.ilike(search_term),
+                    UserPersonalDataModel.last_name2.ilike(search_term),
+                )
+            )
+
+        return query.scalar()
+
+
 class UserPersonalDataRepository:
     @staticmethod
-    def create(db:Session, user_id: UUID, personal_data: UserPersonalDataCreate):
+    def create(db: Session, user_id: UUID, personal_data: UserPersonalDataCreate):
         new_personal_data = UserPersonalDataModel(
             first_name=personal_data.first_name,
             second_name=personal_data.second_name,
@@ -164,12 +230,13 @@ class UserPersonalDataRepository:
         db.refresh(new_personal_data)
         return new_personal_data
 
-
     @staticmethod
     def update(db: Session, user_id: UUID, data_in: UserPersonalDataUpdate):
-        personal_data_db = db.query(UserPersonalDataModel).filter(
-            UserPersonalDataModel.user_id == user_id
-        ).first()
+        personal_data_db = (
+            db.query(UserPersonalDataModel)
+            .filter(UserPersonalDataModel.user_id == user_id)
+            .first()
+        )
         if not personal_data_db:
             return None
 
@@ -198,12 +265,17 @@ class UserPersonalDataRepository:
         return personal_data_db
 
     @staticmethod
-    def get_by_user_id(db:Session, user_id: UUID):
-        return db.execute(select(UserPersonalDataModel).where(UserPersonalDataModel.user_id==user_id)).scalar_one_or_none()
+    def get_by_user_id(db: Session, user_id: UUID):
+        return db.execute(
+            select(UserPersonalDataModel).where(
+                UserPersonalDataModel.user_id == user_id
+            )
+        ).scalar_one_or_none()
+
 
 class UserMedicalDataRepository:
     @staticmethod
-    def create(db:Session, user_id: UUID, medical_data: UserMedicalDataCreate):
+    def create(db: Session, user_id: UUID, medical_data: UserMedicalDataCreate):
         new_medical_data = UserMedicalDataModel(
             blood_type=medical_data.blood_type,
             allergies=medical_data.allergies,
@@ -219,9 +291,11 @@ class UserMedicalDataRepository:
     @staticmethod
     def update(db: Session, user_id: UUID, data_in: UserMedicalDataUpdate):
 
-        medical_data_db = db.query(UserMedicalDataModel).filter(
-            UserMedicalDataModel.user_id == user_id
-        ).first()
+        medical_data_db = (
+            db.query(UserMedicalDataModel)
+            .filter(UserMedicalDataModel.user_id == user_id)
+            .first()
+        )
         if not medical_data_db:
             return None
 
@@ -235,19 +309,20 @@ class UserMedicalDataRepository:
         if data_in.emergency_contact:
             medical_data_db.emergency_contact = data_in.emergency_contact
 
-
         db.commit()
         db.refresh(medical_data_db)
         return medical_data_db
 
     @staticmethod
-    def get_by_user_id(db:Session, user_id: UUID):
-        return db.execute(select(UserMedicalDataModel).where(UserMedicalDataModel.user_id==user_id)).scalar_one_or_none()
+    def get_by_user_id(db: Session, user_id: UUID):
+        return db.execute(
+            select(UserMedicalDataModel).where(UserMedicalDataModel.user_id == user_id)
+        ).scalar_one_or_none()
 
 
 class UserBiometricDataRepository:
     @staticmethod
-    def create(db:Session, user_id: UUID, biometric_data: UserCreate):
+    def create(db: Session, user_id: UUID, biometric_data: UserCreate):
         new_biometric_data = UserBiometricDataModel(
             height=biometric_data.height,
             weight=biometric_data.weight,
@@ -262,9 +337,11 @@ class UserBiometricDataRepository:
 
     @staticmethod
     def update(db: Session, user_id: UUID, data_in: UserBiometricDataUpdate):
-        biometric_data_db = db.query(UserBiometricDataModel).filter(
-            UserBiometricDataModel.user_id == user_id
-        ).first()
+        biometric_data_db = (
+            db.query(UserBiometricDataModel)
+            .filter(UserBiometricDataModel.user_id == user_id)
+            .first()
+        )
         if not biometric_data_db:
             return None
 
@@ -291,5 +368,9 @@ class UserBiometricDataRepository:
         return biometric_data_db
 
     @staticmethod
-    def get_by_user_id(db:Session, user_id: UUID):
-        return db.execute(select(UserBiometricDataModel).where(UserBiometricDataModel.user_id==user_id)).scalar_one_or_none()
+    def get_by_user_id(db: Session, user_id: UUID):
+        return db.execute(
+            select(UserBiometricDataModel).where(
+                UserBiometricDataModel.user_id == user_id
+            )
+        ).scalar_one_or_none()

@@ -152,7 +152,7 @@ async def update_shooter(
     if error:
         status_code = status.HTTP_400_BAD_REQUEST
 
-        if error in ["SHOOTER_NOT_FOUND", "CLUB_NOT_FOUND"]:
+        if error in ["SHOOTER_NOT_FOUND", "CLUB_NOT_FOUND", "NICKNAME_ALREADY_EXISTS"]:
             status_code = status.HTTP_404_NOT_FOUND
 
         raise HTTPException(status_code=status_code, detail=error)

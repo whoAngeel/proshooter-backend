@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from uuid import UUID
+import math
 
 from src.infraestructure.database.repositories.user_repo import (
     UserBiometricDataRepository,
@@ -15,6 +16,9 @@ from src.presentation.schemas.user_schemas import (
     UserMedicalDataUpdate,
     UserPersonalDataCreate,
     UserPersonalDataUpdate,
+    UserFilter,
+    UserList,
+    UserRead,
 )
 from fastapi import HTTPException
 from src.domain.enums.role_enum import RoleEnum
@@ -35,6 +39,35 @@ class UserService:
     @staticmethod
     def get_user(db: Session, user_id: UUID):
         return UserRepository.get_by_id(db, user_id)
+
+    @staticmethod
+    def get_all_users(db: Session, filter_params: UserFilter):
+        try:
+            filter_dict = filter_params.model_dump(exclude_unset=True)
+
+            users = UserRepository.search_by_combined_criteria(
+                db, filter_dict, filter_params.skip, filter_params.limit
+            )
+
+            total = UserRepository.count_by_criteria(db, filter_dict)
+
+            page = (filter_params.skip // filter_params.limit) + 1
+            pages = math.ceil(total / filter_params.limit) if total > 0 else 1
+
+            items = [UserRead.model_validate(user) for user in users]
+
+            return UserList(
+                users=items,
+                total=total,
+                page=page,
+                size=filter_params.limit,
+                pages=pages,
+            )
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error al obtener los usuarios: {str(e)}"
+            )
 
     @staticmethod
     def get_users(db: Session):
