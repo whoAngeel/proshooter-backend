@@ -85,7 +85,8 @@ async def create_medical_data(
         raise HTTPException(status_code=400, detail="Los datos médicos ya existen")
     if error_code == "USER_NOT_FOUND":
         raise HTTPException(status_code=400, detail="El usuario no existe")
-
+    if error_code:
+        raise HTTPException(status_code=500, detail=error_code)
     return {"message": "Datos médicos creados", "data": medical_data}
 
 
@@ -101,6 +102,8 @@ def update_medical_data(
         raise HTTPException(status_code=400, detail="Los datos médicos no existen")
     if error_code == "USER_NOT_FOUND":
         raise HTTPException(status_code=400, detail="El usuario no existe")
+    if error_code:
+        raise HTTPException(status_code=500, detail=error_code)
     return {"message": "Datos médicos actualizados", "data": medical_data}
 
 
@@ -117,6 +120,8 @@ def add_biometric_data(
         raise HTTPException(status_code=400, detail="Los datos biometricos ya existen")
     if error_code == "USER_NOT_FOUND":
         raise HTTPException(status_code=400, detail="El usuario no existe")
+    if error_code:
+        raise HTTPException(status_code=500, detail=error_code)
     return {"message": "Datos biometricos creados", "data": biometric_data}
 
 
@@ -132,6 +137,8 @@ def update_biometric_data(
         raise HTTPException(status_code=400, detail="Los datos biometricos no existen")
     if error_code == "USER_NOT_FOUND":
         raise HTTPException(status_code=400, detail="El usuario no existe")
+    if error_code:
+        raise HTTPException(status_code=500, detail=error_code)
     return {"message": "Datos biometricos actualizados", "data": biometric_data}
 
 
@@ -151,4 +158,8 @@ def update_shooter_nickname(
         raise HTTPException(status_code=404, detail="El tirador no existe")
     if error_code == "NICKNAME_ALREADY_EXISTS":
         raise HTTPException(status_code=400, detail="El apodo ya está en uso")
+    if error_code == "USER_NOT_FOUND":
+        raise HTTPException(status_code=404, detail="El usuario no existe")
+    if error_code:
+        raise HTTPException(status_code=500, detail=error_code)
     return {"message": "Apodo actualizado correctamente", "data": updated_shooter}
