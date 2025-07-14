@@ -65,6 +65,7 @@ class UserPersonalDataReadLite(BaseModel):
     second_name: Optional[str] = None
     last_name1: Optional[str] = None
     last_name2: Optional[str] = None
+    genre: Optional[str] = None  # M, F, N/A
 
     model_config = {"from_attributes": True}
 
@@ -96,6 +97,7 @@ class UserPersonalDataBase(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
+    genre: Optional[str] = "N/A"  # M, F, N/A
 
 
 class UserPersonalDataBaseLite(BaseModel):
@@ -115,6 +117,7 @@ class UserPersonalDataUpdate(UserPersonalDataBase):
     city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
+    genre: Optional[str] = None  # M, F, N/A
 
 
 class UserPersonalDataCreate(UserPersonalDataBase):
