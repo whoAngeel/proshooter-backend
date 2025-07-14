@@ -35,18 +35,19 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
 
 # * ------ PERSONAL DATA ------
 @router.post("/personal-data")
-async def create_biometric_data(
+async def create_personal_data(
     data_in: UserPersonalDataCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    # print(f"USER : {current_user.id}")
     user_id = current_user.id
     personal_data, error_code = UserService.create_personal_data(db, user_id, data_in)
-    if error_code == "PESONAL_DATA_ALREADY_EXISTS":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_code)
+    if error_code == "PERSONAL_DATA_ALREADY_EXISTS":
+        raise HTTPException(status_code=400, detail=error_code)
     if error_code == "USER_NOT_FOUND":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_code)
+        raise HTTPException(status_code=400, detail=error_code)
+    if error_code:
+        raise HTTPException(status_code=500, detail=error_code)
     return {"message": "Datos personales creados", "data": personal_data}
 
 
@@ -64,6 +65,10 @@ async def update_biometric_data(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_code)
     if error_code == "USER_NOT_FOUND":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_code)
+    if error_code:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_code
+        )
     return {"message": "Datos personales actualizados", "data": personal_data}
 
 
@@ -80,6 +85,7 @@ async def create_medical_data(
         raise HTTPException(status_code=400, detail="Los datos médicos ya existen")
     if error_code == "USER_NOT_FOUND":
         raise HTTPException(status_code=400, detail="El usuario no existe")
+
     return {"message": "Datos médicos creados", "data": medical_data}
 
 

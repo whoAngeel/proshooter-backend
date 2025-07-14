@@ -86,7 +86,7 @@ class UserPersonalDataModel(Base):
     )  # TODO: Validar si metemos los datos por separado o como campo de direccion
     state = Column(String)
     country = Column(String)
-    genre = Column(String, nullable=False)
+    genre = Column(String, nullable=False, default="N/A")  # M, F, N/A
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

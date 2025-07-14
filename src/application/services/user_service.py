@@ -30,11 +30,15 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class UserService:
     @staticmethod
     def create_user(db: Session, user_data: UserCreate):
-        existing_user = UserRepository.get_by_email(db, user_data.email)
-        if existing_user:
-            return None
-        hashed_password = pwd_context.hash(user_data.password)
-        return UserRepository.register(db, user_data, hashed_password)
+        try:
+            existing_user = UserRepository.get_by_email(db, user_data.email)
+            if existing_user:
+                return None, "USER_ALREADY_EXISTS"
+            hashed_password = pwd_context.hash(user_data.password)
+            user = UserRepository.register(db, user_data, hashed_password)
+            return user, None
+        except Exception as e:
+            return None, f"ERROR_CREATING_USER: {str(e)}"
 
     @staticmethod
     def get_user(db: Session, user_id: UUID):
@@ -103,15 +107,19 @@ class UserService:
     def create_personal_data(
         db: Session, user_id: UUID, data_in: UserPersonalDataCreate
     ):
-        user = UserRepository.get_by_id(db, user_id)
-        if not user:
-            return None, "USER_NOT_FOUND"
+        try:
+            user = UserRepository.get_by_id(db, user_id)
+            if not user:
+                return None, "USER_NOT_FOUND"
 
-        existing_data = UserPersonalDataRepository.get_by_user_id(db, user_id)
-        if existing_data:
-            return None, "PERSONAL_DATA_ALREADY_EXISTS"
-        created_data = UserPersonalDataRepository.create(db, user_id, data_in)
-        return created_data, None
+            existing_data = UserPersonalDataRepository.get_by_user_id(db, user_id)
+            if existing_data:
+                return None, "PERSONAL_DATA_ALREADY_EXISTS"
+
+            created_data = UserPersonalDataRepository.create(db, user_id, data_in)
+            return created_data, None
+        except Exception as e:
+            return None, f"ERROR_CREATING_PERSONAL_DATA: {str(e)}"
 
     @staticmethod
     def update_personal_data(
