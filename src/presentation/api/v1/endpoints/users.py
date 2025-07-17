@@ -24,9 +24,11 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.post("/", response_model=UserRead)
 def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
-    user = UserService.create_user(db, user_in)
-    if not user:
+    user, error = UserService.create_user(db, user_in)
+    if error == "USER_ALREADY_EXISTS":
         raise HTTPException(status_code=400, detail="El usuario ya existe")
+    if error:
+        raise HTTPException(status_code=500, detail=error)
     return user
 
 
