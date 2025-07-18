@@ -625,7 +625,7 @@ class ShooterRepository:
 
     @staticmethod
     def create_shooter_stats(db: Session, shooter_id: UUID):
-        shooter = ShooterRepository.get_by_user_id(db, shooter_id)
+        shooter = ShooterRepository.get_by_id(db, shooter_id)
         if not shooter:
             return None
 

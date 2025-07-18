@@ -6,6 +6,7 @@ from datetime import datetime
 from src.application.services.practice_exercise_service import PracticeExerciseService
 from src.infraestructure.auth.jwt_config import get_current_user
 from src.domain.enums.role_enum import RoleEnum
+from fastapi import File, UploadFile
 from src.presentation.schemas.practice_exercise_schema import (
     PracticeExerciseCreate,
     PracticeExerciseRead,
@@ -417,3 +418,49 @@ async def get_performance_analysis(
         raise HTTPException(status_code=status_code, detail=error)
 
     return analysis
+
+
+@router.post("/{exercise_id}/image", status_code=status.HTTP_201_CREATED)
+async def upload_exercise_image(
+    exercise_id: UUID = Path(..., description="ID del ejercicio de práctica"),
+    image: UploadFile = File(..., description="Imagen a subir"),
+    replace: bool = Query(False, description="Reemplazar imagen existente"),
+    service: PracticeExerciseService = Depends(),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Sube una imagen asociada a un ejercicio de práctica.
+
+    Este endpoint permite subir una foto relacionada con el ejercicio de práctica.
+    El sistema valida que el ejercicio exista y maneja errores de formato o almacenamiento.
+
+    Parámetros:
+        exercise_id: UUID del ejercicio de práctica
+        image: Archivo de imagen a subi r
+        service: Servicio para gestionar ejercicios (inyectado)
+
+    Retorna:
+        Información de la imagen subida
+
+    Códigos de estado:
+        201: Imagen subida exitosamente
+        400: Error en el archivo o procesamiento
+        404: Ejercicio no encontrado
+    """
+    user_id = current_user.id
+
+    result, error = service.upload_exercise_image(
+        exercise_id, image, user_id, replace=replace
+    )
+
+    if error:
+        if error == "EXERCISE_NOT_FOUND":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
+        elif error.startswith("ERROR_UPLOADING_EXERCISE_IMAGE"):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error
+            )
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    return result

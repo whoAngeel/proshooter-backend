@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Tuple
 from uuid import UUID
 import os
-
+from fastapi import UploadFile
 from src.infraestructure.database.repositories.target_images_repo import (
     TargetImagesRepository,
 )
 from src.infraestructure.database.repositories.practice_exercise_repo import (
     PracticeExerciseRepository,
 )
+from src.infraestructure.utils.s3_utils import upload_file_to_s3
 from src.infraestructure.database.session import get_db
 from src.presentation.schemas.target_images_schema import (
     TargetImageCreate,
@@ -22,13 +23,15 @@ from src.presentation.schemas.target_images_schema import (
     TargetImageUploadResponse,
 )
 
+# from src.presentation.schemas.user_schemas
+
 
 class TargetImagesService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
     def upload_image(
-        self, image_data: TargetImageCreate
+        self, user_id: UUID, file: UploadFile, image_data: TargetImageCreate
     ) -> Tuple[Optional[TargetImageUploadResponse], Optional[str]]:
         """Sube una imagen de blanco y devuelve la respuesta."""
         try:
@@ -38,10 +41,20 @@ class TargetImagesService:
             )
             if not exercise:
                 return None, "EXERCISE_NOT_FOUND"
+            folder = f"target_images/{user_id}"
 
-            # TODO: Subir la imagen a s3
+            file_url = upload_file_to_s3(
+                file,
+                bucket_name="proshooter",
+                folder=folder,
+                allowed_types=["image/png", "image/jpeg"],
+            )
 
+            # guardar
             image_dict = image_data.model_dump()
+            image_dict["file_path"] = file_url
+            image_dict["file_size"] = file.size
+            image_dict["content_type"] = file.content_type
             new_image = TargetImagesRepository.create(self.db, image_dict)
 
             response = TargetImageUploadResponse(
