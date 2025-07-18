@@ -3,13 +3,18 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+
 class ExerciseTypeInfo(BaseModel):
-    id: UUID= Field(..., description="ID of the exercise type")
+    id: UUID = Field(..., description="ID of the exercise type")
     name: str = Field(..., description="Name of the exercise type")
-    description: Optional[str] = Field(None, description="Description of the exercise type")
+    description: Optional[str] = Field(
+        None, description="Description of the exercise type"
+    )
     difficulty: int = Field(..., description="Difficulty level of the exercise type")
     objective: Optional[str] = Field(None, description="Objective of the exercise type")
-    development: Optional[str] = Field(None, description="Development of the exercise type")
+    development: Optional[str] = Field(
+        None, description="Development of the exercise type"
+    )
     model_config = {"from_attributes": True}
 
 
@@ -21,7 +26,7 @@ class TargetInfo(BaseModel):
     dimensions: Optional[str] = None
     distance_recommended: Optional[float] = None
 
-    model_config = {"from_attributes" : True}
+    model_config = {"from_attributes": True}
 
 
 class WeaponInfo(BaseModel):
@@ -34,6 +39,7 @@ class WeaponInfo(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class AmmunitionInfo(BaseModel):
     id: UUID
     name: str
@@ -43,12 +49,24 @@ class AmmunitionInfo(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class SessionInfo(BaseModel):
     id: UUID
     date: datetime
     location: str
 
     model_config = {"from_attributes": True}
+
+
+class TargetImageRead(BaseModel):
+    id: UUID
+    file_path: str
+    file_size: int
+    content_type: str
+    uploaded_at: datetime
+
+    model_config = {"from_attributes": True}
+
 
 class PracticeExerciseBase(BaseModel):
     session_id: UUID
@@ -64,14 +82,20 @@ class PracticeExerciseBase(BaseModel):
     hits: int = 0
     reaction_time: Optional[float] = None
 
+
 class PracticeExerciseCreate(PracticeExerciseBase):
     @model_validator(mode="after")
     def validate_exercise_data(self) -> "PracticeExerciseCreate":
         if self.hits > self.ammunition_used:
-            raise ValueError("Los impactos no pueden ser mayores que la munición utilizada")
+            raise ValueError(
+                "Los impactos no pueden ser mayores que la munición utilizada"
+            )
         if self.ammunition_used > self.ammunition_allocated:
-            raise ValueError("La munición utilizada no puede ser mayor que la munición asignada")
+            raise ValueError(
+                "La munición utilizada no puede ser mayor que la munición asignada"
+            )
         return self
+
 
 class PracticeExerciseUpdate(BaseModel):
     exercise_type_id: Optional[UUID] = None
@@ -90,11 +114,16 @@ class PracticeExerciseUpdate(BaseModel):
     def validate_update_data(self) -> "PracticeExerciseUpdate":
         if self.hits is not None and self.ammunition_used is not None:
             if self.hits > self.ammunition_used:
-                raise ValueError("Los impactos no pueden ser mayores que la munición utilizada")
+                raise ValueError(
+                    "Los impactos no pueden ser mayores que la munición utilizada"
+                )
         if self.ammunition_used is not None and self.ammunition_allocated is not None:
             if self.ammunition_used > self.ammunition_allocated:
-                raise ValueError("La munición utilizada no puede ser mayor que la munición asignada")
+                raise ValueError(
+                    "La munición utilizada no puede ser mayor que la munición asignada"
+                )
         return self
+
 
 class PracticeExerciseRead(PracticeExerciseBase):
     id: UUID
@@ -104,14 +133,17 @@ class PracticeExerciseRead(PracticeExerciseBase):
 
     model_config = {"from_attributes": True}
 
+
 class PracticeExerciseDetail(PracticeExerciseRead):
     exercise_type: Optional[ExerciseTypeInfo] = None
     target: Optional[TargetInfo] = None
     weapon: Optional[WeaponInfo] = None
     ammunition: Optional[AmmunitionInfo] = None
     session: Optional[SessionInfo] = None
+    target_image: Optional[TargetImageRead] = None
 
     model_config = {"from_attributes": True}
+
 
 class PracticeExerciseList(BaseModel):
     items: List[PracticeExerciseRead]
@@ -119,6 +151,7 @@ class PracticeExerciseList(BaseModel):
     page: int
     size: int
     pages: int
+
 
 class PracticeExerciseStatistics(BaseModel):
     total_exercises: int
@@ -132,6 +165,7 @@ class PracticeExerciseStatistics(BaseModel):
     by_weapon: Optional[List[Dict[str, Any]]] = None
     # by_ammunition: Optional[List[Dict[str, Any]]] = None
 
+
 # Esquema para analisis especificos
 class PerformanceAnalysis(BaseModel):
     category: str  # 'weapon', 'ammunition', "target", 'distance, etc
@@ -139,9 +173,10 @@ class PerformanceAnalysis(BaseModel):
     avg_accuracy: float
     total_exercises: int
 
+
 class PracticeExerciseFilter(BaseModel):
     session_id: Optional[UUID] = None
-    shooter_id: Optional[UUID] = None # para buscar ejercicios a traves de las sesion
+    shooter_id: Optional[UUID] = None  # para buscar ejercicios a traves de las sesion
     exercise_type_id: Optional[UUID] = None
     target_id: Optional[UUID] = None
     weapon_id: Optional[UUID] = None
