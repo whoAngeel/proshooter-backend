@@ -38,21 +38,22 @@ async def analyze_exercise_image(
     return result
 
 
-# @router.get(
-#     "/exercises/{exercise_id}/analysis", response_model=ExerciseAnalysisResponse
-# )
-# async def get_exercise_analysis(
-#     exercise_id: UUID,
-#     service: TargetAnalysisService = Depends(),
-#     current_user=Depends(get_current_user),
-# ):
-#     """
-#     Obtiene el análisis más reciente de un ejercicio
-#     """
+@router.get("/exercise/{exercise_id}/analysis", response_model=ExerciseAnalysisResponse)
+async def get_exercise_analysis(
+    exercise_id: UUID,
+    service: TargetAnalysisService = Depends(),
+    current_user=Depends(get_current_user),
+):
+    """
+    Obtiene el análisis más reciente de un ejercicio
+    """
 
-#     result, error = service.
+    result, error = service.get_exercise_analysis(exercise_id=exercise_id)
+    if error == "EXERCISE_OR_IMAGE_NOT_FOUND":
+        raise HTTPException(status_code=404, detail="Ejercicio o imagen no encontrado")
+    elif error == "ANALYSIS_NOT_FOUND":
+        raise HTTPException(status_code=404, detail="Análisis no encontrado")
+    if error:
+        raise HTTPException(status_code=500, detail=error)
 
-#     if error:
-#         raise HTTPException(status_code=404, detail=error)
-
-#     return result
+    return result

@@ -87,6 +87,23 @@ class TargetAnalysisService:
         except Exception as e:
             return None, f"ANALYSIS_ERROR: {str(e)}"
 
+    def get_exercise_analysis(
+        self, exercise_id: UUID
+    ) -> Tuple[Optional[ExerciseAnalysisResponse], Optional[str]]:
+        try:
+            exercise = PracticeExerciseRepository.get_by_id(self.db, exercise_id)
+            if not exercise or not exercise.target_image:
+                return None, "EXERCISE_OR_IMAGE_NOT_FOUND"
+
+            existing_analysis = self._get_latest_analysis(exercise.target_image.id)
+            if not existing_analysis:
+                return None, "ANALYSIS_NOT_FOUND"
+
+            response = self._build_response_from_db(existing_analysis)
+            return response, None
+        except Exception as e:
+            return None, f"ANALYSIS_RETRIEVAL_ERROR: {str(e)}"
+
     def _download_image_from_s3(self, s3_path: str) -> bytes:
         """Descarga la imagen desde S3 y la devuelve como bytes."""
         s3_url = f"{s3_path}"
