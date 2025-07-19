@@ -13,6 +13,7 @@ from .endpoints import practice_session_router as practice_session
 from .endpoints import practice_exercise_router as practice_exercise
 from .endpoints import practice_evaluation_router as practice_evaluation
 from .endpoints import health_router as health
+from .endpoints import analysis_image_router as analysis_image
 
 router = APIRouter()
 router.include_router(health.router)
@@ -28,3 +29,4 @@ router.include_router(practice_type.router)
 router.include_router(practice_session.router)
 router.include_router(practice_exercise.router)
 router.include_router(practice_evaluation.router)
+router.include_router(analysis_image.router)

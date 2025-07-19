@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from uuid import UUID
 
@@ -34,8 +34,8 @@ class ExerciseAnalysisResponse(BaseModel):
     precision_porcentaje: float
 
     # Datos detallados
-    coordenadas_impactos: List[ImpactDetection]
-    estadisticas_confianza: ConfidenceStats
+    coordenadas_impactos: List[Dict[str, Any]]
+    estadisticas_confianza: Dict[str, float]
 
     # Metadata
     modelo_version: str

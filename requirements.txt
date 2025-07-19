@@ -33,3 +33,9 @@ pydantic[email]
 python-multipart
 boto3>=1.30.0  # Para manejar S3 y otros servicios de AWS
 aiofiles>=23.1.0  # Para manejar archivos de forma asíncrona
+
+# para el modelo de detección de balas
+ultralytics>=8.0.0
+opencv-python>=4.5.0
+Pillow>=8.3.0
+numpy>=1.21.0
