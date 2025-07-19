@@ -33,6 +33,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL}
       SECRET_KEY: ${SECRET_KEY}
       DATABASE_URL: ${DATABASE_URL}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     ports:
       - "8000:8000"
     depends_on:

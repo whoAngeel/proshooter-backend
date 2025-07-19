@@ -36,6 +36,7 @@ services:
       LOG_LEVEL: DEBUG
       SECRET_KEY: n83iPiObXhiauePC3IVbDeTlj8uTzPTd
       DATABASE_URL: postgresql://angel:angel@postgres:5432/proshooter_db_dev
+
     ports:
       - "3000:8000"
     volumes:
