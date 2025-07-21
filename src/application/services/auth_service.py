@@ -5,18 +5,27 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from pydantic import UUID4
 
-from src.presentation.schemas.auth_schema import Token, LoginRequest
-from src.infraestructure.database.repositories.user_repo import UserRepository
-from src.infraestructure.auth.jwt_config import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from src.domain.enums.role_enum import RoleEnum
+from src.presentation.schemas.auth_schema import Token, LoginRequest, RegisterRequest
+from src.infraestructure.database.repositories.user_repo import (
+    UserRepository,
+    UserMedicalDataRepository,
+    UserPersonalDataRepository,
+)
+from src.infraestructure.auth.jwt_config import (
+    create_access_token,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+)
 from src.infraestructure.database.session import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 class AuthService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
-    def verify_password(self, plain_password: str, hashed_password: str)->bool:
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """
         Verifica si una contraseña sin encriptar coincide con la versión encriptada.
 
@@ -29,8 +38,8 @@ class AuthService:
         """
         return pwd_context.verify(plain_password, hashed_password)
 
-    def get_password_hash(self, password: str)->str:
-        '''
+    def get_password_hash(self, password: str) -> str:
+        """
         Genera un hash de la contraseña proporcionada.
 
         Args:
@@ -38,10 +47,10 @@ class AuthService:
 
         Returns:
             str: La contraseña encriptada.
-        '''
+        """
         return pwd_context.hash(password)
 
-    def authenticate_user(self, email: str, password: str)-> Optional[dict]:
+    def authenticate_user(self, email: str, password: str) -> Optional[dict]:
         """
         Autentica a un usuario por email y contraseña.
 
@@ -61,10 +70,10 @@ class AuthService:
             "id": user.id,
             "email": user.email,
             "role": user.role,
-            "is_active": user.is_active
+            "is_active": user.is_active,
         }
 
-    def login(self, login_data: LoginRequest)-> dict:
+    def login(self, login_data: LoginRequest) -> dict:
         """
         Realiza el inicio de sesión y genera un token JWT.
 
@@ -82,7 +91,7 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Credenciales de autenticación inválidas",
-                headers={"WWW-Authenticate": "Bearer"}
+                headers={"WWW-Authenticate": "Bearer"},
             )
         if not user["is_active"]:
             raise HTTPException(
@@ -92,21 +101,18 @@ class AuthService:
 
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={
-                "sub": str(user["id"]),
-                "role": user["role"],
-                "email": user["email"]
-                }, expires_delta=access_token_expires
+            data={"sub": str(user["id"]), "role": user["role"], "email": user["email"]},
+            expires_delta=access_token_expires,
         )
         return {
             "access_token": access_token,
             "token_type": "bearer",
             "user_id": str(user["id"]),
             "email": user["email"],
-            "role": user["role"]
+            "role": user["role"],
         }
 
-    def get_current_user_data(self, user_id: UUID4)->dict:
+    def get_current_user_data(self, user_id: UUID4) -> dict:
         """
         Obtiene los datos del usuario actual.
 
@@ -121,9 +127,77 @@ class AuthService:
         """
         user = UserRepository.get_by_id(self.db, user_id)
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El usuario no existe")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="El usuario no existe"
+            )
 
         if not user.is_active:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no esta activo")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="El usuario no esta activo",
+            )
 
         return user
+
+    def register(self, register_data: RegisterRequest) -> dict:
+        from src.presentation.schemas.user_schemas import (
+            UserCreate,
+            UserPersonalDataCreate,
+        )
+
+        try:
+            # 1. Verificar si el usuario ya existe
+            existing_user = UserRepository.get_by_email(self.db, register_data.email)
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El usuario ya existe",
+                )
+
+            # 2. Crear el usuario principal
+            user_create = UserCreate(
+                email=register_data.email,
+                password=register_data.password,
+                role=(
+                    register_data.role
+                    if hasattr(register_data, "role") and register_data.role
+                    else RoleEnum.USER
+                ),
+                is_active=True,
+            )
+            hashed_password = self.get_password_hash(register_data.password)
+            user = UserRepository.create(self.db, user_create, hashed_password)
+
+            # 3. Crear los datos personales
+            personal_data_create = UserPersonalDataCreate(
+                **register_data.personal_data.model_dump()
+            )
+            UserPersonalDataRepository.create(self.db, user.id, personal_data_create)
+
+            # 4. Generar el token JWT
+            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token = create_access_token(
+                data={
+                    "sub": str(user.id),
+                    "role": user.role,
+                    "email": user.email,
+                },
+                expires_delta=access_token_expires,
+            )
+
+            # 5. Retornar la respuesta como en el login
+            return {
+                "access_token": access_token,
+                "token_type": "bearer",
+                "user_id": str(user.id),
+                "email": user.email,
+                "role": user.role,
+            }
+
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error al registrar el usuario: {str(e)}",
+            )

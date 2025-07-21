@@ -2,20 +2,22 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 
-from src.presentation.schemas.auth_schema import LoginRequest, LoginResponse
+from src.presentation.schemas.auth_schema import (
+    LoginRequest,
+    LoginResponse,
+    RegisterRequest,
+)
 from src.application.services.auth_service import AuthService
 from src.infraestructure.auth.jwt_config import get_current_user
 from src.presentation.schemas.user_schemas import UserRead
 
-router = APIRouter(
-    prefix="/auth",
-    tags=["Autenticación"]
-)
+router = APIRouter(prefix="/auth", tags=["Autenticación"])
+
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    auth_service: AuthService = Depends()
+    auth_service: AuthService = Depends(),
 ):
     """
     Endpoint para iniciar sesión y obtener un token JWT.
@@ -37,10 +39,7 @@ async def login(
 
 
 @router.post("/login/json", response_model=LoginResponse)
-async def login_json(
-    login_data: LoginRequest,
-    auth_service: AuthService = Depends()
-):
+async def login_json(login_data: LoginRequest, auth_service: AuthService = Depends()):
     """
     Endpoint alternativo para iniciar sesión usando JSON en lugar de form-data.
 
@@ -60,9 +59,7 @@ async def login_json(
 
 
 @router.get("/me", response_model=UserRead)
-async def read_users_me(
-    current_user: dict = Depends(get_current_user)
-):
+async def read_users_me(current_user: dict = Depends(get_current_user)):
     """
     Endpoint para obtener los datos del usuario autenticado.
 
@@ -73,3 +70,11 @@ async def read_users_me(
         dict: Datos del usuario autenticado.
     """
     return current_user
+
+
+@router.post("/register/", response_model=LoginResponse)
+async def register_user(
+    register_data: RegisterRequest, auth_service: AuthService = Depends()
+):
+    response = auth_service.register(register_data)
+    return LoginResponse(**response)
