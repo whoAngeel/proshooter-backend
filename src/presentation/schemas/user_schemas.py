@@ -147,6 +147,9 @@ class UserMedicalDataBase(BaseModel):
     allergies: Optional[str] = None
     medical_conditions: Optional[str] = None
     emergency_contact: Optional[str] = None
+    insurance_provider: Optional[str] = None
+    insurance_number: Optional[str] = None
+    insurance_expiry: Optional[date] = None
 
 
 class UserMedicalDataCreate(UserMedicalDataBase):
@@ -158,6 +161,9 @@ class UserMedicalDataUpdate(UserMedicalDataBase):
     allergies: Optional[str] = None
     medical_conditions: Optional[str] = None
     emergency_contact: Optional[str] = None
+    insurance_provider: Optional[str] = None
+    insurance_number: Optional[str] = None
+    insurance_expiry: Optional[date] = None
 
 
 class UserMedicalDataRead(UserMedicalDataBase):

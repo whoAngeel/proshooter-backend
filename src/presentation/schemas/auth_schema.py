@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator, ValidationError
+from pydantic import BaseModel, EmailStr, field_validator, ValidationError, Field
 from typing import Optional
 from datetime import date, datetime
 from src.domain.enums.role_enum import RoleEnum
@@ -23,7 +23,7 @@ class TokenData(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: EmailStr = Field(..., description="Correo electrónico del usuario")
     password: str
 
 
@@ -36,11 +36,13 @@ class LoginResponse(BaseModel):
 
 
 class PersonalData(BaseModel):
-    first_name: str
+    first_name: str = Field(..., min_length=1, max_length=50)
     second_name: Optional[str] = None
-    last_name1: str
+    last_name1: str = Field(..., min_length=1, max_length=50)
     last_name2: Optional[str] = None
-    phone_number: str
+    phone_number: str = Field(
+        ..., min_length=7, max_length=15, description="Número de teléfono del usuario"
+    )
     date_of_birth: Optional[date] = None
     city: Optional[str] = None
     state: Optional[str] = None

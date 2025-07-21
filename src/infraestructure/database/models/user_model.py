@@ -107,7 +107,10 @@ class UserMedicalDataModel(Base):
     medical_conditions = Column(String)  # Ejemplo: Diabetes, Epilepsia, etc
     # is_disabled = Column(Boolean, default=False)
     emergency_contact = Column(String)
-    # TODO: agregar seguro medico (institucion, numero de afiliado)
+
+    insurance_provider = Column(String, nullable=True)  # Proveedor de seguro médico
+    insurance_number = Column(String, nullable=True)  # Número de póliza de seguro
+    insurance_expiry = Column(Date, nullable=True)  # Fecha de vencimiento del seguro
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
