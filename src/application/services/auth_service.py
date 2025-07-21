@@ -166,7 +166,7 @@ class AuthService:
                 is_active=True,
             )
             hashed_password = self.get_password_hash(register_data.password)
-            user = UserRepository.create(self.db, user_create, hashed_password)
+            user = UserRepository.register(self.db, user_create, hashed_password)
 
             # 3. Crear los datos personales
             personal_data_create = UserPersonalDataCreate(

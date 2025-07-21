@@ -64,9 +64,13 @@ class UserRepository:
         return user
 
     @staticmethod
-    def update(db: Session, user: UserModel) -> UserModel:
+    def update(db: Session, user: UserModel, update_data: dict = None) -> UserModel:
+        # TODO: Implementar lógica de actualización de usuario y ver en que usarlo
+        if update_data:
+            for key, value in update_data.items():
+                setattr(user, key, value)
         db.add(user)
-        db.flush()
+        db.commit()
         db.refresh(user)
         return user
 
@@ -213,18 +217,9 @@ class UserRepository:
 class UserPersonalDataRepository:
     @staticmethod
     def create(db: Session, user_id: UUID, personal_data: UserPersonalDataCreate):
-        new_personal_data = UserPersonalDataModel(
-            first_name=personal_data.first_name,
-            second_name=personal_data.second_name,
-            last_name1=personal_data.last_name1,
-            last_name2=personal_data.last_name2,
-            phone_number=personal_data.phone_number,
-            date_of_birth=personal_data.date_of_birth,
-            city=personal_data.city,
-            state=personal_data.state,
-            country=personal_data.country,
-            user_id=user_id,
-        )
+        data_dict = personal_data.model_dump()
+        data_dict["user_id"] = user_id
+        new_personal_data = UserPersonalDataModel(**data_dict)
         db.add(new_personal_data)
         db.commit()
         db.refresh(new_personal_data)
@@ -239,26 +234,9 @@ class UserPersonalDataRepository:
         )
         if not personal_data_db:
             return None
-
-        # actualizar los campos que no vienen vacios
-        if data_in.first_name:
-            personal_data_db.first_name = data_in.first_name
-        if data_in.second_name:
-            personal_data_db.second_name = data_in.second_name
-        if data_in.last_name1:
-            personal_data_db.last_name1 = data_in.last_name1
-        if data_in.last_name2:
-            personal_data_db.last_name2 = data_in.last_name2
-        if data_in.phone_number:
-            personal_data_db.phone_number = data_in.phone_number
-        if data_in.date_of_birth:
-            personal_data_db.date_of_birth = data_in.date_of_birth
-        if data_in.city:
-            personal_data_db.city = data_in.city
-        if data_in.state:
-            personal_data_db.state = data_in.state
-        if data_in.country:
-            personal_data_db.country = data_in.country
+        update_dict = data_in.model_dump(exclude_unset=True)
+        for key, value in update_dict.item():
+            setattr(personal_data_db, key, value)
 
         db.commit()
         db.refresh(personal_data_db)
@@ -276,13 +254,17 @@ class UserPersonalDataRepository:
 class UserMedicalDataRepository:
     @staticmethod
     def create(db: Session, user_id: UUID, medical_data: UserMedicalDataCreate):
-        new_medical_data = UserMedicalDataModel(
-            blood_type=medical_data.blood_type,
-            allergies=medical_data.allergies,
-            medical_conditions=medical_data.medical_conditions,
-            emergency_contact=medical_data.emergency_contact,
-            user_id=user_id,
-        )
+        # new_medical_data = UserMedicalDataModel(
+        #     blood_type=medical_data.blood_type,
+        #     allergies=medical_data.allergies,
+        #     medical_conditions=medical_data.medical_conditions,
+        #     emergency_contact=medical_data.emergency_contact,
+        #     user_id=user_id,
+        # )
+        medical_data_dict = medical_data.model_dump()
+        medical_data_dict["user_id"] = user_id
+        new_medical_data = UserMedicalDataModel(**medical_data_dict)
+
         db.add(new_medical_data)
         db.commit()
         db.refresh(new_medical_data)
@@ -300,14 +282,9 @@ class UserMedicalDataRepository:
             return None
 
         # actualizar los campos que no vienen vacios
-        if data_in.blood_type:
-            medical_data_db.blood_type = data_in.blood_type
-        if data_in.allergies:
-            medical_data_db.allergies = data_in.allergies
-        if data_in.medical_conditions:
-            medical_data_db.medical_conditions = data_in.medical_conditions
-        if data_in.emergency_contact:
-            medical_data_db.emergency_contact = data_in.emergency_contact
+        update_dict = data_in.model_dump(exclude_unset=True)
+        for key, value in update_dict.items():
+            setattr(medical_data_db, key, value)
 
         db.commit()
         db.refresh(medical_data_db)
@@ -323,13 +300,16 @@ class UserMedicalDataRepository:
 class UserBiometricDataRepository:
     @staticmethod
     def create(db: Session, user_id: UUID, biometric_data: UserCreate):
-        new_biometric_data = UserBiometricDataModel(
-            height=biometric_data.height,
-            weight=biometric_data.weight,
-            hand_dominance=biometric_data.hand_dominance,
-            eye_sight=biometric_data.eye_sight,
-            user_id=user_id,
-        )
+        # new_biometric_data = UserBiometricDataModel(
+        #     height=biometric_data.height,
+        #     weight=biometric_data.weight,
+        #     hand_dominance=biometric_data.hand_dominance,
+        #     eye_sight=biometric_data.eye_sight,
+        #     user_id=user_id,
+        # )
+        data_dict = biometric_data.model_dump()
+        data_dict[user_id] = user_id
+        new_biometric_data = UserBiometricDataModel(**data_dict)
         db.add(new_biometric_data)
         db.commit()
         db.refresh(new_biometric_data)
@@ -345,23 +325,9 @@ class UserBiometricDataRepository:
         if not biometric_data_db:
             return None
 
-        # actualizar los campos que no vienen vacios
-        if data_in.height:
-            biometric_data_db.height = data_in.height
-        if data_in.weight:
-            biometric_data_db.weight = data_in.weight
-        if data_in.hand_dominance:
-            biometric_data_db.hand_dominance = data_in.hand_dominance
-        if data_in.eye_sight:
-            biometric_data_db.eye_sight = data_in.eye_sight
-        if data_in.time_sleep:
-            biometric_data_db.time_sleep = data_in.time_sleep
-        if data_in.blood_pressure:
-            biometric_data_db.blood_pressure = data_in.blood_pressure
-        if data_in.heart_rate:
-            biometric_data_db.heart_rate = data_in.heart_rate
-        if data_in.respiratory_rate:
-            biometric_data_db.respiratory_rate = data_in.respiratory_rate
+        update_dict = data_in.model_dump(exclude_unset=True)
+        for key, value in update_dict.items():
+            setattr(biometric_data_db, key, value)
 
         db.commit()
         db.refresh(biometric_data_db)
