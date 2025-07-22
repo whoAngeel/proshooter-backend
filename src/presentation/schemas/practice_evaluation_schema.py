@@ -32,17 +32,13 @@ class PracticeEvaulationBase(BaseModel):
     session_id: UUID
     evaluator_id: Optional[UUID] = None
     final_score: float = Field(ge=0, le=100)
-    classification: Optional[ShooterLevelEnum] = None
+    # classification: Optional[ShooterLevelEnum] = None
     strengths: Optional[str] = None
     weaknesses: Optional[str] = None
     recomendations: Optional[str] = None
 
-    # calificaciones especificas
-    posture_rating: Optional[int] = Field(None, ge=0, le=10)
-    grip_rating: Optional[int] = Field(None, ge=1, le=10)
-    sight_alignment_rating: Optional[int] = Field(None, ge=1, le=10)
-    trigger_control_rating: Optional[int] = Field(None, ge=1, le=10)
-    breathing_rating: Optional[int] = Field(None, ge=1, le=10)
+    overall_technique_rating: Optional[float] = None
+    instructor_notes: Optional[str] = None
 
     # zonas problematicas
     primary_issue_zone: Optional[str] = None
@@ -58,6 +54,7 @@ class PracticeEvaulationBase(BaseModel):
 
 
 class PracticeEvaluationCreate(PracticeEvaulationBase):
+    # TODO: cambiar esto
     @model_validator(mode="after")
     def validate_classification_based_on_score(self) -> "PracticeEvaluationCreate":
         # validamos que la clasificacion sea coherente con la puntuacion
@@ -80,17 +77,14 @@ class PracticeEvaluationCreate(PracticeEvaulationBase):
 class PracticeEvaluationUpdate(BaseModel):
     evaluator_id: Optional[UUID] = None
     final_score: Optional[float] = Field(None, ge=0, le=100)
-    classification: Optional[ShooterLevelEnum] = None
+    # classification: Optional[ShooterLevelEnum] = None
     strengths: Optional[str] = None
     weaknesses: Optional[str] = None
     recomendations: Optional[str] = None
 
     # Calificaciones específicas
-    posture_rating: Optional[int] = Field(None, ge=1, le=10)
-    grip_rating: Optional[int] = Field(None, ge=1, le=10)
-    sight_alignment_rating: Optional[int] = Field(None, ge=1, le=10)
-    trigger_control_rating: Optional[int] = Field(None, ge=1, le=10)
-    breathing_rating: Optional[int] = Field(None, ge=1, le=10)
+    overall_technique_rating: Optional[float] = None
+    instructor_notes: Optional[str] = None
 
     # Zonas problemáticas
     primary_issue_zone: Optional[str] = None
