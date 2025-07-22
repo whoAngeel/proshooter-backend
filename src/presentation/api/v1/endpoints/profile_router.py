@@ -5,6 +5,7 @@ import json
 
 from src.application.services.user_service import UserService
 from src.application.services.shooter_service import ShooterService
+from src.application.services.practice_session_service import PracticeSessionService
 from src.infraestructure.auth.jwt_config import get_current_user
 from src.infraestructure.database.session import get_db
 from src.presentation.schemas.user_schemas import (
@@ -205,5 +206,37 @@ async def update_shooter_license_file(
             "message": "Archivo de licencia actualizado correctamente",
             "license_file": file_url,
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+
+@router.get("/my-sessions/")
+async def get_my_sessions(
+    is_finished: bool = Query(False, description="Filtrar por sesiones finalizadas"),
+    skip: int = Query(0, ge=0, description="Número de sesiones a omitir"),
+    limit: int = Query(
+        5, ge=1, le=100, description="Número máximo de sesiones a retornar"
+    ),
+    practice_session_service: PracticeSessionService = Depends(),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Obtener las sesiones de práctica del usuario autenticado.
+    Args:
+        is_finished (bool): Filtrar por sesiones finalizadas.
+        practice_session_service (PracticeSessionService): Servicio para manejar sesiones de práctica.
+        current_user (dict): Usuario actual obtenido del token JWT.
+
+    Returns:
+        dict: Lista de sesiones de práctica del usuario.
+    """
+    user_id = current_user.id
+    try:
+        sessions = practice_session_service.get_my_sessions(
+            user_id=user_id, is_finished=is_finished, skip=skip, limit=limit
+        )
+        return {"sessions": sessions}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")

@@ -271,3 +271,18 @@ class PracticeSessionService:
             IndividualPracticeSessionDetailLite.model_validate(session)
             for session in sessions
         ]
+
+    def get_my_sessions(
+        self,
+        user_id: UUID,
+        is_finished: Optional[bool] = False,
+        skip: int = 0,
+        limit: int = 5,
+    ) -> List[IndividualPracticeSessionDetailLite]:
+        sessions = PracticeSessionRepository.get_user_sessions(
+            self.db, user_id, is_finished, skip=skip, limit=limit
+        )
+        return [
+            IndividualPracticeSessionDetailLite.model_validate(session)
+            for session in sessions
+        ]

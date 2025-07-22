@@ -57,6 +57,9 @@ class PracticeExerciseService:
             if not session:
                 return None, "PRACTICE_SESSION_NOT_FOUND"
 
+            if session.is_finished:
+                return None, "PRACTICE_SESSION_ALREADY_FINISHED"
+
             exercise_type = ExerciseTypeRepository.get_by_id(
                 self.db, exercise_data.exercise_type_id
             )
