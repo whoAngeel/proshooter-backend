@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Query, Path, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 import json
+from typing import List, Optional
 
 from src.application.services.user_service import UserService
 from src.application.services.shooter_service import ShooterService
@@ -210,9 +211,14 @@ async def update_shooter_license_file(
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
-@router.get("/my-sessions/")
+from src.presentation.schemas.practice_session_schema import MyPracticeSessionList
+
+
+@router.get("/my-sessions/", response_model=MyPracticeSessionList)
 async def get_my_sessions(
-    is_finished: bool = Query(False, description="Filtrar por sesiones finalizadas"),
+    is_finished: Optional[bool] = Query(
+        None, description="Filtrar por sesiones finalizadas"
+    ),
     skip: int = Query(0, ge=0, description="Número de sesiones a omitir"),
     limit: int = Query(
         5, ge=1, le=100, description="Número máximo de sesiones a retornar"
@@ -235,7 +241,8 @@ async def get_my_sessions(
         sessions = practice_session_service.get_my_sessions(
             user_id=user_id, is_finished=is_finished, skip=skip, limit=limit
         )
-        return {"sessions": sessions}
+        total = len(sessions)  # Total de la lista mostrada (paginada)
+        return {"sessions": sessions, "total": total}
     except HTTPException as e:
         raise e
     except Exception as e:

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from .user_schemas import UserReadLite, UserPersonalDataReadLite
 from .practice_exercise_schema import PracticeExerciseDetail
 
+
 class ShooterInfo(BaseModel):
     user_id: UUID
     range: Optional[str]
@@ -13,15 +14,18 @@ class ShooterInfo(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class InstructorInfo(BaseModel):
     id: UUID
     personal_data: Optional[UserPersonalDataReadLite] = None
     model_config = {"from_attributes": True}
 
+
 class EvaluationInfo(BaseModel):
     id: UUID
     final_score: float
     classification: str
+
 
 class IndividualPracticeSessionBase(BaseModel):
     instructor_id: Optional[UUID] = None
@@ -30,12 +34,14 @@ class IndividualPracticeSessionBase(BaseModel):
     total_shots_fired: int = 0
     total_hits: int = 0
 
+
 class IndividualPracticeSessionCreate(IndividualPracticeSessionBase):
-    @model_validator(mode='after')
-    def validate_hits_not_greater_than_shots(self) -> 'IndividualPracticeSessionCreate':
+    @model_validator(mode="after")
+    def validate_hits_not_greater_than_shots(self) -> "IndividualPracticeSessionCreate":
         if self.total_hits > self.total_shots_fired:
-            raise ValueError('Total hits cannot be greater than total shots fired')
+            raise ValueError("Total hits cannot be greater than total shots fired")
         return self
+
 
 class IndividualPracticeSessionUpdate(BaseModel):
     instructor_id: Optional[UUID] = None
@@ -44,12 +50,16 @@ class IndividualPracticeSessionUpdate(BaseModel):
     total_shots_fired: Optional[int] = None
     total_hits: Optional[int] = None
 
-    @model_validator(mode='after')
-    def validate_hits_not_greater_than_shots(self) -> 'IndividualPracticeSessionUpdate':
-        if (self.total_hits is not None and self.total_shots_fired is not None and
-                self.total_hits > self.total_shots_fired):
-            raise ValueError('Total hits cannot be greater than total shots fired')
+    @model_validator(mode="after")
+    def validate_hits_not_greater_than_shots(self) -> "IndividualPracticeSessionUpdate":
+        if (
+            self.total_hits is not None
+            and self.total_shots_fired is not None
+            and self.total_hits > self.total_shots_fired
+        ):
+            raise ValueError("Total hits cannot be greater than total shots fired")
         return self
+
 
 class IndividualPracticeSessionRead(IndividualPracticeSessionBase):
     id: UUID
@@ -58,6 +68,7 @@ class IndividualPracticeSessionRead(IndividualPracticeSessionBase):
     updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
 
 class IndividualPracticeSessionDetail(BaseModel):
     shooter_id: UUID
@@ -79,6 +90,7 @@ class IndividualPracticeSessionDetail(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class IndividualPracticeSessionDetailLite(BaseModel):
     date: datetime = Field(default_factory=datetime.utcnow)
     location: str
@@ -95,12 +107,14 @@ class IndividualPracticeSessionDetailLite(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 class IndividualPracticeSessionList(BaseModel):
     items: List[IndividualPracticeSessionDetailLite]
     total: int
     page: int
     size: int
     pages: int
+
 
 class IndividualPracticeSessionFilter(BaseModel):
     shooter_id: Optional[UUID] = None
@@ -113,6 +127,7 @@ class IndividualPracticeSessionFilter(BaseModel):
     skip: int = 0
     limit: int = 100
 
+
 class IndividualPracticeSessionStatistics(BaseModel):
     total_sessions: int
     avg_accuracy: float
@@ -121,3 +136,32 @@ class IndividualPracticeSessionStatistics(BaseModel):
     hit_percentage: float
     period: str
     shooter_id: UUID
+
+
+class PracticeExerciseSummary(BaseModel):
+    id: UUID
+    exercise_type_name: Optional[str]
+    hits: int
+    accuracy_percentage: float
+    has_image: bool
+
+    model_config = {"from_attributes": True}
+
+
+class MyPracticeSessionSummary(BaseModel):
+    id: UUID
+    date: datetime
+    location: str
+    is_finished: bool
+    evaluation_pending: bool
+    total_shots_fired: int
+    total_hits: int
+    accuracy_percentage: float
+    exercises: List[PracticeExerciseSummary]
+
+    model_config = {"from_attributes": True}
+
+
+class MyPracticeSessionList(BaseModel):
+    sessions: List[MyPracticeSessionSummary]
+    total: int

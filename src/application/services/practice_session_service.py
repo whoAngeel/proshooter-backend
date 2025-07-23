@@ -275,14 +275,43 @@ class PracticeSessionService:
     def get_my_sessions(
         self,
         user_id: UUID,
-        is_finished: Optional[bool] = False,
+        is_finished: Optional[bool] = None,
         skip: int = 0,
         limit: int = 5,
     ) -> List[IndividualPracticeSessionDetailLite]:
+        from src.presentation.schemas.practice_session_schema import (
+            PracticeExerciseSummary,
+            MyPracticeSessionSummary,
+        )
+
         sessions = PracticeSessionRepository.get_user_sessions(
             self.db, user_id, is_finished, skip=skip, limit=limit
         )
-        return [
-            IndividualPracticeSessionDetailLite.model_validate(session)
-            for session in sessions
-        ]
+        result = []
+        for session in sessions:
+            exercises = [
+                PracticeExerciseSummary(
+                    id=ex.id,
+                    exercise_type_name=(
+                        ex.exercise_type.name if ex.exercise_type else None
+                    ),
+                    hits=ex.hits,
+                    accuracy_percentage=ex.accuracy_percentage,
+                    has_image=ex.target_image_id is not None,
+                )
+                for ex in session.exercises
+            ]
+            result.append(
+                MyPracticeSessionSummary(
+                    id=session.id,
+                    date=session.date,
+                    location=session.location,
+                    is_finished=session.is_finished,
+                    evaluation_pending=session.evaluation_pending,
+                    total_shots_fired=session.total_shots_fired,
+                    total_hits=session.total_hits,
+                    accuracy_percentage=session.accuracy_percentage,
+                    exercises=exercises,
+                )
+            )
+        return result
