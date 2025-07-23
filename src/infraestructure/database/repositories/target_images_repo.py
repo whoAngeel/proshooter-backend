@@ -237,3 +237,19 @@ class TargetImagesRepository:
             .limit(limit)
             .all()
         )
+
+    @staticmethod
+    def has_analysis(db: Session, image_id: UUID) -> bool:
+        """
+        Verifica si una imagen tiene análisis asociados.
+        """
+        image = (
+            db.query(TargetImageModel)
+            .options(joinedload(TargetImageModel.analyses))
+            .filter(TargetImageModel.id == image_id)
+            .first()
+        )
+
+        if image and image.analyses and len(image.analyses) > 0:
+            return True
+        return False
