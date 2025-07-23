@@ -105,6 +105,12 @@ class PracticeExerciseService:
             exercise = PracticeExerciseRepository.get_by_id(self.db, exercise_id)
             if not exercise:
                 return None, "PRACTICE_EXERCISE_NOT_FOUND"
+            if exercise.target_image and exercise.target_image.analyses:
+                analysis = exercise.target_image.analyses[0]
+                exercise.target_image.analysis = analysis
+            elif exercise.target_image:
+                exercise.target_image.analysis = None
+
             return PracticeExerciseDetail.model_validate(exercise), None
         except Exception as e:
             return None, f"ERROR_FETCHING_EXERCISE: {str(e)}"

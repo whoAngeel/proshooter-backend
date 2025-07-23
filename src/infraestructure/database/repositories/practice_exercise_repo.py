@@ -14,6 +14,11 @@ from src.infraestructure.database.models.exercise_type_model import ExerciseType
 from src.infraestructure.database.models.target_model import TargetModel
 from src.infraestructure.database.models.weapon_model import WeaponModel
 from src.infraestructure.database.models.ammunition_model import AmmunitionModel
+from src.infraestructure.database.models.target_analysis_model import (
+    TargetAnalysisModel,
+)
+from src.infraestructure.database.models.target_image_model import TargetImageModel
+
 
 logger = getLogger(__name__)
 
@@ -46,7 +51,9 @@ class PracticeExerciseRepository:
                 joinedload(PracticeExerciseModel.weapon),
                 joinedload(PracticeExerciseModel.ammunition),
                 joinedload(PracticeExerciseModel.session),
-                joinedload(PracticeExerciseModel.target_image),
+                joinedload(PracticeExerciseModel.target_image).joinedload(
+                    TargetImageModel.analyses
+                ),
             )
             .filter(PracticeExerciseModel.id == exercise_id)
             .first()

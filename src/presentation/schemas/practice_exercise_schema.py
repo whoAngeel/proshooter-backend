@@ -15,6 +15,7 @@ class ExerciseTypeInfo(BaseModel):
     development: Optional[str] = Field(
         None, description="Development of the exercise type"
     )
+
     model_config = {"from_attributes": True}
 
 
@@ -54,16 +55,6 @@ class SessionInfo(BaseModel):
     id: UUID
     date: datetime
     location: str
-
-    model_config = {"from_attributes": True}
-
-
-class TargetImageRead(BaseModel):
-    id: UUID
-    file_path: str
-    file_size: int
-    content_type: str
-    uploaded_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -134,13 +125,50 @@ class PracticeExerciseRead(PracticeExerciseBase):
     model_config = {"from_attributes": True}
 
 
-class PracticeExerciseDetail(PracticeExerciseRead):
-    exercise_type: Optional[ExerciseTypeInfo] = None
-    target: Optional[TargetInfo] = None
-    weapon: Optional[WeaponInfo] = None
-    ammunition: Optional[AmmunitionInfo] = None
-    session: Optional[SessionInfo] = None
-    target_image: Optional[TargetImageRead] = None
+class TargetAnalysisRead(BaseModel):
+    id: UUID
+    # accuracy_percentage: Optional[float]
+    average_confidence: Optional[float]
+    analysis_method: Optional[str]
+    model_version: Optional[str]
+    total_impacts_detected: Optional[int]
+    fresh_impacts_inside: Optional[int]
+    fresh_impacts_outside: Optional[int]
+    confidence_threshold: Optional[float]
+    analysis_timestamp: Optional[datetime]
+
+    model_config = {"from_attributes": True}
+
+
+class TargetImageRead(BaseModel):
+    id: UUID
+    file_path: str
+    file_size: int
+    content_type: str
+    uploaded_at: datetime
+    analysis: Optional[TargetAnalysisRead] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PracticeExerciseDetail(BaseModel):
+    id: UUID
+    session_id: UUID
+    exercise_type: Optional[ExerciseTypeInfo]
+    target: Optional[TargetInfo]
+    weapon: Optional[WeaponInfo]
+    ammunition: Optional[AmmunitionInfo]
+    distance: str
+    firing_cadence: Optional[str]
+    time_limit: Optional[str]
+    ammunition_allocated: int
+    ammunition_used: int
+    hits: int
+    accuracy_percentage: float
+    reaction_time: Optional[float]
+    created_at: datetime
+    updated_at: Optional[datetime]
+    target_image: Optional[TargetImageRead]
 
     model_config = {"from_attributes": True}
 
