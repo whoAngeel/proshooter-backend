@@ -24,7 +24,9 @@ class InstructorInfo(BaseModel):
 class EvaluationInfo(BaseModel):
     id: UUID
     final_score: float
-    classification: str
+    # classification: str
+
+    model_config = {"from_attributes": True}
 
 
 class IndividualPracticeSessionBase(BaseModel):

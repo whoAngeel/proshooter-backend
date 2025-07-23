@@ -130,12 +130,19 @@ async def get_practice_session(
         200: Operación exitosa
         404: Sesión de práctica no encontrada
     """
-    session, error = session_service.get_session_by_id(session_id)
+    try:
+        session, error = session_service.get_session_by_id(session_id)
 
-    if error:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
+        if error:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
 
-    return session
+        return session
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.get("/", response_model=IndividualPracticeSessionList)
