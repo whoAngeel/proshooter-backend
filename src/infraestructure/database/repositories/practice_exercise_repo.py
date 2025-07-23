@@ -1,9 +1,9 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, func, between, desc
+from sqlalchemy import or_, func, between, desc, select, update
 from datetime import datetime, timedelta, timezone
-
+from logging import getLogger
 from src.infraestructure.database.models.practice_exercise_model import (
     PracticeExerciseModel,
 )
@@ -14,6 +14,8 @@ from src.infraestructure.database.models.exercise_type_model import ExerciseType
 from src.infraestructure.database.models.target_model import TargetModel
 from src.infraestructure.database.models.weapon_model import WeaponModel
 from src.infraestructure.database.models.ammunition_model import AmmunitionModel
+
+logger = getLogger(__name__)
 
 
 class PracticeExerciseRepository:
@@ -692,3 +694,97 @@ class PracticeExerciseRepository:
             analysis_results.append(result_dict)
 
         return analysis_results
+
+    @staticmethod
+    def get_with_relations(
+        db: Session, exercise_id: UUID, relations: List[str] = None
+    ) -> Optional[PracticeExerciseModel]:
+        query = select(PracticeExerciseModel).where(
+            PracticeExerciseModel.id == exercise_id
+        )
+
+        if relations:
+            if "target_image" in relations:
+                query = query.options(joinedload(PracticeExerciseModel.target_image))
+            if "session" in relations:
+                query = query.options(joinedload(PracticeExerciseModel.session))
+            if "exercise_type" in relations:
+                query = query.options(joinedload(PracticeExerciseModel.exercise_type))
+            if "weapon" in relations:
+                query = query.options(joinedload(PracticeExerciseModel.weapon))
+            if "ammunition" in relations:
+                query = query.options(joinedload(PracticeExerciseModel.ammunition))
+            if "target" in relations:
+                query = query.options(joinedload(PracticeExerciseModel.target))
+
+        result = db.execute(query)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    def update_metrics(db: Session, exercise_id: UUID, metrics: Dict) -> bool:
+        try:
+            allowed_fields = {
+                "ammunition_used",
+                "hits",
+                "accuracy_percentage",
+                "reaction_time",
+                "updated_at",
+            }
+            # solo actualizar los campo permitidos
+            update_data = {k: v for k, v in metrics.items() if k in allowed_fields}
+
+            if not update_data:
+                return False
+
+            stmt = (
+                update(PracticeExerciseModel)
+                .where(PracticeExerciseModel.id == exercise_id)
+                .values(**update_data)
+            )
+
+            result = db.execute(stmt)
+            db.commit()
+
+            return result.rowcount > 0
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error updating metrics: {e}")
+            raise e
+
+    @staticmethod
+    def get_exercises_with_images(
+        db: Session, session_id: UUID
+    ) -> List[PracticeExerciseModel]:
+        query = (
+            select(PracticeExerciseModel)
+            .where(
+                PracticeExerciseModel.session_id == session_id,
+                PracticeExerciseModel.target_image_id.is_not(None),
+            )
+            .options(joinedload(PracticeExerciseModel.target_image))
+        )
+
+        result = db.execute(query)
+        return result.scalars().all()
+
+    @staticmethod
+    def update_exercise(
+        db: Session, exercise_id: UUID, **kwargs
+    ) -> Optional[PracticeExerciseModel]:
+        try:
+            exercise = PracticeExerciseRepository.get_by_id(exercise_id)
+            if not exercise:
+                return None
+
+            # Actualizar campos proporcionados
+            for key, value in kwargs.items():
+                if hasattr(exercise, key):
+                    setattr(exercise, key, value)
+
+            db.commit()
+            db.refresh(exercise)
+            return exercise
+
+        except Exception as e:
+            db.rollback()
+            raise e
