@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, Depends
 from uuid import UUID
 from typing import Optional, Tuple, List, Any
+import logging
 
 from src.infraestructure.ml_models import get_bullet_detector, BulletDetectorError
 from src.infraestructure.database.session import get_db
@@ -20,12 +21,20 @@ from src.infraestructure.database.models.target_analysis_model import (
     TargetAnalysisModel,
 )
 from src.presentation.schemas.target_analysis_schema import *
+from src.application.services.exercise_consolidation import ExerciseConsolidationService
+from src.presentation.schemas.exercise_consolidation import (
+    ExerciseConsolidationResult,
+    ExerciseConsolidationStatus,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class TargetAnalysisService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
         self.detector = get_bullet_detector()
+        self.consolidation_service = ExerciseConsolidationService(self.db)
 
     def analyze_excersise_image(
         self,
@@ -74,11 +83,24 @@ class TargetAnalysisService:
                     exercise.target_image.id, analysis_data
                 )
 
+            # 7. consolidacion de datos
+            consolidation_result = self._conslidate_exercise_after_analysis(
+                exercise_id=exercise_id
+            )
+
             # 7. Actualizar estadísticas del ejercicio
-            self._update_exercise_stats(exercise_id, stats)
+            # self._update_exercise_stats(exercise_id, stats)
 
             # 8. Construir respuesta
             response = self._build_response(exercise_id, db_analysis, detections)
+
+            # 9 agregar info de consolidacion a la resputesta
+            if consolidation_result:
+                response.consolidation_info = {
+                    "ammunition_validation_status": consolidation_result.ammunition_validation.status,
+                    "warning": consolidation_result.ammunition_validation.warning,
+                    "needs_manual_review": consolidation_result.ammunition_validation.needs_manual_review,
+                }
 
             return response, None
 
@@ -175,26 +197,6 @@ class TargetAnalysisService:
         }
 
         return TargetAnalysisRepository.create(self.db, analysis_dict)
-
-    def _update_exercise_stats(
-        self, exercise_id: UUID, stats: dict
-    ):  # ← Cambiar parámetro
-        """Actualiza las estadísticas del ejercicio basadas en el análisis"""
-
-        total_fresh_shots = (
-            stats["fresh_impacts_inside"]  # ← Cambiar a stats
-            + stats["fresh_impacts_outside"]  # ← Cambiar a stats
-        )
-        hits = stats["fresh_impacts_inside"]  # ← Cambiar a stats
-        accuracy = stats["accuracy_percentage"]  # ← Cambiar a stats
-
-        update_data = {
-            "ammunition_used": total_fresh_shots,
-            "hits": hits,
-            "accuracy_percentage": accuracy,
-        }
-
-        PracticeExerciseRepository.update(self.db, exercise_id, update_data)
 
     def _get_latest_analysis(
         self, target_image_id: UUID
@@ -300,3 +302,48 @@ class TargetAnalysisService:
 
         # Usar tu repository para actualizar
         return TargetAnalysisRepository.update(self.db, analysis_id, update_data)
+
+    def _update_exercise_stats_fallback(self, exercise_id: UUID):
+        exercise = PracticeExerciseRepository.get_by_id(self.db, exercise_id)
+        if not exercise or not exercise.target_image:
+            return
+
+        # obtener el analisis
+        analysis = self._get_latest_analysis(exercise.target_image.id)
+        if not analysis:
+            return
+
+        total_fresh_shots = (
+            analysis.fresh_impacts_inside + analysis.fresh_impacts_outside
+        )
+        hits = analysis.fresh_impacts_inside
+        accuracy = (hits / total_fresh_shots * 100) if total_fresh_shots > 0 else 0.0
+
+        update_data = {
+            "ammunition_used": total_fresh_shots,
+            "hits": hits,
+            "accuracy_percentage": accuracy,
+        }
+        PracticeExerciseRepository.update(self.db, exercise_id, update_data)
+
+    def _conslidate_exercise_after_analysis(
+        self, exercise_id: UUID
+    ) -> Optional[ExerciseConsolidationResult]:
+
+        try:
+            result = self.consolidation_service.update_exercise_from_analysis(
+                exercise_id=exercise_id
+            )
+
+            if result.ammunition_validation.warning:
+                logger.warning(
+                    f"Consolidación de ejercicio {exercise_id} con advertencia: {result.ammunition_validation.warning}"
+                )
+
+            return result
+
+        except Exception as e:
+            # si falla la consolicacion log de error pero no falla todo el analilsis
+            logger.error(f"Error al consolidar ejercicio {exercise_id}: {str(e)}")
+            self._update_exercise_stats_fallback(exercise_id)
+            return None
