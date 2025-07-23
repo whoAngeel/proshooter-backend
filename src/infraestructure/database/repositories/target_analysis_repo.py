@@ -23,7 +23,14 @@ class TargetAnalysisRepository:
 
     @staticmethod
     def get_by_image_id(db: Session, image_id: UUID) -> List[TargetAnalysisModel]:
-        return db.query(TargetAnalysisModel).filter_by(target_image_id=image_id).all()
+        # return db.query(TargetAnalysisModel).filter_by(target_image_id=image_id).all()
+        query = (
+            select(TargetAnalysisModel)
+            .where(TargetAnalysisModel.target_image_id == image_id)
+            .order_by(desc(TargetAnalysisModel.analysis_timestamp))
+        )
+        result = db.execute(query)
+        return result.scalars().first()
 
     @staticmethod
     def update(

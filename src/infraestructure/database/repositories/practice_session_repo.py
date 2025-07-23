@@ -45,14 +45,14 @@ class PracticeSessionRepository:
     def get_with_exercises(
         db: Session, session_id: UUID
     ) -> Optional[PracticeSessionModel]:
-        query = (
-            select(PracticeSessionModel)
-            .where(PracticeSessionModel.id == session_id)
-            .options(joinedload(PracticeSessionModel.exercises))
-        )
 
-        result = db.execute(query)
-        return result.scalar_one_or_none()
+        # result = db.execute(query)
+        return (
+            db.query(PracticeSessionModel)
+            .options(joinedload(PracticeSessionModel.exercises))
+            .filter(PracticeSessionModel.id == session_id)
+            .first()
+        )
 
     @staticmethod
     def update_totals(db: Session, session_id: UUID) -> bool:
@@ -137,7 +137,7 @@ class PracticeSessionRepository:
             return False
 
     @staticmethod
-    def can_modify_session(db: Session, session_id: UUID, user_id: UUID) -> bool:
+    def can_modify_session(db: Session, session_id: UUID) -> bool:
         session = PracticeSessionRepository.get_by_id(db, session_id=session_id)
         return session and not session.is_finished
 

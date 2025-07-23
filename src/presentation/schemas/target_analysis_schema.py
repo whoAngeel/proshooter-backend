@@ -37,6 +37,8 @@ class ExerciseAnalysisResponse(BaseModel):
     coordenadas_impactos: List[Dict[str, Any]]
     estadisticas_confianza: Dict[str, float]
 
+    consolidation_info: Dict[str, Any] = None  # Información de consolidación si aplica
+
     # Metadata
     modelo_version: str
     umbral_confianza: float

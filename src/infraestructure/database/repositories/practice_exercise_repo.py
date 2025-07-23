@@ -795,3 +795,17 @@ class PracticeExerciseRepository:
         except Exception as e:
             db.rollback()
             raise e
+
+    @staticmethod
+    def get_by_session_id(db: Session, session_id: UUID) -> List[PracticeExerciseModel]:
+        query = (
+            select(PracticeExerciseModel)
+            .where(PracticeExerciseModel.session_id == session_id)
+            .options(
+                joinedload(PracticeExerciseModel.exercise_type),
+                joinedload(PracticeExerciseModel.target_image),
+            )
+        )
+
+        result = db.execute(query)
+        return result.scalars().all()

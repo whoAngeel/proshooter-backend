@@ -3,6 +3,10 @@ from uuid import UUID
 from typing import Dict, Optional, List
 from fastapi import HTTPException
 from datetime import datetime
+from fastapi import Depends
+
+
+from src.infraestructure.database.session import get_db
 
 # from src.application.services
 from src.infraestructure.database.repositories.practice_session_repo import (
@@ -12,14 +16,14 @@ from src.infraestructure.database.repositories.practice_exercise_repo import (
     PracticeExerciseRepository as ExerciseRepository,
 )
 from src.application.services.exercise_consolidation import ExerciseConsolidationService
-from src.presentation.schemas.session_finalization import (
+from src.presentation.schemas.sesion_finalization import (
     SessionFinalizationResult,
     SessionValidationResult,
 )
 
 
 class SessionFinalizationService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session = Depends(get_db)):
         self.db = db
         self.session_repo = SessionRepository()
         self.exercise_repo = ExerciseRepository()
@@ -30,7 +34,7 @@ class SessionFinalizationService:
     ) -> SessionFinalizationResult:
         try:
             # verificar que la sesion existe y pertenece al tirador
-            session = self.session_repo.get_by_id(session_id)
+            session = self.session_repo.get_by_id(db=self.db, session_id=session_id)
 
             if not session:
                 raise HTTPException(
@@ -191,7 +195,7 @@ class SessionFinalizationService:
         Obtiene el estado actual de la sesión.
         """
         try:
-            session = self.session_repo.get_with_exercises(session_id)
+            session = self.session_repo.get_with_exercises(self.db, session_id)
 
             if not session:
                 return {"error": "Sesión no encontrada"}
@@ -258,17 +262,22 @@ class SessionFinalizationService:
                 detail=f"Error reabriendo la sesión [{session_id}]: {str(e)}",
             )
 
-    def _extract_warnings(self, consolidation_result: Dict) -> List:
+    def _extract_warnings(self, consolidation_result: Dict) -> list:
+        """
+        Extrae warnings importantes del resultado de consolidación
+        """
         warnings = []
 
         if consolidation_result.get("failed_count", 0) > 0:
             warnings.append(
-                f"{consolidation_result["failed_count"]} ejercicios no pudieron ser consolidados"
+                f"{consolidation_result['failed_count']} ejercicios no pudieron consolidarse"
             )
-        # buscar warnings especificos en los resultados de ejercicios
-        for exercise_result in consolidation_result.get("exercise_result", []):
-            if not exercise_result.get("success", True):
+
+        # Buscar warnings específicos en los resultados de ejercicios
+        for exercise_result in consolidation_result.get("exercise_results", []):
+            if not exercise_result.get("success") and exercise_result.get("reason"):
                 warnings.append(
-                    f"Ejercicio {exercise_result.get("exercise_id", "UNKNOWN")} falló al consolidar: Razon: {exercise_result["reason"]}"
+                    f"Ejercicio {exercise_result.get('exercise_id', 'unknown')}: {exercise_result['reason']}"
                 )
-        return warnings[:5]  # limitar a 5 warnings
+
+        return warnings[:5]

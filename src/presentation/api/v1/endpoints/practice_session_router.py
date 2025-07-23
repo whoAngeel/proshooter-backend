@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime, timedelta
-
+from sqlalchemy.orm import Session
 from src.application.services.practice_session_service import PracticeSessionService
 from src.infraestructure.auth.jwt_config import get_current_user
+from src.infraestructure.database.session import get_db
 from src.domain.enums.role_enum import RoleEnum
 from src.presentation.schemas.practice_session_schema import (
     IndividualPracticeSessionCreate,
@@ -14,6 +15,14 @@ from src.presentation.schemas.practice_session_schema import (
     IndividualPracticeSessionList,
     IndividualPracticeSessionStatistics,
     IndividualPracticeSessionFilter,
+)
+from src.application.services.finalize_session import SessionFinalizationService
+from src.presentation.schemas.sesion_finalization import (
+    FinishSessionRequest,
+    FinishSessionResponse,
+    SessionStatusResponse,
+    ReopenSessionRequest,
+    ReopenSessionResponse,
 )
 
 router = APIRouter(
@@ -347,3 +356,187 @@ async def get_shooter_statistics(
         raise HTTPException(status_code=status_code, detail=error)
 
     return stats
+
+
+@router.post("/{session_id}/finish/", response_model=FinishSessionResponse)
+async def finish_practice_session(
+    request: FinishSessionRequest,
+    session_id: UUID = Path(..., description="ID de la sesión de práctica a finalizar"),
+    service: SessionFinalizationService = Depends(),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Finaliza una sesión de práctica
+    - Consolida todos los ejercicios
+    - Valida que esté lista para finalizar
+    - Marca como terminada y lista para evaluación
+    """
+    try:
+        shooter_id = current_user.id
+
+        result = service.finish_session(session_id, shooter_id)
+
+        return FinishSessionResponse(
+            success=True,
+            data=result,
+        )
+    except HTTPException as e:
+        return FinishSessionResponse(
+            success=False,
+            error=str(e.detail),
+        )
+
+    except Exception as e:
+        return FinishSessionResponse(
+            success=False,
+            error=f"Error interno: {str(e)}",
+        )
+
+
+@router.get("/{session_id}/status/", response_model=SessionStatusResponse)
+async def get_session_status(
+    session_id: UUID = Path(..., description="ID de la sesión de práctica"),
+    service: SessionFinalizationService = Depends(),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Obtiene el estado actual de una sesión
+    - Si puede finalizarse
+    - Si puede modificarse
+    - Qué le falta para estar completa
+    """
+    try:
+        status = service.get_session_status(session_id)
+
+        if "error" in status:
+            return SessionStatusResponse(
+                success=False,
+                error=status["error"],
+            )
+        return SessionStatusResponse(
+            success=True,
+            data=status,
+        )
+    except HTTPException as e:
+        return SessionStatusResponse(
+            success=False,
+            error=str(e.detail),
+        )
+
+
+@router.get("/{session_id}/validate-completion/")
+async def validate_session_for_completion(
+    session_id: UUID = Path(..., description="ID de la sesión de práctica"),
+    service: SessionFinalizationService = Depends(),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Valida si una sesión puede finalizarse
+    Útil para mostrar warnings ANTES de intentar finalizar
+    """
+    try:
+        validation = service.validate_session_for_completion(session_id)
+
+        return {
+            "can_finish": validation.can_finish,
+            "reason": validation.reason,
+            "missing_requirements": validation.missing_requirements,
+            "exercises_count": validation.exercises_count,
+            "exercises_with_images": validation.exercises_with_images,
+            "exercises_needing_analysis": validation.exercises_needing_analysis,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{session_id}/reopen/")
+async def reopen_practice_session(
+    request: ReopenSessionRequest,
+    session_id: UUID = Path(..., description="ID de la sesión de práctica a reabrir"),
+    service: SessionFinalizationService = Depends(),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Reabre una sesión de práctica finalizada
+    Permite volver a modificarla si es necesario
+    """
+    try:
+        if not request.confirmation:
+            raise HTTPException(
+                status_code=400, detail="Debe confirmar que desea reabrir la sesión"
+            )
+
+        shooter_id = current_user.shooter.user_id
+
+        result = service.reopen_session(session_id, shooter_id)
+
+        return ReopenSessionResponse(**result)
+    except HTTPException as e:
+        return ReopenSessionResponse(
+            success=False, message=e.detail, session_id=session_id, can_modify=False
+        )
+    except Exception as e:
+        return ReopenSessionResponse(
+            success=False,
+            message=f"Error interno: {str(e)}",
+            session_id=session_id,
+            can_modify=False,
+        )
+
+
+@router.get("/{session_id}/can-modify/")
+async def can_modify_session(
+    session_id: UUID = Path(..., description="ID de la sesión de práctica"),
+    service: SessionFinalizationService = Depends(),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Verifica rápidamente si una sesión puede modificarse
+    Útil para habilitar/deshabilitar botones en el frontend
+    """
+    try:
+        can_modify = service.can_modify_session(session_id)
+
+        return {
+            "session_id": str(session_id),
+            "can_modify": can_modify,
+            "message": (
+                "Puede modificarse"
+                if can_modify
+                else "Sesión finalizada - no se puede modificar"
+            ),
+        }
+    except Exception as e:
+        return {"session_id": str(session_id), "can_modify": False, "error": str(e)}
+
+
+@router.get("/exercise/{exercise_id}/can-modify/")
+async def can_modify_exercise(
+    exercise_id: UUID = Path(..., description="ID del ejercicio de práctica"),
+    # service: SessionFinalizationService = Depends(),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Verifica si un ejercicio de práctica puede modificarse
+    Útil para habilitar/deshabilitar botones en el frontend
+    """
+    try:
+        # from utils.session_protection import validate_exercise_modification_allowed
+        from src.infraestructure.utils.session_protection import (
+            validate_exercise_modification_allowed,
+        )
+
+        validate_exercise_modification_allowed(db, exercise_id)
+
+        return {
+            "exercise_id": str(exercise_id),
+            "can_modify": True,
+            "message": "Ejercicio puede modificarse",
+        }
+    except HTTPException as e:
+        return {
+            "exercise_id": str(exercise_id),
+            "can_modify": False,
+            "message": e.detail,
+        }

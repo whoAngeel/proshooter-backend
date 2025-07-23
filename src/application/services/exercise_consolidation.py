@@ -34,46 +34,53 @@ class ExerciseConsolidationService:
         self, exercise_id: UUID
     ) -> ExerciseConsolidationResult:
         try:
+            # Obtener ejercicio con sus relaciones
             exercise = self.exercise_repo.get_with_relations(
                 self.db, exercise_id, ["target_image", "session"]
             )
 
             if not exercise:
                 raise HTTPException(status_code=404, detail="Ejercicio no encontrado")
+
             if not exercise.target_image_id:
                 raise HTTPException(
-                    status_code=400, detail="Ejercicio sin imagen de blanco asociada"
+                    status_code=400,
+                    detail="El ejercicio no tiene imagen de blanco asociada",
                 )
 
+            # Obtener el análisis más reciente
             analysis = self.analysis_repo.get_by_image_id(
                 self.db, exercise.target_image_id
             )
 
             if not analysis:
                 raise HTTPException(
-                    status_code=404,
-                    detail="Análisis no encontrado para la imagen de blanco",
+                    status_code=400,
+                    detail="No se encontró análisis para la imagen del ejercicio",
                 )
 
-            # validar consistencia de municion
+            # Validar consistencia de munición
             ammunition_validation = self.validate_ammunition_consistency(
                 exercise, analysis
             )
 
-            # calcular metricas del ejercicio
+            # Calcular métricas del ejercicio
             exercise_updates = self.calculate_exercise_metrics(
                 exercise, analysis, ammunition_validation
             )
+
+            # Actualizar ejercicio en base de datos
             success = self.exercise_repo.update_metrics(
-                db=self.db, exercise_id=exercise_id, metrics=exercise_updates
+                self.db, exercise_id, exercise_updates.model_dump()
             )
 
             if not success:
                 raise HTTPException(
-                    status_code=500, detail="Error al actualizar el ejercicio"
+                    status_code=500, detail="Error actualizando ejercicio"
                 )
 
-            self.session_repo.update_totals(db=self.db, session_id=exercise.session_id)
+            # Recalcular totales de la sesión
+            self.session_repo.update_totals(self.db, exercise.session_id)
 
             return ExerciseConsolidationResult(
                 exercise_id=exercise_id,
@@ -197,15 +204,19 @@ class ExerciseConsolidationService:
 
     def consolidate_all_session_exercises(self, session_id: UUID) -> Dict:
         try:
-            # obtener todos los ejercicios de la session
-            exercises = self.exercise_repo.get_by_session(
+            # Obtener todos los ejercicios de la sesión
+            exercises = self.exercise_repo.get_by_session_id(
                 self.db, session_id=session_id
+            )
+
+            logger.info(
+                f"Consolidando {len(exercises)} ejercicios para la sesión {session_id}"
             )
 
             results = {
                 "session_id": str(session_id),
                 "total_exercises": len(exercises),
-                "consolidation_count": 0,
+                "consolidated_count": 0,
                 "failed_count": 0,
                 "exercise_results": [],
                 "session_totals": None,
@@ -224,20 +235,18 @@ class ExerciseConsolidationService:
                                 "accuracy": result.accuracy_percentage,
                             }
                         )
-                        results["consolidation_count"] += 1
+                        results["consolidated_count"] += 1
                     else:
                         results["exercise_results"].append(
                             {
                                 "exercise_id": str(exercise.id),
                                 "success": False,
-                                "reason": "No tiene imagen del blanco",
+                                "reason": "No tiene imagen de blanco",
                             }
                         )
+                        results["failed_count"] += 1
 
-                except HTTPException as e:
-                    logger.warning(
-                        f"Error consolidando ejercicio {exercise.id}: {str(e)}"
-                    )
+                except Exception as e:
                     results["exercise_results"].append(
                         {
                             "exercise_id": str(exercise.id),
@@ -246,20 +255,20 @@ class ExerciseConsolidationService:
                         }
                     )
                     results["failed_count"] += 1
-            # calcular totales de la sesion
-            if results["consolidation_count"] > 0:
+
+            # Calcular totales de la sesión
+            if results["consolidated_count"] > 0:
                 results["session_totals"] = self.session_repo.calculate_totals(
                     self.db, session_id
                 )
+
             return results
+
         except Exception as e:
             logger.error(
-                f"Error consolidando ejercicios de la sesión {session_id}: {str(e)}"
+                f"Error consolidando ejercicios de sesión {session_id}: {str(e)}"
             )
-            return {
-                "session_id": str(session_id),
-                "error": f"Error interno: {str(e)}",
-            }
+            return {"session_id": str(session_id), "error": str(e)}
 
     def _needs_consolidation(self, exercise, analysis) -> bool:
         if not analysis:
