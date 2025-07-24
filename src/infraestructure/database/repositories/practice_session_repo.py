@@ -468,3 +468,26 @@ class PracticeSessionRepository:
             .limit(limit)
             .all()
         )
+
+    @staticmethod
+    def finish_session_with_evaluation_status(
+        db: Session, session_id: UUID, evaluation_pending: bool
+    ) -> bool:
+        try:
+            # actualizar totales al finalizar
+            if not PracticeSessionRepository.update_totals(db, session_id):
+                return False
+
+            stmt = (
+                update(PracticeSessionModel)
+                .where(PracticeSessionModel.id == session_id)
+                .values(is_finished=True, evaluation_pending=evaluation_pending)
+            )
+
+            result = db.execute(stmt)
+            db.commit()
+            return result.rowcount > 0
+
+        except Exception as e:
+            db.rollback()
+            raise e
