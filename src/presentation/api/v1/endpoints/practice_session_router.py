@@ -83,21 +83,6 @@ async def create_practice_session(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error interno: {str(e)}",
         )
-    # current_user_id = current_user.id
-
-    # if current_user.role != RoleEnum.TIRADOR:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail=f"Solo los tiradores pueden crear sesiones de practica. Tu rol actual es: {current_user.role}",
-    #     )
-
-    # session, error = service.create_session(session_data, current_user_id)
-    # if error:
-    #     status_code = status.HTTP_400_BAD_REQUEST
-    #     if error == "SHOOTER_NOT_FOUND" or error == "INSTRUCTOR_NOT_FOUND":
-    #         status_code = status.HTTP_404_NOT_FOUND
-    #     raise HTTPException(status_code=status_code, detail=error)
-    # return session
 
 
 @router.get("/recent", response_model=List[IndividualPracticeSessionRead])
@@ -567,3 +552,55 @@ async def can_modify_exercise(
             "can_modify": False,
             "message": e.detail,
         }
+
+
+@router.get("/{session_id}/details")
+async def get_session_with_instructor_details(
+    session_id: UUID,
+    service: PracticeSessionService = Depends(),
+    current_user=Depends(get_current_user),
+):
+    """
+    Obtiene detalles de sesión incluyendo información del instructor
+    """
+
+    session_details = service.get_session_with_instructor_info(session_id)
+
+    if not session_details:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
+    return session_details
+
+
+@router.patch("/{session_id}/instructor")
+async def update_session_instructor(
+    session_id: UUID,
+    instructor_id: UUID = Query(
+        None, description="Id del instructor"
+    ),  # None para remover instructor
+    service: PracticeSessionService = Depends(),
+    current_user=Depends(get_current_user),
+):
+    """
+    Actualiza el instructor asignado a una sesión
+    Solo si la sesión no está finalizada
+    """
+    try:
+        shooter_id = current_user.shooter.user_id
+
+        success, error = service.update_session_instructor(
+            session_id, instructor_id, shooter_id
+        )
+
+        if not success:
+            raise HTTPException(status_code=400, detail=error)
+
+        return {
+            "success": True,
+            "message": "Instructor actualizado correctamente",
+            "instructor_id": str(instructor_id) if instructor_id else None,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
