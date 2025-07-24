@@ -85,7 +85,7 @@ class ClubInstructorService:
         if user.personal_data:
             first_name = user.personal_data.first_name or ""
             second_name = user.personal_data.second_name or ""
-            last_name1 = user.personal_data.last_name or ""
-            last_name2 = user.personal_data.second_last_name or ""
+            last_name1 = user.personal_data.last_name1 or ""
+            last_name2 = user.personal_data.last_name2 or ""
             return f"{first_name} {second_name} {last_name1} {last_name2}".strip()
         return user.email  # Fallback to email if personal data is not available
