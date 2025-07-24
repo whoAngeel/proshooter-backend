@@ -36,11 +36,11 @@ from src.infraestructure.database.repositories.instructor import InstructorRepos
 class PracticeSessionService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
-        self.club_instructor_service = ClubInstructorService()
+        self.club_instructor_service = ClubInstructorService(self.db)
 
     def create_session(
         self, session_data: PracticeSessionCreateRequest, user_id: UUID
-    ) -> Tuple[Optional[IndividualPracticeSessionRead], Optional[str]]:
+    ) -> Tuple[Optional[any], Optional[str]]:
         try:
             # verificar que el shooter existe
             shooter = ShooterRepository.get_by_id(self.db, user_id)
@@ -54,6 +54,7 @@ class PracticeSessionService:
                         session_data.instructor_id, shooter_id=user_id
                     )
                 )
+
                 if not is_valid:
                     return None, f"INVALID_INSTRUCTOR_SELECTION: {error_msg}"
 
@@ -85,7 +86,7 @@ class PracticeSessionService:
             #     session_dict["accuracy_percentage"] = 0.0
 
             new_session = PracticeSessionRepository.create(self.db, session_dict)
-            return IndividualPracticeSessionRead.model_validate(new_session), None
+            return new_session, None
         except Exception as e:
             self.db.rollback()
             return None, f"ERROR_CRAETING_PRACTICE_SESSION: {str(e)}"
