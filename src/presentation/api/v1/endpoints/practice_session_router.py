@@ -24,6 +24,7 @@ from src.presentation.schemas.sesion_finalization import (
     ReopenSessionRequest,
     ReopenSessionResponse,
 )
+from src.presentation.schemas.instructor import PracticeSessionCreateRequest
 
 router = APIRouter(
     prefix="/practice-sessions",
@@ -34,12 +35,11 @@ router = APIRouter(
 
 @router.post(
     "/",
-    response_model=IndividualPracticeSessionRead,
     status_code=status.HTTP_201_CREATED,
 )
 # @router.post("/",  status_code=status.HTTP_201_CREATED)
 async def create_practice_session(
-    session_data: IndividualPracticeSessionCreate,
+    session_data: PracticeSessionCreateRequest,
     service: PracticeSessionService = Depends(),
     current_user: dict = Depends(get_current_user),
 ):
@@ -63,21 +63,41 @@ async def create_practice_session(
         404: Tirador o instructor no encontrado
 
     """
-    current_user_id = current_user.id
+    try:
+        shotoer_id = current_user.id
 
-    if current_user.role != RoleEnum.TIRADOR:
+        session, error = service.create_session(session_data, shotoer_id)
+        if error:
+            raise HTTPException(status_code=400, detail=error)
+
+        return {
+            "success": True,
+            "session_id": str(session.id),
+            "instructor_assigned": session.instructor_id is not None,
+            "can_be_evaluated": session.instructor_id is not None,
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Solo los tiradores pueden crear sesiones de practica. Tu rol actual es: {current_user.role}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error interno: {str(e)}",
         )
+    # current_user_id = current_user.id
 
-    session, error = service.create_session(session_data, current_user_id)
-    if error:
-        status_code = status.HTTP_400_BAD_REQUEST
-        if error == "SHOOTER_NOT_FOUND" or error == "INSTRUCTOR_NOT_FOUND":
-            status_code = status.HTTP_404_NOT_FOUND
-        raise HTTPException(status_code=status_code, detail=error)
-    return session
+    # if current_user.role != RoleEnum.TIRADOR:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN,
+    #         detail=f"Solo los tiradores pueden crear sesiones de practica. Tu rol actual es: {current_user.role}",
+    #     )
+
+    # session, error = service.create_session(session_data, current_user_id)
+    # if error:
+    #     status_code = status.HTTP_400_BAD_REQUEST
+    #     if error == "SHOOTER_NOT_FOUND" or error == "INSTRUCTOR_NOT_FOUND":
+    #         status_code = status.HTTP_404_NOT_FOUND
+    #     raise HTTPException(status_code=status_code, detail=error)
+    # return session
 
 
 @router.get("/recent", response_model=List[IndividualPracticeSessionRead])
