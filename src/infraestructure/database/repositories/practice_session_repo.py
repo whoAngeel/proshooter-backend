@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, func, between, desc, select, update
+from sqlalchemy import or_, func, between, desc, select, update, and_
 from datetime import datetime, timedelta, timezone
 import logging
 
@@ -153,6 +153,24 @@ class PracticeSessionRepository:
             .limit(limit)
             .all()
         )
+
+    @staticmethod
+    def get_sessions_by_instructor(
+        db: Session, instructor_id: UUID, only_pending: bool = True
+    ):
+        query = select(PracticeSessionModel).where(
+            PracticeSessionModel.instructor_id == instructor_id
+        )
+
+        if only_pending:
+            query = query.where(
+                and_(
+                    PracticeSessionModel.is_finished == True,
+                    PracticeSessionModel.evaluation_pending == True,
+                )
+            )
+        result = db.execute(query)
+        return result.scalars().all()
 
     @staticmethod
     def get_finished_sessions_by_shooter(
