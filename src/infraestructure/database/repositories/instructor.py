@@ -50,24 +50,24 @@ class InstructorRepository:
         db: Session, instructor_id: UUID, shooter_id: UUID
     ) -> bool:
         # Verificar que instructor y shooter estén en el mismo club
-        query = (
-            select(
-                ShooterModel.club_id.label("instructor_club"),
-                ShooterModel.club_id.label("shooter_club"),
-            )
-            .select_from(ShooterModel.alias("instructor_shooter"))
-            .join(
-                ShooterModel.alias("target_shooter"),
-                ShooterModel.alias("instructor_shooter").c.club_id
-                == ShooterModel.alias("target_shooter").c.club_id,
-            )
-            .where(
-                and_(
-                    ShooterModel.alias("instructor_shooter").c.user_id == instructor_id,
-                    ShooterModel.alias("target_shooter").c.user_id == shooter_id,
-                )
-            )
-        )
+        # query = (
+        #     select(
+        #         ShooterModel.club_id.label("instructor_club"),
+        #         ShooterModel.club_id.label("shooter_club"),
+        #     )
+        #     .select_from(ShooterModel.alias("instructor_shooter"))
+        #     .join(
+        #         ShooterModel.alias("target_shooter"),
+        #         ShooterModel.alias("instructor_shooter").c.club_id
+        #         == ShooterModel.alias("target_shooter").c.club_id,
+        #     )
+        #     .where(
+        #         and_(
+        #             ShooterModel.alias("instructor_shooter").c.user_id == instructor_id,
+        #             ShooterModel.alias("target_shooter").c.user_id == shooter_id,
+        #         )
+        #     )
+        # )
 
         # Versión más simple y clara
         instructor_club_query = select(ShooterModel.club_id).where(
