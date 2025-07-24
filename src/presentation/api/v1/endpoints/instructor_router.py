@@ -23,11 +23,13 @@ async def get_available_instructors(
     try:
         shooter_id = current_user.id
 
-        instructors = service.get_available_instructors_for_shooter(shooter_id)
+        # instructors = service.get_available_instructors_for_shooter(shooter_id)
+        result = service.get_available_instructors_for_shooter(shooter_id)
 
-        return AvailableInstructorsResponse(
-            success=True, instructors=instructors, total_count=len(instructors)
-        )
+        # return AvailableInstructorsResponse(
+        #     success=True, instructors=instructors, total_count=len(instructors)
+        # )
+        return result
     except HTTPException as e:
         return AvailableInstructorsResponse(
             success=False,

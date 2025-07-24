@@ -11,6 +11,7 @@ from src.presentation.schemas.instructor import (
     AvailableInstructorsResponse,
     InstructorBasicInfo,
 )
+from src.infraestructure.database.models.shooting_club_model import ShootingClubModel
 
 
 class ClubInstructorService:
@@ -19,14 +20,16 @@ class ClubInstructorService:
 
     def get_available_instructors_for_shooter(
         self, shooter_id: UUID
-    ) -> List[InstructorBasicInfo]:
+    ) -> AvailableInstructorsResponse:
         shooter = ShooterRepository.get_by_id(self.db, shooter_id)
         if not shooter:
             raise HTTPException(status_code=404, detail="Tirador no encontrado")
         if not shooter.club_id:
-            return []  # sin club
+            return AvailableInstructorsResponse(
+                success=True, instructors=[], club_name=None, total_count=0
+            )
 
-        # obtener instructores del mismo club
+        # Obtener instructores del mismo club
         instructors = InstructorRepository.get_available_instructors_for_shooter(
             self.db, shooter_id
         )
@@ -41,7 +44,21 @@ class ClubInstructorService:
                 is_chief_instructor=instructor.role == "INSTRUCTOR_JEFE",
             )
             instructor_list.append(instructor_info)
-        return instructor_list
+
+        # Obtener el nombre del club
+        club = (
+            self.db.query(ShootingClubModel)
+            .filter(ShootingClubModel.id == shooter.club_id)
+            .first()
+        )
+        club_name = club.name if club else None
+
+        return AvailableInstructorsResponse(
+            success=True,
+            instructors=instructor_list,
+            club_name=club_name,
+            total_count=len(instructor_list),
+        )
 
     def validate_instructor_selection(
         self, instructor_id: UUID, shooter_id: UUID
