@@ -3,11 +3,16 @@ from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
 from uuid import uuid4
 
+
 class ExerciseTypeModel(Base):
     __tablename__ = "exercise_types"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
+    type = Column(
+        String, nullable=False
+    )  # Tipo de ejercicio (e.g., "precision", "reaction", "movement")
+    # category = Column(String, nullable=False)  # Categoria del ejercicio (e.g., "
     difficulty = Column(Integer, nullable=False)
     objective = Column(String, nullable=True)
     development = Column(String, nullable=True)
@@ -18,10 +23,14 @@ class ExerciseTypeModel(Base):
 
     # Relationships
     # practice_exercise = relationship("PracticeExerciseModel", back_populates="exercise_type", cascade="all, delete-orphan")
-    exercises = relationship("PracticeExerciseModel", back_populates="exercise_type", cascade="all, delete-orphan")
-
+    exercises = relationship(
+        "PracticeExerciseModel",
+        back_populates="exercise_type",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"ExerciseType(id={self.id}, name={self.name}, description={self.description})"
+
 
 from ..models.practice_exercise_model import PracticeExerciseModel
