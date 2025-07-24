@@ -17,6 +17,7 @@ class ShooterInfo(BaseModel):
 
 class InstructorInfo(BaseModel):
     id: UUID
+    email: str
     personal_data: Optional[UserPersonalDataReadLite] = None
     model_config = {"from_attributes": True}
 

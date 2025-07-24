@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
@@ -63,7 +63,7 @@ async def get_club_instructors(
 
 @router.post("/validate-selection/")
 async def validate_instructor_selection(
-    instructor_id: UUID,
+    instructor_id: UUID = Query(..., description="ID del instructor a validar"),
     service: ClubInstructorService = Depends(),
     current_user: dict = Depends(get_current_user),
 ):
