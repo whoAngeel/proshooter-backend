@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from src.infraestructure.config.settings import settings
 from fastapi.middleware.cors import CORSMiddleware
-
+import logging
 from src.presentation.api.v1.routers import router as router_v1
 
+# logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,

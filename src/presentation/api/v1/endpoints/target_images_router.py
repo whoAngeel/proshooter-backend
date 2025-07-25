@@ -5,10 +5,6 @@ from src.application.services.target_images_service import TargetImagesService
 from src.infraestructure.database.session import get_db
 from sqlalchemy.orm import Session
 import io
-import requests
-import cv2
-import numpy as np
-from PIL import Image
 from src.application.services.target_images_service import TargetImagesService
 from src.presentation.schemas.target_images_schema import (
     TargetImageCreate,

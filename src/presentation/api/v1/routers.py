@@ -16,6 +16,7 @@ from .endpoints import health_router as health
 from .endpoints import analysis_image_router as analysis_image
 from .endpoints import instructor_router as instructor
 from .endpoints import target_images_router as target_images
+from .endpoints import instructor_dashboard_router as instructor_dashboard
 
 router = APIRouter()
 router.include_router(health.router)
@@ -34,3 +35,4 @@ router.include_router(practice_evaluation.router)
 router.include_router(analysis_image.router)
 router.include_router(instructor.router)
 router.include_router(target_images.router)
+router.include_router(instructor_dashboard.router)

@@ -451,11 +451,11 @@ class PracticeExerciseService:
             image_np = np.array(pil_image)
 
             for impact in analysis.impact_coordinates:
-                x = int(impact.get("centro_x", 0))
-                y = int(impact.get("centro_y", 0))
-                es_fresco = impact.get("es_fresco", False)
-                color = (0, 255, 0) if es_fresco else (255, 0, 0)
-                cv2.circle(image_np, (x, y), 15, color, thickness=3)
+                if impact.get("es_fresco", False):
+                    x = int(impact.get("centro_x", 0))
+                    y = int(impact.get("centro_y", 0))
+                    color = (0, 255, 0)  # solo color verde para impactos frescos
+                    cv2.circle(image_np, (x, y), 15, color, thickness=3)
 
             result_image = Image.fromarray(image_np)
             buf = io.BytesIO()
