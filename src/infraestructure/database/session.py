@@ -6,17 +6,12 @@ from src.infraestructure.config.settings import settings
 Base = declarative_base()
 
 engine = create_engine(
-    settings.DATABASE_URL,
-    echo=True,
-    future=True,
-    poolclass=NullPool
+    settings.DATABASE_URL, echo=False, future=True, poolclass=NullPool
 )
 
-SessionLocal = sessionmaker(
-    bind=engine,
-    expire_on_commit=False,
-    autoflush=False
-)
+SessionLocal = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
+
+
 def get_db():
     db = SessionLocal()
     try:
