@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, status, Response
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
+from fastapi.responses import StreamingResponse
+import io
 
 from src.application.services.practice_exercise_service import PracticeExerciseService
 from src.infraestructure.auth.jwt_config import get_current_user
@@ -464,3 +466,15 @@ async def upload_exercise_image(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
 
     return result
+
+
+@router.get(
+    "/exercises/{exercise_id}/image-with-impacts", response_class=StreamingResponse
+)
+def get_exercise_image_with_impacts(
+    exercise_id: UUID, service: PracticeExerciseService = Depends()
+):
+    image_bytes, error = service.get_exercise_image_with_impacts(exercise_id)
+    if error or not image_bytes:
+        return Response(content=error or "Error generando imagen", status_code=404)
+    return StreamingResponse(io.BytesIO(image_bytes), media_type="image/jpeg")

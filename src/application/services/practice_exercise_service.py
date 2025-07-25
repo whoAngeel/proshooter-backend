@@ -5,6 +5,11 @@ from uuid import UUID
 from datetime import datetime
 import math
 from fastapi import UploadFile
+import io
+import requests
+import cv2
+import numpy as np
+from PIL import Image
 
 from src.infraestructure.database.repositories.practice_exercise_repo import (
     PracticeExerciseRepository,
@@ -404,3 +409,59 @@ class PracticeExerciseService:
         except Exception as e:
             self.db.rollback()
             print(f"Error updating session totals: {str(e)}")
+
+    def get_exercise_image_with_impacts(
+        self, exercise_id: UUID
+    ) -> Tuple[Optional[bytes], Optional[str]]:
+        """
+        Devuelve la imagen del ejercicio con los impactos detectados dibujados encima.
+        """
+        try:
+            # 1. Validar que el ejercicio existe
+            exercise = PracticeExerciseRepository.get_by_id(self.db, exercise_id)
+            if not exercise:
+                return None, "EXERCISE_NOT_FOUND"
+
+            # 2. Validar que tiene imagen asociada
+            image = exercise.target_image
+            if not image:
+                return None, "EXERCISE_HAS_NO_IMAGE"
+
+            # 3. Validar que tiene análisis
+            if not image.analyses or len(image.analyses) == 0:
+                return None, "IMAGE_HAS_NO_ANALYSIS"
+
+            analysis = image.analyses[0]
+            if not analysis.impact_coordinates:
+                return None, "NO_IMPACT_COORDINATES"
+
+            # 4. Descargar la imagen original desde S3
+            if not image.file_path or not image.file_path.startswith("http"):
+                return None, "IMAGE_FILE_PATH_INVALID"
+
+            import requests
+
+            response = requests.get(image.file_path)
+            if response.status_code != 200:
+                return None, "IMAGE_DOWNLOAD_ERROR"
+            image_bytes = response.content
+
+            # 5. Abrir imagen y pintar impactos
+            pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            image_np = np.array(pil_image)
+
+            for impact in analysis.impact_coordinates:
+                x = int(impact.get("centro_x", 0))
+                y = int(impact.get("centro_y", 0))
+                es_fresco = impact.get("es_fresco", False)
+                color = (0, 255, 0) if es_fresco else (255, 0, 0)
+                cv2.circle(image_np, (x, y), 15, color, thickness=3)
+
+            result_image = Image.fromarray(image_np)
+            buf = io.BytesIO()
+            result_image.save(buf, format="JPEG")
+            buf.seek(0)
+            return buf.read(), None
+
+        except Exception as e:
+            return None, f"ERROR_DRAWING_IMPACTS: {str(e)}"

@@ -1,8 +1,13 @@
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from typing import List, Optional, Tuple
+import requests
 from uuid import UUID
 import os
+import io
+import cv2
+import numpy as np
+from PIL import Image
 from fastapi import UploadFile
 from src.infraestructure.database.repositories.target_images_repo import (
     TargetImagesRepository,
