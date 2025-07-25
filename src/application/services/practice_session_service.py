@@ -28,42 +28,129 @@ from src.presentation.schemas.practice_session_schema import (
     IndividualPracticeSessionDetailLite,
 )
 
+from src.presentation.schemas.instructor import PracticeSessionCreateRequest
+from src.application.services.club_instructor import ClubInstructorService
+from src.infraestructure.database.repositories.instructor import InstructorRepository
+
 
 class PracticeSessionService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
+        self.club_instructor_service = ClubInstructorService(self.db)
 
     def create_session(
-        self, session_data: IndividualPracticeSessionCreate, user_id: UUID
-    ) -> Tuple[Optional[IndividualPracticeSessionRead], Optional[str]]:
+        self, session_data: PracticeSessionCreateRequest, user_id: UUID
+    ) -> Tuple[Optional[any], Optional[str]]:
         try:
+            # verificar que el shooter existe
             shooter = ShooterRepository.get_by_id(self.db, user_id)
             if not shooter:
                 return None, "SHOOTER_NOT_FOUND"
 
-            # verificar
+            # validar instrotor si se proporciona
             if session_data.instructor_id:
-                instructor = UserRepository.get_by_id(
-                    self.db, session_data.instructor_id
+                is_valid, error_msg = (
+                    self.club_instructor_service.validate_instructor_selection(
+                        session_data.instructor_id, shooter_id=user_id
+                    )
                 )
-                if not instructor:
-                    return None, "INSTRUCTOR_NOT_FOUND"
 
-            session_dict = session_data.model_dump()
-            session_dict["shooter_id"] = shooter.user_id
+                if not is_valid:
+                    return None, f"INVALID_INSTRUCTOR_SELECTION: {error_msg}"
 
-            if session_data.total_shots_fired > 0:
-                session_dict["accuracy_percentage"] = (
-                    session_data.total_hits / session_data.total_shots_fired
-                ) * 100
-            else:
-                session_dict["accuracy_percentage"] = 0.0
+            # crear datos de la sesion
+            session_dict = {
+                "shooter_id": user_id,
+                "instructor_id": session_data.instructor_id,  # Puede ser None
+                "location": session_data.location,
+                "date": (
+                    datetime.now()
+                    if not session_data.date
+                    else self._parse_date(session_data.date)
+                ),
+                "total_shots_fired": 0,
+                "total_hits": 0,
+                "accuracy_percentage": 0.0,
+                "evaluation_pending": False,  # Se actualiza al finalizar
+                "is_finished": False,
+            }
+
+            # session_dict = session_data.model_dump()
+            # session_dict["shooter_id"] = shooter.user_id
+
+            # if session_data.total_shots_fired > 0:
+            #     session_dict["accuracy_percentage"] = (
+            #         session_data.total_hits / session_data.total_shots_fired
+            #     ) * 100
+            # else:
+            #     session_dict["accuracy_percentage"] = 0.0
 
             new_session = PracticeSessionRepository.create(self.db, session_dict)
-            return IndividualPracticeSessionRead.model_validate(new_session), None
+            return new_session, None
         except Exception as e:
             self.db.rollback()
             return None, f"ERROR_CRAETING_PRACTICE_SESSION: {str(e)}"
+
+    def get_session_with_instructor_info(self, session_id: UUID) -> Optional[dict]:
+        session = PracticeSessionRepository.get_with_exercises(self.db, session_id)
+        if not session:
+            return None
+
+        # agregar informacion del instructor si existe
+        instructor_info = None
+        if session.instructor_id:
+            instructor = InstructorRepository.get_instructor_basic_info(
+                self.db, session.instructor_id
+            )
+            if instructor:
+                instructor_info = {
+                    "id": instructor.id,
+                    "email": instructor.email,
+                    "role": instructor.role,
+                    "full_name": self.club_instructor_service._get_full_name(
+                        instructor
+                    ),
+                    "is_chief_instructor": instructor.role == "INSTRUCTOR_JEFE",
+                }
+        return {
+            "session": session,
+            "instructor_info": instructor_info,
+            "can_be_evaluated": session.instructor_id is not None
+            and session.is_finished,
+        }
+
+    def update_session_instructor(
+        self, session_id: UUID, instructor_id: Optional[UUID], shooter_id: UUID
+    ) -> Tuple[bool, Optional[str]]:
+        # solo permitir si la sesion no esta finalizada
+        session = PracticeSessionRepository.get_by_id(self.db, session_id)
+        if not session:
+            return False, "SESSION_NOT_FOUND"
+
+        if session.shooter_id != shooter_id:
+            return False, "NOT_SESSION_OWNER"
+
+        if session.is_finished:
+            return False, "SESSION_ALREADY_FINISHED"
+
+        # validar nuevo instructor si se proporciona
+        if instructor_id:
+            is_valid, error_msg = (
+                self.club_instructor_service.validate_instructor_selection(
+                    instructor_id, shooter_id
+                )
+            )
+            if not is_valid:
+                return False, f"INVALID_INSTRUCTOR_SELECTION: {error_msg}"
+
+        # actualizar
+        success = PracticeSessionRepository.update_session(
+            self.db, session_id, instructor_id=instructor_id
+        )
+        return success, None if success else "ERROR_UPDATING_SESSION_INSTRUCTOR"
+
+    def _parse_date(self, date_str: str) -> datetime:
+        return datetime.now()
 
     # def get_session_by_id(self, session_id: UUID) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     def get_session_by_id(

@@ -3,6 +3,7 @@ from uuid import UUID
 from typing import Optional
 from datetime import datetime
 
+
 class ShooterStatsBase(BaseModel):
     total_shots: int = 0
     accuracy: int = 0
@@ -13,12 +14,16 @@ class ShooterStatsBase(BaseModel):
     average_hit_factor: float = 0
     effectiveness: float = 0
     common_error_zones: Optional[str]
-
-
+    trend_accuracy: float = 0.0
+    last_10_sessions_avg: float = 0.0
+    precision_exercise_accuracy: float = 0.0
+    reaction_exercise_accuracy: float = 0.0
+    movement_exercise_accuracy: float = 0.0
 
 
 class ShooterStatsCreate(ShooterStatsBase):
     pass
+
 
 class ShooterStatsUpdate(ShooterStatsBase):
     shooter_id: UUID
@@ -27,6 +32,7 @@ class ShooterStatsUpdate(ShooterStatsBase):
 
     class Config:
         from_attributes = True
+
 
 class ShooterStatsRead(ShooterStatsBase):
 

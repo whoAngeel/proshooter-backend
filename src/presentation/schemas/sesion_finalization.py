@@ -44,6 +44,7 @@ class SessionFinalizationResult(BaseModel):
     finalization_timestamp: datetime = Field(description="Timestamp de finalización")
     evaluation_pending: bool = Field(description="Si está pendiente de evaluación")
     message: str = Field(description="Mensaje descriptivo")
+    has_assigned_instructor: bool = Field(description="Si tiene instructor asignado")
 
 
 # Esquemas para requests/responses de endpoints

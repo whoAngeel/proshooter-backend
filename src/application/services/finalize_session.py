@@ -73,13 +73,20 @@ class SessionFinalizationService:
                     detail=f"Error calculando totales de la sesión: {final_stats['error']}",
                 )
 
+            evaluation_pending = session.instructor_id is not None
+
             # 5 finalizar la sesion
-            success = self.session_repo.finish_session(self.db, session_id)
+            # success = self.session_repo.finish_session(self.db, session_id)
+            success = self.session_repo.finish_session_with_evaluation_status(
+                self.db, session_id, evaluation_pending
+            )
 
             if not success:
                 raise HTTPException(
                     status_code=500, detail="Error finalizando la sesión"
                 )
+
+            self._update_basic_shooter_stats(session_id, shooter_id)
 
             # 6 obtener sesion actualizada
             updated_session = self.session_repo.get_by_id(self.db, session_id)
@@ -94,7 +101,8 @@ class SessionFinalizationService:
                 consolidation_warnings=self._extract_warnings(consolidation_result),
                 finalization_timestamp=updated_session.updated_at,
                 evaluation_pending=updated_session.evaluation_pending,
-                message="Sesión finalizada exitosamente. Lista para evaluación.",
+                has_assigned_instructor=updated_session.instructor_id is not None,
+                message=self._get_finalization_message(updated_session),
             )
         except HTTPException as he:
             raise he
@@ -281,3 +289,25 @@ class SessionFinalizationService:
                 )
 
         return warnings[:5]
+
+    def _update_basic_shooter_stats(self, session_id: UUID, shooter_id: UUID):
+        """
+        Actualiza estadisticas basicas del tirador al finalizar sesion
+        se ejecuta siempre, tenga o no instructor asignado
+        """
+        try:
+            from src.application.services.shooter_stats import ShooterStatsService
+
+            stats_service = ShooterStatsService(self.db)
+            stats_service.update_basic_stats_after_session(
+                session_id=session_id, shooter_id=shooter_id
+            )
+
+        except Exception as e:
+            print(f"⚠️ Error actualizando stats del tirador: {str(e)}")
+
+    def _get_finalization_message(self, session) -> str:
+        if session.instructor_id:
+            return "Sesión finalizada. La evaluación por parte del instructor está pendiente."
+        else:
+            return "Sesión finalizada y completada. No requiere evaluación."

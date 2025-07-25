@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, func, between, desc, select, update
+from sqlalchemy import or_, func, between, desc, select, update, and_
 from datetime import datetime, timedelta, timezone
 import logging
 
@@ -91,6 +91,7 @@ class PracticeSessionRepository:
             if not row:
                 return {
                     "total_shots_fired": 0,
+                    "ammunition_used": 0,
                     "total_hits": 0,
                     "accuracy_percentage": 0.0,
                     "error": "No se encontraron ejercicios",
@@ -105,6 +106,7 @@ class PracticeSessionRepository:
 
             return {
                 "total_shots_fired": total_shots,
+                "ammunition_used": total_shots,
                 "total_hits": total_hits,
                 "accuracy_percentage": round(accuracy_percentage, 2),
                 "exercise_count": exercise_count,
@@ -113,6 +115,7 @@ class PracticeSessionRepository:
         except Exception as e:
             return {
                 "total_shots_fired": 0,
+                "ammunition_used": 0,
                 "total_hits": 0,
                 "accuracy_percentage": 0.0,
                 "error": str(e),
@@ -153,6 +156,24 @@ class PracticeSessionRepository:
             .limit(limit)
             .all()
         )
+
+    @staticmethod
+    def get_sessions_by_instructor(
+        db: Session, instructor_id: UUID, only_pending: bool = True
+    ):
+        query = select(PracticeSessionModel).where(
+            PracticeSessionModel.instructor_id == instructor_id
+        )
+
+        if only_pending:
+            query = query.where(
+                and_(
+                    PracticeSessionModel.is_finished == True,
+                    PracticeSessionModel.evaluation_pending == True,
+                )
+            )
+        result = db.execute(query)
+        return result.scalars().all()
 
     @staticmethod
     def get_finished_sessions_by_shooter(
@@ -450,3 +471,26 @@ class PracticeSessionRepository:
             .limit(limit)
             .all()
         )
+
+    @staticmethod
+    def finish_session_with_evaluation_status(
+        db: Session, session_id: UUID, evaluation_pending: bool
+    ) -> bool:
+        try:
+            # actualizar totales al finalizar
+            if not PracticeSessionRepository.update_totals(db, session_id):
+                return False
+
+            stmt = (
+                update(PracticeSessionModel)
+                .where(PracticeSessionModel.id == session_id)
+                .values(is_finished=True, evaluation_pending=evaluation_pending)
+            )
+
+            result = db.execute(stmt)
+            db.commit()
+            return result.rowcount > 0
+
+        except Exception as e:
+            db.rollback()
+            raise e
