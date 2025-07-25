@@ -145,17 +145,18 @@ class ExerciseConsolidationService:
     def calculate_exercise_metrics(
         self, exercise, analysis, ammunition_validation
     ) -> ExerciseMetricsUpdate:
-        ammunition_used = ammunition_validation.recommended_used
+        # usar la municion usada que el usuario asigno (no los impactos detectados)
+        ammunition_used = exercise.ammunition_used or exercise.ammunition_allocated or 0
+        # ammunition_used = ammunition_validation.recommended_used
 
         # calcular aciertos (impactos dentro del blanco)
         # hits_inside = (analysis.fresh_impacts_inside or 0) + (analysis.covered_impacts_inside or 0)
         hits_inside = analysis.fresh_impacts_inside or 0
 
         # calcular precision
-        if ammunition_used > 0:
-            accuracy_percentage = (hits_inside / ammunition_used) * 100
-        else:
-            accuracy_percentage = 0.0
+        accuracy_percentage = (
+            (hits_inside / ammunition_used * 100) if ammunition_used > 0 else 0.0
+        )
 
         # mantener tiempo de reaccion si ya existe
         reaction_time = exercise.reaction_time if exercise.reaction_time else None

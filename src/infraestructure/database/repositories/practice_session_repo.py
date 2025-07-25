@@ -91,6 +91,7 @@ class PracticeSessionRepository:
             if not row:
                 return {
                     "total_shots_fired": 0,
+                    "ammunition_used": 0,
                     "total_hits": 0,
                     "accuracy_percentage": 0.0,
                     "error": "No se encontraron ejercicios",
@@ -105,6 +106,7 @@ class PracticeSessionRepository:
 
             return {
                 "total_shots_fired": total_shots,
+                "ammunition_used": total_shots,
                 "total_hits": total_hits,
                 "accuracy_percentage": round(accuracy_percentage, 2),
                 "exercise_count": exercise_count,
@@ -113,6 +115,7 @@ class PracticeSessionRepository:
         except Exception as e:
             return {
                 "total_shots_fired": 0,
+                "ammunition_used": 0,
                 "total_hits": 0,
                 "accuracy_percentage": 0.0,
                 "error": str(e),

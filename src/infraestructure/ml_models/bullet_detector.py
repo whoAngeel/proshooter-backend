@@ -340,7 +340,7 @@ class BulletDetector:
         }
 
         return {
-            "total_impacts": len(detections),
+            "total_impacts": total_fresh,
             "fresh_impacts_inside": len(fresh_inside),
             "fresh_impacts_outside": len(fresh_outside),
             "covered_impacts_inside": len(covered_inside),
