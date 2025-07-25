@@ -38,11 +38,11 @@ class ShooterStatsService:
                     return False
 
             # Obtener sesión y ejercicios
-            session = self.session_repo.get_by_id(session_id)
+            session = self.session_repo.get_by_id(self.db, session_id)
             if not session or not session.is_finished:
                 return False
 
-            exercises = self.exercise_repo.get_by_session_id(session_id)
+            exercises = self.exercise_repo.get_by_session_id(self.db, session_id)
 
             # Calcular todas las estadísticas
             updates = {}
@@ -69,11 +69,12 @@ class ShooterStatsService:
 
             # 7. Actualizar en BD
             self.stats_repo.update(self.db, shooter_id, updates)
+            print(f"✅ Estadísticas actualizadas para tirador {shooter_id}")
 
             return True
 
         except Exception as e:
-            print(f"Error actualizando estadísticas completas: {str(e)}")
+            print(f"⚠️ Error actualizando estadísticas completas: {str(e)}")
             return False
 
     def _calculate_basic_stats(self, stats, session, exercises) -> Dict:
@@ -103,12 +104,14 @@ class ShooterStatsService:
         """
         # Obtener TODOS los ejercicios históricos del tirador por tipo
         all_sessions = self.session_repo.get_finished_sessions_by_shooter(
-            shooter_id, limit=50
+            self.db, shooter_id=shooter_id, limit=50
         )
         all_exercises = []
 
         for session in all_sessions:
-            session_exercises = self.exercise_repo.get_by_session_id(session.id)
+            session_exercises = self.exercise_repo.get_by_session_id(
+                self.db, session.id
+            )
             all_exercises.extend(session_exercises)
 
         # Clasificar ejercicios por tipo
@@ -200,7 +203,7 @@ class ShooterStatsService:
         Tendencias y promedios de últimas sesiones
         """
         recent_sessions = self.session_repo.get_finished_sessions_by_shooter(
-            shooter_id, limit=10
+            self.db, shooter_id, limit=10
         )
 
         if len(recent_sessions) < 2:
@@ -243,8 +246,8 @@ class ShooterStatsService:
         for exercise in exercises:
             if exercise.target_image_id:
                 # Obtener análisis de la imagen
-                analysis = self.analysis_repo.get_latest_by_image_id(
-                    exercise.target_image_id
+                analysis = self.analysis_repo.get_by_id(
+                    self.db, exercise.target_image_id
                 )
 
                 if analysis and analysis.impact_coordinates:
@@ -415,7 +418,7 @@ class ShooterStatsService:
     def _calculate_last_10_sessions_avg(self, shooter_id: UUID) -> float:
         try:
             recent_sessions = self.session_repo.get_finished_sessions_by_shooter(
-                shooter_id, limit=10
+                self.db, shooter_id, limit=10
             )
 
             if not recent_sessions:
