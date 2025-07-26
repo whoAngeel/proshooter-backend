@@ -472,9 +472,13 @@ async def upload_exercise_image(
     "/exercises/{exercise_id}/image-with-impacts", response_class=StreamingResponse
 )
 def get_exercise_image_with_impacts(
-    exercise_id: UUID, service: PracticeExerciseService = Depends()
+    exercise_id: UUID,
+    mode: str = Query(
+        "impacts", description="Modo de visualización", enum=["impacts", "heatmap"]
+    ),
+    service: PracticeExerciseService = Depends(),
 ):
-    image_bytes, error = service.get_exercise_image_with_impacts(exercise_id)
+    image_bytes, error = service.get_exercise_image_with_impacts(exercise_id, mode)
     if error or not image_bytes:
         return Response(content=error or "Error generando imagen", status_code=404)
     return StreamingResponse(io.BytesIO(image_bytes), media_type="image/jpeg")

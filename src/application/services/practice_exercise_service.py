@@ -411,23 +411,21 @@ class PracticeExerciseService:
             print(f"Error updating session totals: {str(e)}")
 
     def get_exercise_image_with_impacts(
-        self, exercise_id: UUID
+        self, exercise_id: UUID, mode: str = "impacts"
     ) -> Tuple[Optional[bytes], Optional[str]]:
         """
-        Devuelve la imagen del ejercicio con los impactos detectados dibujados encima.
+        Devuelve la imagen del ejercicio con los impactos detectados dibujados encima
+        o como un mapa de calor (modo 'heatmap').
         """
         try:
-            # 1. Validar que el ejercicio existe
             exercise = PracticeExerciseRepository.get_by_id(self.db, exercise_id)
             if not exercise:
                 return None, "EXERCISE_NOT_FOUND"
 
-            # 2. Validar que tiene imagen asociada
             image = exercise.target_image
             if not image:
                 return None, "EXERCISE_HAS_NO_IMAGE"
 
-            # 3. Validar que tiene análisis
             if not image.analyses or len(image.analyses) == 0:
                 return None, "IMAGE_HAS_NO_ANALYSIS"
 
@@ -435,29 +433,45 @@ class PracticeExerciseService:
             if not analysis.impact_coordinates:
                 return None, "NO_IMPACT_COORDINATES"
 
-            # 4. Descargar la imagen original desde S3
             if not image.file_path or not image.file_path.startswith("http"):
                 return None, "IMAGE_FILE_PATH_INVALID"
-
-            import requests
 
             response = requests.get(image.file_path)
             if response.status_code != 200:
                 return None, "IMAGE_DOWNLOAD_ERROR"
             image_bytes = response.content
 
-            # 5. Abrir imagen y pintar impactos
             pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
             image_np = np.array(pil_image)
+            h, w = image_np.shape[:2]
 
-            for impact in analysis.impact_coordinates:
-                if impact.get("es_fresco", False):
+            if mode == "heatmap":
+                # Mapa de calor tipo "predator"
+                heatmap = np.zeros((h, w), dtype=np.float32)
+                for impact in analysis.impact_coordinates:
                     x = int(impact.get("centro_x", 0))
                     y = int(impact.get("centro_y", 0))
-                    color = (0, 255, 0)  # solo color verde para impactos frescos
+                    if 0 <= x < w and 0 <= y < h:
+                        cv2.circle(heatmap, (x, y), 20, 1, thickness=-1)
+                heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigmaX=15, sigmaY=15)
+                heatmap_norm = cv2.normalize(heatmap, None, 0, 255, cv2.NORM_MINMAX)
+                heatmap_color = cv2.applyColorMap(
+                    heatmap_norm.astype(np.uint8), cv2.COLORMAP_JET
+                )
+                alpha = 0.3
+                image_opaca = (image_np * alpha).astype(np.uint8)
+                result = cv2.addWeighted(image_opaca, 1, heatmap_color, 0.7, 0)
+            else:
+                # Imagen normal con impactos marcados
+                for impact in analysis.impact_coordinates:
+                    x = int(impact.get("centro_x", 0))
+                    y = int(impact.get("centro_y", 0))
+                    es_fresco = impact.get("es_fresco", False)
+                    color = (0, 255, 0) if es_fresco else (255, 0, 0)
                     cv2.circle(image_np, (x, y), 15, color, thickness=3)
+                result = image_np
 
-            result_image = Image.fromarray(image_np)
+            result_image = Image.fromarray(result)
             buf = io.BytesIO()
             result_image.save(buf, format="JPEG")
             buf.seek(0)
