@@ -205,7 +205,7 @@ async def search_assigned_sessions(
         }
 
 
-@router.get("/stats")
+@router.get("/stats/")
 async def get_instructor_stats(
     service: InstructorDashboardService = Depends(),
     current_user=Depends(get_current_user),
@@ -214,7 +214,7 @@ async def get_instructor_stats(
     Estadísticas detalladas del instructor
     """
     try:
-        if current_user.role not in ["INSTRUCTOR", "INSTRUCTOR_JEFE"]:
+        if current_user.role not in [RoleEnum.INSTRUCTOR, RoleEnum.INSTRUCTOR_JEFE]:
             raise HTTPException(
                 status_code=403, detail="Solo instructores pueden acceder"
             )
@@ -224,6 +224,37 @@ async def get_instructor_stats(
         stats = service.get_instructor_dashboard_stats(instructor_id)
 
         return {"success": True, "stats": stats, "instructor_id": str(instructor_id)}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/sessions/urgent/")
+async def get_urgent_sessions(
+    service: InstructorDashboardService = Depends(),
+    current_user=Depends(get_current_user),
+):
+    """
+    Obtiene solo sesiones urgentes (>7 días pendientes)
+    """
+    try:
+        if current_user.role not in [RoleEnum.INSTRUCTOR, RoleEnum.INSTRUCTOR_JEFE]:
+            raise HTTPException(
+                status_code=403, detail="Solo instructores pueden acceder"
+            )
+
+        instructor_id = current_user.id
+
+        all_sessions = service.get_assigned_sessions(
+            instructor_id, include_evaluated=False
+        )
+        urgent_sessions = [s for s in all_sessions if s.days_pending > 7]
+
+        return {
+            "success": True,
+            "urgent_sessions": urgent_sessions,
+            "count": len(urgent_sessions),
+        }
 
     except Exception as e:
         return {"success": False, "error": str(e)}
