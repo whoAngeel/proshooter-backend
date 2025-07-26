@@ -136,6 +136,7 @@ class PracticeSessionRepository:
             db.commit()
             return result.rowcount > 0
         except Exception as e:
+            logger.error(f"❌ Error finishing session {session_id}: {e}")
             db.rollback()
             return False
 
@@ -160,20 +161,24 @@ class PracticeSessionRepository:
     @staticmethod
     def get_sessions_by_instructor(
         db: Session, instructor_id: UUID, only_pending: bool = True
-    ):
-        query = select(PracticeSessionModel).where(
-            PracticeSessionModel.instructor_id == instructor_id
+    ) -> List[PracticeSessionModel]:
+        query = (
+            select(PracticeSessionModel)
+            .where(
+                PracticeSessionModel.instructor_id == instructor_id,
+                PracticeSessionModel.is_finished == True,  # Solo sesiones finalizadas
+            )
+            .options(joinedload(PracticeSessionModel.exercises))
         )
 
         if only_pending:
-            query = query.where(
-                and_(
-                    PracticeSessionModel.is_finished == True,
-                    PracticeSessionModel.evaluation_pending == True,
-                )
-            )
+            query = query.where(PracticeSessionModel.evaluation_pending == True)
+
+        # Ordenar por fecha (más antiguas primero = más urgentes)
+        query = query.order_by(PracticeSessionModel.date.asc())
+
         result = db.execute(query)
-        return result.scalars().all()
+        return result.unique().scalars().all()
 
     @staticmethod
     def get_finished_sessions_by_shooter(
@@ -494,3 +499,24 @@ class PracticeSessionRepository:
         except Exception as e:
             db.rollback()
             raise e
+
+    @staticmethod
+    def update_evaluation_status(
+        db: Session, session_id: UUID, evaluation_pending
+    ) -> bool:
+        try:
+            stmt = (
+                update(PracticeSessionModel)
+                .where(PracticeSessionModel.id == session_id)
+                .values(evaluation_pending=evaluation_pending)
+            )
+
+            result = db.execute(stmt)
+            db.commit()
+            return result.rowcount > 0
+        except Exception as e:
+            logger.error(
+                f"❌ Error updating evaluation status for session {session_id}: {e}"
+            )
+            db.rollback()
+            return False

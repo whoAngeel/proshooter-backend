@@ -51,6 +51,10 @@ class InstructorDashboardService:
         sessions = self.session_repo.get_sessions_by_instructor(
             self.db, instructor_id=instructor_id, only_pending=not include_evaluated
         )
+        logger.info(
+            f"Obteniendo sesiones asignadas para instructor {instructor_id}, "
+            f"incluyendo evaluadas: {include_evaluated}"
+        )
 
         session_summaries = []
         for session in sessions:
