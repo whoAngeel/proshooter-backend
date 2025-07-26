@@ -205,7 +205,7 @@ async def search_assigned_sessions(
         }
 
 
-@router.get("/stats")
+@router.get("/stats/")
 async def get_instructor_stats(
     service: InstructorDashboardService = Depends(),
     current_user=Depends(get_current_user),
@@ -214,7 +214,7 @@ async def get_instructor_stats(
     Estadísticas detalladas del instructor
     """
     try:
-        if current_user.role not in ["INSTRUCTOR", "INSTRUCTOR_JEFE"]:
+        if current_user.role not in [RoleEnum.INSTRUCTOR, RoleEnum.INSTRUCTOR_JEFE]:
             raise HTTPException(
                 status_code=403, detail="Solo instructores pueden acceder"
             )
@@ -229,18 +229,32 @@ async def get_instructor_stats(
         return {"success": False, "error": str(e)}
 
 
-# @router.post("/sessions/{session_id}/mark-urgent")
-# async def mark_session_urgent(
-#     session_id: UUID,
-#     db: Session = Depends(get_db),
-#     current_user = Depends(get_current_user)
-# ):
-#     """
-#     Marca una sesión como urgente (funcionalidad futura)
-#     """
-#     # Por implementar si se necesita
-#     return {
-#         "success": True,
-#         "message": "Sesión marcada como urgente",
-#         "session_id": str(session_id)
-#     }
+@router.get("/sessions/urgent/")
+async def get_urgent_sessions(
+    service: InstructorDashboardService = Depends(),
+    current_user=Depends(get_current_user),
+):
+    """
+    Obtiene solo sesiones urgentes (>7 días pendientes)
+    """
+    try:
+        if current_user.role not in [RoleEnum.INSTRUCTOR, RoleEnum.INSTRUCTOR_JEFE]:
+            raise HTTPException(
+                status_code=403, detail="Solo instructores pueden acceder"
+            )
+
+        instructor_id = current_user.id
+
+        all_sessions = service.get_assigned_sessions(
+            instructor_id, include_evaluated=False
+        )
+        urgent_sessions = [s for s in all_sessions if s.days_pending > 7]
+
+        return {
+            "success": True,
+            "urgent_sessions": urgent_sessions,
+            "count": len(urgent_sessions),
+        }
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
