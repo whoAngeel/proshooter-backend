@@ -36,7 +36,7 @@ class PracticeEvaluationModel(Base):
 
     # calificacion general
     final_score = Column(Float, nullable=False)
-    # classification = Column(classification_enum, nullable=False)
+    classification = Column(classification_enum, nullable=False)
 
     # retroalimentacion cualitativa
     strengths = Column(String, nullable=True)

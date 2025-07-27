@@ -245,7 +245,7 @@ class PracticeEvaluationService:
                 auto_calculated=auto_calculated,
                 suggested_zones=suggested_zones,
                 shooter_context=shooter_context,
-                classification_suggestion=self._determine_classification(
+                classification_suggestion=self._determinate_classification(
                     auto_calculated["final_score"]
                 ),
             )
@@ -355,5 +355,6 @@ class PracticeEvaluationService:
                 ),
                 "improvement_trend": len(recent_evaluations) >= 2,
             }
-        except:
+        except Exception as e:
+            logger.error(f"❌Error obteniendo contexto del tirador: {e}")
             return {"current_stats": {}, "recent_evaluations_count": 0}
