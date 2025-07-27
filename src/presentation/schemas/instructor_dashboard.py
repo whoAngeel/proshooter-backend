@@ -22,6 +22,9 @@ class AssignedSessionSummary(BaseModel):
     exercises_count: int
     evaluation_pending: bool
     days_pending: int = Field(description="Días desde la sesión")
+    evaluation_id: Optional[str]
+    evaluation_score: Optional[float]
+    evaluation_date: Optional[datetime]
 
 
 class ExerciseForEvaluation(BaseModel):
@@ -111,6 +114,7 @@ class AssignedSessionsResponse(BaseModel):
     total_count: int = Field(default=0)
     pending_count: int = Field(default=0)
     evaluated_count: int = Field(default=0)
+
     error: Optional[str] = None
 
 

@@ -23,6 +23,10 @@ from src.presentation.schemas.instructor_dashboard import (
     InstructorDashboardStats,
 )
 
+from src.infraestructure.database.repositories.practice_evaluation_repo import (
+    PracticeEvaluationRepository,
+)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -54,25 +58,28 @@ class InstructorDashboardService:
 
         session_summaries = []
         for session in sessions:
-            summary = AssignedSessionSummary(
-                session_id=session.id,
-                shooter_id=session.shooter_id,
-                shooter_name=self._get_shooter_name(session.shooter_id),
-                date=session.date,
-                location=session.location,
-                total_shots=session.total_shots_fired,
-                total_hits=session.total_hits,
-                accuracy_percentage=session.accuracy_percentage,
-                exercises_count=(
-                    len(session.exercises) if hasattr(session, "exercises") else 0
-                ),
-                evaluation_pending=session.evaluation_pending,
-                days_pending=self._calculate_days_pending(session.date),
+            evaluation = self.get_evaluation_for_session(session.id)
+            session_summaries.append(
+                AssignedSessionSummary(
+                    session_id=session.id,
+                    shooter_id=session.shooter_id,
+                    shooter_name=self._get_shooter_name(session.shooter_id),
+                    date=session.date,
+                    location=session.location,
+                    total_shots=session.total_shots_fired,
+                    total_hits=session.total_hits,
+                    accuracy_percentage=session.accuracy_percentage,
+                    exercises_count=(
+                        len(session.exercises) if hasattr(session, "exercises") else 0
+                    ),
+                    evaluation_pending=session.evaluation_pending,
+                    days_pending=self._calculate_days_pending(session.date),
+                    evaluation_id=str(evaluation.id) if evaluation else None,
+                    evaluation_score=evaluation.final_score if evaluation else None,
+                    evaluation_date=evaluation.date if evaluation else None,
+                )
             )
-            session_summaries.append(summary)
-
         session_summaries.sort(key=lambda x: x.days_pending, reverse=True)
-
         return session_summaries
 
     def get_session_details_for_evaluation(
@@ -340,3 +347,52 @@ class InstructorDashboardService:
             evaluation_pending=session.evaluation_pending,
             days_pending=self._calculate_days_pending(session.date),
         )
+
+    def get_evaluation_for_session(self, session_id: UUID):
+        """
+        Devuelve la evaluación asociada a una sesión, si existe.
+        """
+        return PracticeEvaluationRepository.get_by_session_id(self.db, session_id)
+
+    def get_evaluation_stats(self, instructor_id: UUID, limit: int = 100) -> dict:
+        """
+        Estadísticas de evaluaciones realizadas por el instructor
+        """
+        from collections import Counter
+
+        evaluations = PracticeEvaluationRepository.get_by_evaluator(
+            self.db, instructor_id, limit=limit
+        )
+        total_evaluations = len(evaluations)
+
+        if total_evaluations == 0:
+            return {
+                "total_evaluations": 0,
+                "average_score": 0,
+                "this_month_count": 0,
+                "classification_distribution": {},
+                "most_common_classification": None,
+            }
+
+        avg_score = sum(eval.final_score for eval in evaluations) / total_evaluations
+        classifications = [
+            eval.classification for eval in evaluations if eval.classification
+        ]
+        classification_dist = dict(Counter(classifications))
+        this_month = datetime.now().replace(day=1)
+        this_month_evaluations = [
+            eval for eval in evaluations if eval.date >= this_month
+        ]
+        most_common = (
+            max(classification_dist, key=classification_dist.get)
+            if classification_dist
+            else None
+        )
+
+        return {
+            "total_evaluations": total_evaluations,
+            "average_score": round(avg_score, 2),
+            "this_month_count": len(this_month_evaluations),
+            "classification_distribution": classification_dist,
+            "most_common_classification": most_common,
+        }

@@ -12,6 +12,10 @@ from src.presentation.schemas.instructor_dashboard import (
 )
 from src.domain.enums.role_enum import RoleEnum
 from src.application.services.instructor_dashboard import InstructorDashboardService
+from src.application.services.practice_evaluation_service import (
+    PracticeEvaluationService,
+)
+
 from src.infraestructure.auth.jwt_config import get_current_user
 
 router = APIRouter(prefix="/instructor", tags=["Dashboard para instructores"])
@@ -63,46 +67,101 @@ async def get_instructor_dashboard(
         return InstructorDashboardResponse(success=False, error=str(e))
 
 
-@router.get("/assigned-sessions/")
+@router.get("/assigned-sessions/", response_model=AssignedSessionsResponse)
 async def get_assigned_sessions(
-    included_evaluated: bool = Query(False, description="Incluir sesiones evaluadas"),
-    limit: int = Query(20, ge=1, le=100, description="Límite de sesiones a retornar"),
-    offset: int = Query(0, ge=0, description="Número de sesiones a omitir"),
+    include_evaluated: bool = Query(False, description="Incluir sesiones ya evaluadas"),
+    limit: int = Query(20, le=100),
+    offset: int = Query(0),
     service: InstructorDashboardService = Depends(),
-    current_user: dict = Depends(get_current_user),
+    eval_service: PracticeEvaluationService = Depends(),
+    current_user=Depends(get_current_user),
 ):
+    """
+    ACTUALIZADO: Lista de sesiones asignadas al instructor
+    - Ahora incluye links a evaluación y datos de evaluación
+    """
     try:
         if current_user.role not in [
             RoleEnum.INSTRUCTOR,
             RoleEnum.INSTRUCTOR_JEFE,
             RoleEnum.ADMIN,
         ]:
-            raise HTTPException(status_code=403, detail="Acceso denegado")
+            raise HTTPException(
+                status_code=403, detail="Solo instructores pueden acceder"
+            )
+
         instructor_id = current_user.id
 
         all_sessions = service.get_assigned_sessions(
-            instructor_id, include_evaluated=included_evaluated
+            instructor_id, include_evaluated=include_evaluated
         )
 
-        # aplicar paginacion
-        paginated_sessions = all_sessions[offset : offset + limit]
+        # NUEVO: Agregar info de evaluación para cada sesión usando el servicio
+        enhanced_sessions = []
+        for session in all_sessions:
+            session_dict = session.dict() if hasattr(session, "dict") else dict(session)
+            evaluation = service.get_evaluation_for_session(session_dict["session_id"])
+            if evaluation:
+                session_dict["evaluation_id"] = str(evaluation.id)
+                session_dict["evaluation_score"] = evaluation.final_score
+                session_dict["evaluation_date"] = evaluation.date
+            else:
+                session_dict["evaluation_id"] = None
+                session_dict["evaluation_score"] = None
+                session_dict["evaluation_date"] = None
+            enhanced_sessions.append(session_dict)
 
-        pending_count = len([s for s in all_sessions if s.evaluation_pending])
-        evaluated_count = len([s for s in all_sessions if not s.evaluation_pending])
+        # Aplicar paginación
+        paginated_sessions = enhanced_sessions[offset : offset + limit]
+
+        # Contar por estado
+        pending_count = len(
+            [s for s in enhanced_sessions if s.get("evaluation_pending", False)]
+        )
+        evaluated_count = len(
+            [s for s in enhanced_sessions if not s.get("evaluation_pending", True)]
+        )
 
         return AssignedSessionsResponse(
             success=True,
             sessions=paginated_sessions,
-            total_count=len(all_sessions),
+            total_count=len(enhanced_sessions),
             pending_count=pending_count,
             evaluated_count=evaluated_count,
         )
+
     except HTTPException:
         raise
     except Exception as e:
         return AssignedSessionsResponse(
-            success=False, error=str(e), sessions=[], total_count=0
+            success=False,
+            error=str(e),
+            sessions=[],
+            total_count=0,
+            pending_count=0,
+            evaluated_count=0,
         )
+
+
+@router.get("/evaluation-stats/")
+async def get_instructor_evaluation_stats(
+    service: InstructorDashboardService = Depends(),
+    current_user=Depends(get_current_user),
+):
+    """
+    NUEVO: Estadísticas de evaluaciones del instructor
+    - Para mostrar en dashboard
+    """
+    try:
+        if current_user.role not in ["INSTRUCTOR", "INSTRUCTOR_JEFE"]:
+            raise HTTPException(
+                status_code=403, detail="Solo instructores pueden acceder"
+            )
+
+        stats = service.get_evaluation_stats(current_user.id, limit=100)
+        return {"success": True, "stats": stats}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @router.get("/sessions/{session_id}/details/", response_model=SessionDetailsResponse)
