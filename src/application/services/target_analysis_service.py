@@ -347,3 +347,10 @@ class TargetAnalysisService:
             logger.error(f"Error al consolidar ejercicio {exercise_id}: {str(e)}")
             self._update_exercise_stats_fallback(exercise_id)
             return None
+
+    # def calcular_puntuacion_impactos(impactos, cx, cy, radio_blanco):
+    #     puntuaciones = []
+    #     for impacto in impactos:
+    #         y = impacto["centro_x"]
+    #         y = impacto["centro_y"]
+    #         distancia = ((x-cx)** + (y-cy)**2)
