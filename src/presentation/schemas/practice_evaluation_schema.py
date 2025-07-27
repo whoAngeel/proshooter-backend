@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
@@ -15,7 +15,7 @@ class EvaluationCreateRequest(BaseModel):
     weaknesses: Optional[str] = Field(
         None, max_length=1000, description="Debilidades detectadas"
     )
-    recommendations: Optional[str] = Field(
+    recomendations: Optional[str] = Field(
         None, max_length=1000, description="Recomendaciones de mejora"
     )
 
@@ -34,7 +34,7 @@ class EvaluationCreateRequest(BaseModel):
         None, max_length=100, description="Zona secundaria de problema"
     )
 
-    @validator("overall_technique_rating")
+    @field_validator("overall_technique_rating")
     def validate_rating(cls, v):
         if v is not None and (v < 1.0 or v > 10.0):
             raise ValueError("Rating debe estar entre 1.0 y 10.0")
@@ -100,7 +100,8 @@ class EvaluationResponse(BaseModel):
     # Campos del instructor
     strengths: Optional[str]
     weaknesses: Optional[str]
-    recommendations: Optional[str]
+    recomendations: Optional[str]
+
     overall_technique_rating: Optional[float]
     instructor_notes: Optional[str]
 
@@ -215,7 +216,8 @@ class EvaluationEditRequest(BaseModel):
 
     strengths: Optional[str] = None
     weaknesses: Optional[str] = None
-    recommendations: Optional[str] = None
+    recomendations: Optional[str] = None
+
     overall_technique_rating: Optional[float] = Field(None, ge=1.0, le=10.0)
     instructor_notes: Optional[str] = None
     primary_issue_zone: Optional[str] = None

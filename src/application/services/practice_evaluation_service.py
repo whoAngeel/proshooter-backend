@@ -29,6 +29,7 @@ from src.infraestructure.database.session import get_db
 from src.domain.enums.classification_enum import ShooterLevelEnum
 from src.domain.enums.role_enum import RoleEnum
 from src.presentation.schemas.practice_evaluation_schema import (
+    EvaluationEditRequest,
     EvaluationCreateRequest,
     EvaluationFormData,
 )
@@ -44,6 +45,18 @@ class PracticeEvaluationService:
         self.exercise_repo = PracticeExerciseRepository
         self.analysis_repo = TargetAnalysisRepository
         self.stats_service = ShooterStatsService(self.db)
+
+    def get_evaluation_by_id(
+        self, evaluation_id: UUID
+    ) -> Optional[PracticeEvaluationModel]:
+        """Obtiene una evaluación por su ID"""
+        return self.evaluation_repo.get_by_id(self.db, evaluation_id)
+
+    def get_by_evaluator(
+        self, evaluator_id: UUID, skip: int = 0, limit: int = 100
+    ) -> List[PracticeEvaluationModel]:
+        """Obtiene evaluaciones por ID de evaluador"""
+        return self.evaluation_repo.get_by_evaluator(self.db, evaluator_id, skip, limit)
 
     def create_evaluation(
         self,
@@ -66,6 +79,9 @@ class PracticeEvaluationService:
                 "session_id": session_id,
                 "evaluator_id": instructor_id,
                 "date": datetime.now(),
+                "classification": self._determinate_classification(
+                    auto_calculated["final_score"]
+                ),
                 # Campos automáticos
                 "final_score": auto_calculated["final_score"],
                 "avg_reaction_time": auto_calculated["avg_reaction_time"],
@@ -74,7 +90,7 @@ class PracticeEvaluationService:
                 # Campos manuales del instructor
                 "strengths": evaluation_data.strengths,
                 "weaknesses": evaluation_data.weaknesses,
-                "recomendations": evaluation_data.recommendations,
+                "recomendations": evaluation_data.recomendations,
                 "overall_technique_rating": evaluation_data.overall_technique_rating,
                 "instructor_notes": evaluation_data.instructor_notes,
                 # Zonas de problema (sugeridas por IA, editables por instructor)
@@ -308,13 +324,13 @@ class PracticeEvaluationService:
         Determina la clasificación del tirador basado en el puntaje final
         """
         if final_score >= 90:
-            return ShooterLevelEnum.EXPERTO.value
+            return ShooterLevelEnum.EXPERTO.name
         elif final_score >= 75:
-            return ShooterLevelEnum.CONFIABLE.value
+            return ShooterLevelEnum.CONFIABLE.name
         elif final_score >= 50:
-            return ShooterLevelEnum.MEDIO.value
+            return ShooterLevelEnum.MEDIO.name
         else:
-            return ShooterLevelEnum.REGULAR.value
+            return ShooterLevelEnum.REGULAR.name
 
     def _classify_impact_zone(self, x: float, y: float) -> Optional[str]:
         """
@@ -358,3 +374,54 @@ class PracticeEvaluationService:
         except Exception as e:
             logger.error(f"❌Error obteniendo contexto del tirador: {e}")
             return {"current_stats": {}, "recent_evaluations_count": 0}
+
+    def update_evaluation(
+        self, evaluation_id: UUID, update_data: EvaluationEditRequest
+    ) -> Optional["PracticeEvaluationModel"]:
+        """Actualiza una evaluación existente"""
+        # Convierte el esquema a dict y filtra campos no nulos
+        update_dict = {
+            k: v for k, v in update_data.model_dump().items() if v is not None
+        }
+        return self.evaluation_repo.update(self.db, evaluation_id, update_dict)
+
+    def delete_evaluation(self, evaluation_id: UUID) -> bool:
+        """Elimina una evaluación existente"""
+        return self.evaluation_repo.delete(self.db, evaluation_id)
+
+    def get_shooter_full_name(self, shooter_id: UUID) -> str:
+        """
+        Devuelve el nombre completo del tirador dado su ID.
+        """
+        try:
+            from src.infraestructure.database.repositories.user_repo import (
+                UserRepository,
+            )
+
+            user = UserRepository.get_by_id(self.db, shooter_id)
+            if user and user.personal_data:
+                first_name = user.personal_data.first_name or ""
+                second_name = user.personal_data.second_name or ""
+                last_name1 = user.personal_data.last_name1 or ""
+                last_name2 = user.personal_data.last_name2 or ""
+                full_name = (
+                    f"{first_name} {second_name} {last_name1} {last_name2}".strip()
+                )
+                return " ".join(full_name.split())
+            return user.email if user else "Desconocido"
+        except Exception:
+            return "Desconocido"
+
+    def get_classification_value(self, classification_key: str) -> str:
+        """
+        Convierte la clave corta de clasificación al valor largo.
+        Ejemplo: 'MEDIO' -> 'Tirador Medio'
+        """
+        try:
+            return ShooterLevelEnum[classification_key].value
+        except Exception:
+            return classification_key  # fallback si no existe
+
+    def get_by_session_id(self, session_id: UUID) -> Optional[PracticeEvaluationModel]:
+        """Obtiene una evaluación por ID de sesión"""
+        return self.evaluation_repo.get_by_session_id(self.db, session_id)
