@@ -1,176 +1,232 @@
-from datetime import datetime
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, validator
+from typing import Optional, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel, Field, field_validator, model_validator
-
-from src.domain.enums.classification_enum import ShooterLevelEnum
+from datetime import datetime
 
 
-class SessionInfo(BaseModel):
-    id: UUID
-    date: datetime
-    location: str
-    total_shots_fired: int
-    accuracy_percentage: float
+class EvaluationCreateRequest(BaseModel):
+    """
+    Request para crear evaluación - Solo campos manuales del instructor
+    """
 
-    model_config = {"from_attributes": True}
+    strengths: Optional[str] = Field(
+        None, max_length=1000, description="Fortalezas observadas"
+    )
+    weaknesses: Optional[str] = Field(
+        None, max_length=1000, description="Debilidades detectadas"
+    )
+    recommendations: Optional[str] = Field(
+        None, max_length=1000, description="Recomendaciones de mejora"
+    )
+
+    overall_technique_rating: Optional[float] = Field(
+        None, ge=1.0, le=10.0, description="Calificación técnica general (1-10)"
+    )
+    instructor_notes: Optional[str] = Field(
+        None, max_length=2000, description="Notas adicionales del instructor"
+    )
+
+    # Zonas de problema (sugeridas automáticamente, editables por instructor)
+    primary_issue_zone: Optional[str] = Field(
+        None, max_length=100, description="Zona principal de problema"
+    )
+    secondary_issue_zone: Optional[str] = Field(
+        None, max_length=100, description="Zona secundaria de problema"
+    )
+
+    @validator("overall_technique_rating")
+    def validate_rating(cls, v):
+        if v is not None and (v < 1.0 or v > 10.0):
+            raise ValueError("Rating debe estar entre 1.0 y 10.0")
+        return v
 
 
-class ShooterInfo(BaseModel):
-    user_id: UUID
-    range: Optional[str] = None
+class EvaluationAutoCalculated(BaseModel):
+    """
+    Campos calculados automáticamente
+    """
 
-    model_config = {"from_attributes": True}
+    final_score: float = Field(description="Puntuación final calculada")
+    avg_reaction_time: Optional[float] = Field(
+        None, description="Tiempo promedio de reacción"
+    )
+    avg_draw_time: Optional[float] = Field(
+        None, description="Tiempo promedio de desenfunde"
+    )
+    hit_factor: Optional[float] = Field(
+        None, description="Factor de impacto (hits/tiempo)"
+    )
 
 
-class EvaluatorInfo(BaseModel):
-    id: UUID
-    model_config = {"from_attributes": True}
+class EvaluationSuggestedZones(BaseModel):
+    """
+    Zonas de problema sugeridas por IA
+    """
+
+    primary: Optional[str] = Field(None, description="Zona principal sugerida")
+    secondary: Optional[str] = Field(None, description="Zona secundaria sugerida")
 
 
-class PracticeEvaulationBase(BaseModel):
+class EvaluationFormData(BaseModel):
+    """
+    Datos completos para pre-llenar formulario de evaluación
+    """
+
     session_id: UUID
-    evaluator_id: Optional[UUID] = None
-    final_score: float = Field(ge=0, le=100)
-    # classification: Optional[ShooterLevelEnum] = None
-    strengths: Optional[str] = None
-    weaknesses: Optional[str] = None
-    recomendations: Optional[str] = None
-
-    overall_technique_rating: Optional[float] = None
-    instructor_notes: Optional[str] = None
-
-    # zonas problematicas
-    primary_issue_zone: Optional[str] = None
-    secondary_issue_zone: Optional[str] = None
-
-    # metricas de tiempo
-    avg_reaction_time: Optional[float] = None
-    avg_draw_time: Optional[float] = None
-    avg_reload_time: Optional[float] = None
-
-    # Metricas avanzadas
-    hit_factor: Optional[float] = None
+    auto_calculated: EvaluationAutoCalculated
+    suggested_zones: EvaluationSuggestedZones
+    shooter_context: Dict[str, Any]
+    classification_suggestion: str = Field(
+        description="Clasificación sugerida (TR/TM/TC/TE)"
+    )
 
 
-class PracticeEvaluationCreate(PracticeEvaulationBase):
-    # TODO: cambiar esto
-    @model_validator(mode="after")
-    def validate_classification_based_on_score(self) -> "PracticeEvaluationCreate":
-        # validamos que la clasificacion sea coherente con la puntuacion
-        score = self.final_score
-        classification = self.classification
+class EvaluationResponse(BaseModel):
+    """
+    Respuesta completa de evaluación
+    """
 
-        # reglas de clasificacion segun el documento
-        if score >= 90 and classification != ShooterLevelEnum.EXPERTO:
-            self.classification = ShooterLevelEnum.EXPERTO
-        elif 70 <= score < 90 and classification != ShooterLevelEnum.CONFIABLE:
-            self.classification = ShooterLevelEnum.CONFIABLE
-        elif 40 <= score < 70 and classification != ShooterLevelEnum.MEDIO:
-            self.classification = ShooterLevelEnum.MEDIO
-        elif 10 <= score < 40 and classification != ShooterLevelEnum.REGULAR:
-            self.classification = ShooterLevelEnum.REGULAR
-
-        return self
-
-
-class PracticeEvaluationUpdate(BaseModel):
-    evaluator_id: Optional[UUID] = None
-    final_score: Optional[float] = Field(None, ge=0, le=100)
-    # classification: Optional[ShooterLevelEnum] = None
-    strengths: Optional[str] = None
-    weaknesses: Optional[str] = None
-    recomendations: Optional[str] = None
-
-    # Calificaciones específicas
-    overall_technique_rating: Optional[float] = None
-    instructor_notes: Optional[str] = None
-
-    # Zonas problemáticas
-    primary_issue_zone: Optional[str] = None
-    secondary_issue_zone: Optional[str] = None
-
-    # Métricas de tiempo
-    avg_reaction_time: Optional[float] = None
-    avg_draw_time: Optional[float] = None
-    avg_reload_time: Optional[float] = None
-
-    # Métricas avanzadas
-    hit_factor: Optional[float] = None
-
-    @model_validator(mode="after")
-    def validate_classification_based_on_score(self) -> "PracticeEvaluationUpdate":
-        # Solo validamos si ambos campos se proporcionan
-        if self.final_score is not None and self.classification is not None:
-            score = self.final_score
-
-            # Reglas de clasificación según el documento
-            if score >= 90 and self.classification != ShooterLevelEnum.EXPERT:
-                self.classification = ShooterLevelEnum.EXPERT
-            elif (
-                70 <= score < 90 and self.classification != ShooterLevelEnum.TRUSTWORTHY
-            ):
-                self.classification = ShooterLevelEnum.TRUSTWORTHY
-            elif 40 <= score < 70 and self.classification != ShooterLevelEnum.MEDIUM:
-                self.classification = ShooterLevelEnum.MEDIUM
-            elif 10 <= score < 40 and self.classification != ShooterLevelEnum.REGULAR:
-                self.classification = ShooterLevelEnum.REGULAR
-
-        return self
-
-
-class PracticeEvaluationRead(PracticeEvaulationBase):
     id: UUID
+    session_id: UUID
+    evaluator_id: Optional[UUID]
+
+    # Campos calculados
+    final_score: float
+    classification: str
+    avg_reaction_time: Optional[float]
+    avg_draw_time: Optional[float]
+    hit_factor: Optional[float]
+
+    # Campos del instructor
+    strengths: Optional[str]
+    weaknesses: Optional[str]
+    recommendations: Optional[str]
+    overall_technique_rating: Optional[float]
+    instructor_notes: Optional[str]
+
+    # Zonas de problema
+    primary_issue_zone: Optional[str]
+    secondary_issue_zone: Optional[str]
+
     date: datetime
-    created_at: datetime
-    updated_at: Optional[datetime]
 
-    model_config = {"from_attributes": True}
-
-
-class PracticeEvaluationDetail(PracticeEvaluationRead):
-    session: Optional[SessionInfo] = None
-    evaluator: Optional[EvaluatorInfo] = None
-
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
 
 
-class PracticeEvaluationList(BaseModel):
-    items: List[PracticeEvaluationRead]
-    total: int
-    page: int
-    size: int
-    pages: int
+class EvaluationCreateResponse(BaseModel):
+    """
+    Respuesta al crear evaluación
+    """
+
+    success: bool
+    evaluation_id: Optional[UUID] = None
+    final_score: Optional[float] = None
+    classification: Optional[str] = None
+    message: str
+    error: Optional[str] = None
 
 
-class ShooterEvaluationStatistics(BaseModel):
+class EvaluationFormResponse(BaseModel):
+    """
+    Respuesta para datos del formulario
+    """
+
+    success: bool
+    form_data: Optional[EvaluationFormData] = None
+    error: Optional[str] = None
+
+
+# Esquemas para listados y consultas
+
+
+class EvaluationSummary(BaseModel):
+    """
+    Resumen de evaluación para listados
+    """
+
+    id: UUID
+    session_id: UUID
+    shooter_name: str
+    final_score: float
+    classification: str
+    date: datetime
+    evaluator_name: Optional[str] = None
+
+
+class ShooterEvaluationHistory(BaseModel):
+    """
+    Historial de evaluaciones de un tirador
+    """
+
     shooter_id: UUID
+    shooter_name: str
+    evaluations: list[EvaluationSummary]
     total_evaluations: int
-    average_score: float
-    classification_distribution: Dict[str, int]
-    recent_trend: str  # "improving", "declining", "stable", "insufficient_data"
-    average_ratings: Dict[str, Optional[float]]
-    common_issue_zones: Dict[str, float]
-    classification_change_recommended: bool
-    suggested_classification: Optional[ShooterLevelEnum] = None
-    latest_evaluations: List[PracticeEvaluationRead] = []
+    latest_classification: Optional[str] = None
+    average_score: Optional[float] = None
 
 
-class PracticeEvaluationFilter(BaseModel):
-    session_id: Optional[UUID] = None
-    shooter_id: Optional[UUID] = None
-    evaluator_id: Optional[UUID] = None
-    min_score: Optional[float] = None
-    max_score: Optional[float] = None
-    classification: Optional[ShooterLevelEnum] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    skip: int = 0
-    limit: int = 100
+# Esquemas para análisis y estadísticas
 
 
-class RatingAnalysis(BaseModel):
-    category: str  # "posture", "grip", etc.
-    average: float
-    trend: str  # "improving", "declining", "stable"
-    suggested_improvements: Optional[str] = None
+class EvaluationTrend(BaseModel):
+    """
+    Tendencia de evaluaciones
+    """
+
+    trend: str = Field(description="improving, declining, stable, insufficient_data")
+    scores: list[float]
+    improving: Optional[bool] = None
+    trend_value: Optional[float] = None
+
+
+class ClassificationDistribution(BaseModel):
+    """
+    Distribución de clasificaciones
+    """
+
+    distributions: Dict[str, int] = Field(description="Conteo por clasificación")
+    total_evaluations: int
+    most_common: Optional[str] = None
+
+
+class IssueZonesAnalysis(BaseModel):
+    """
+    Análisis de zonas problemáticas
+    """
+
+    zones_frequency: Dict[str, float] = Field(
+        description="Frecuencia de zonas problema"
+    )
+    most_common_zones: list[str] = Field(description="Zonas más comunes")
+    improvement_suggestions: list[str] = Field(
+        description="Sugerencias basadas en patrones"
+    )
+
+
+# Esquemas de validación
+
+
+class EvaluationEditRequest(BaseModel):
+    """
+    Request para editar evaluación existente
+    """
+
+    strengths: Optional[str] = None
+    weaknesses: Optional[str] = None
+    recommendations: Optional[str] = None
+    overall_technique_rating: Optional[float] = Field(None, ge=1.0, le=10.0)
+    instructor_notes: Optional[str] = None
+    primary_issue_zone: Optional[str] = None
+    secondary_issue_zone: Optional[str] = None
+
+
+class BulkEvaluationRequest(BaseModel):
+    """
+    Request para operaciones en lote (futuro)
+    """
+
+    session_ids: list[UUID]
+    action: str = Field(description="export, delete, etc.")
+    format: Optional[str] = Field("json", description="json, pdf, excel")

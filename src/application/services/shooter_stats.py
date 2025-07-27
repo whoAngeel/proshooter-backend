@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
+import logging
 from src.infraestructure.database.repositories.shooter_stats_repo import (
     ShooterStatsRepository,
 )
@@ -12,8 +13,15 @@ from src.infraestructure.database.repositories.practice_exercise_repo import (
 from src.infraestructure.database.repositories.target_analysis_repo import (
     TargetAnalysisRepository,
 )
+from src.infraestructure.database.repositories.practice_evaluation_repo import (
+    PracticeEvaluationRepository,
+)
 from src.presentation.schemas.user_stats_schema import ShooterStatsUpdate
 from typing import Dict
+from src.domain.enums.classification_enum import ShooterLevelEnum
+
+
+logger = logging.getLogger(__name__)
 
 
 class ShooterStatsService:
@@ -23,6 +31,7 @@ class ShooterStatsService:
         self.session_repo = PracticeSessionRepository()
         self.exercise_repo = PracticeExerciseRepository()
         self.analysis_repo = TargetAnalysisRepository()
+        self.evaluation_repo = PracticeEvaluationRepository()
 
     def update_basic_stats_after_session(self, session_id: UUID, shooter_id: UUID):
         """
@@ -460,3 +469,164 @@ class ShooterStatsService:
         except Exception as e:
             print(f"Error obteniendo estadísticas: {str(e)}")
             return {"error": str(e)}
+
+    def update_advanced_stats_after_evaluation(
+        self, shooter_id: UUID, evaluation_id: UUID
+    ):
+        """
+        Actualiza estadisticas avanzadas SOLO despues de evaluacion
+        campos que no se calculan con finalizacion basica
+        """
+        try:
+            # obtener estadisticas actuales
+            stats = self.stats_repo.get_by_shooter_id(self.db, shooter_id)
+            if not stats:
+                return False
+
+            # obtener evaluacion recien creada
+            evaluation = self.evaluation_repo.get_by_id(self.db, evaluation_id)
+            if not evaluation:
+                return False
+
+            # obtener sesion para contexto
+            session = self.session_repo.get_by_id(self.db, evaluation.session_id)
+            if not session:
+                return False
+            updates = {}
+
+            # 1. TIEMPOS PROMEDIO (solo si hay datos en evaluación)
+            if evaluation.avg_draw_time and evaluation.avg_draw_time > 0:
+                # Promedio móvil con peso al nuevo valor
+                current_draw = stats.draw_time_avg or 0
+                if current_draw == 0:
+                    updates["draw_time_avg"] = evaluation.avg_draw_time
+                else:
+                    # 70% histórico + 30% nuevo
+                    updates["draw_time_avg"] = (current_draw * 0.7) + (
+                        evaluation.avg_draw_time * 0.3
+                    )
+
+            # 2. HIT FACTOR PROMEDIO
+            if evaluation.hit_factor and evaluation.hit_factor > 0:
+                current_hit_factor = stats.average_hit_factor or 0
+                if current_hit_factor == 0:
+                    updates["average_hit_factor"] = evaluation.hit_factor
+                else:
+                    # Promedio móvil
+                    updates["average_hit_factor"] = (current_hit_factor * 0.8) + (
+                        evaluation.hit_factor * 0.2
+                    )
+
+            # 3. EFFECTIVENESS (combinando datos cuantitativos + cualitativos)
+            if evaluation.overall_technique_rating:
+                # Combinar precisión objetiva + evaluación técnica subjetiva
+                objective_precision = session.accuracy_percentage / 100  # 0-1
+                subjective_technique = evaluation.overall_technique_rating / 10  # 0-1
+
+                # Peso: 70% objetivo, 30% subjetivo
+                effectiveness = (objective_precision * 0.7) + (
+                    subjective_technique * 0.3
+                )
+
+                current_effectiveness = stats.effectiveness or 0
+                if current_effectiveness == 0:
+                    updates["effectiveness"] = effectiveness
+                else:
+                    # Promedio móvil
+                    updates["effectiveness"] = (current_effectiveness * 0.7) + (
+                        effectiveness * 0.3
+                    )
+
+            # 4. COMMON ERROR ZONES (actualizar con zonas identificadas)
+            if evaluation.primary_issue_zone or evaluation.secondary_issue_zone:
+                new_zones = []
+                if evaluation.primary_issue_zone:
+                    new_zones.append(evaluation.primary_issue_zone)
+                if evaluation.secondary_issue_zone:
+                    new_zones.append(evaluation.secondary_issue_zone)
+
+                # Combinar con zonas existentes
+                current_zones = stats.common_error_zones or ""
+                current_zones_list = [
+                    z.strip() for z in current_zones.split(",") if z.strip()
+                ]
+
+                # Agregar nuevas zonas
+                all_zones = current_zones_list + new_zones
+
+                # Contar frecuencias y mantener las 3 más comunes
+                from collections import Counter
+
+                zone_counts = Counter(all_zones)
+                most_common = [zone for zone, count in zone_counts.most_common(3)]
+
+                updates["common_error_zones"] = ", ".join(most_common)
+
+            # 5. Redondear valores
+            for key, value in updates.items():
+                if isinstance(value, float) and key != "common_error_zones":
+                    updates[key] = round(value, 3)
+
+            # 6. Actualizar en BD si hay cambios
+            if updates:
+                self.stats_repo.update(self.db, shooter_id, updates)
+
+                # Log para debugging
+                logger.info(
+                    f"📊 Stats avanzadas actualizadas para tirador {shooter_id}: {list(updates.keys())}"
+                )
+
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Error actualizando estadísticas avanzadas: {str(e)}")
+            return False
+
+    def get_evaluation_impact_summary(
+        self, shooter_id: UUID, evaluation_id: UUID
+    ) -> Dict:
+        """
+        Resumen del impacto de una evaluacion en las estadisticas del tirador
+        """
+        try:
+            # obtener estadisticas antes y despues (simplificado)
+            current_stats = self.get_complete_shooter_stats(shooter_id)
+
+            evaluation = self.evaluation_repo.get_by_id(self.db, evaluation_id)
+            if not evaluation:
+                return {"error": "Evaluación no encontrada"}
+
+            return {
+                "evaluation_score": evaluation.final_score,
+                "classification": self._determine_classification(
+                    evaluation.final_score
+                ),
+                "updated_fields": [
+                    "draw_time_avg",
+                    "average_hit_factor",
+                    "effectiveness",
+                    "common_error_zones",
+                ],
+                "current_effectiveness": current_stats.get("advanced_metrics", {}).get(
+                    "effectiveness", 0
+                ),
+                "hit_factor": evaluation.hit_factor,
+            }
+        except Exception as e:
+            logger.error(
+                f"❌ Error obteniendo resumen de impacto de evaluación: {str(e)}"
+            )
+            return {"error": str(e)}
+
+    def _determinate_classification(self, final_score: float) -> str:
+        """
+        Determina la clasificación del tirador basado en el puntaje final
+        """
+        if final_score >= 90:
+            return ShooterLevelEnum.EXPERTO.value
+        elif final_score >= 75:
+            return ShooterLevelEnum.CONFIABLE.value
+        elif final_score >= 50:
+            return ShooterLevelEnum.MEDIO.value
+        else:
+            return ShooterLevelEnum.REGULAR.value

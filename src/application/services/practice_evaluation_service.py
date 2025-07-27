@@ -1,10 +1,10 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional, Tuple, Dict, Any
 from uuid import UUID
 from datetime import datetime
 import math
-
+import logging
 
 from src.infraestructure.database.repositories.practice_evaluation_repo import (
     PracticeEvaluationRepository,
@@ -17,626 +17,343 @@ from src.infraestructure.database.repositories.shooter_stats_repo import (
     ShooterStatsRepository,
 )
 from src.infraestructure.database.repositories.user_repo import UserRepository
+from src.infraestructure.database.repositories.practice_exercise_repo import (
+    PracticeExerciseRepository,
+)
+from src.infraestructure.database.repositories.target_analysis_repo import (
+    TargetAnalysisRepository,
+)
 from src.infraestructure.database.models.evaluation_model import PracticeEvaluationModel
+from src.application.services.shooter_stats import ShooterStatsService
 from src.infraestructure.database.session import get_db
 from src.domain.enums.classification_enum import ShooterLevelEnum
 from src.domain.enums.role_enum import RoleEnum
 from src.presentation.schemas.practice_evaluation_schema import (
-    PracticeEvaluationCreate,
-    PracticeEvaluationRead,
-    PracticeEvaluationDetail,
-    PracticeEvaluationUpdate,
-    PracticeEvaluationList,
-    PracticeEvaluationFilter,
-    ShooterEvaluationStatistics,
-    RatingAnalysis,
+    EvaluationCreateRequest,
+    EvaluationFormData,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PracticeEvaluationService:
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
+        self.evaluation_repo = PracticeEvaluationRepository
+        self.session_repo = PracticeSessionRepository
+        self.exercise_repo = PracticeExerciseRepository
+        self.analysis_repo = TargetAnalysisRepository
+        self.stats_service = ShooterStatsService(self.db)
 
     def create_evaluation(
-        self, evaluation_data: PracticeEvaluationCreate
-    ) -> Tuple[Optional[PracticeEvaluationRead], Optional[str]]:
+        self,
+        session_id: UUID,
+        instructor_id: UUID,
+        evaluation_data: EvaluationCreateRequest,
+    ) -> Dict:
         try:
-            # verficar que la sesion existe
-            session = PracticeSessionRepository.get_by_id(
-                self.db, evaluation_data.session_id
-            )
+            # validar permisos y estado de la sesion
+            self._validate_evaluation_creation(session_id, instructor_id)
+
+            # calcular campos automaticos
+            auto_calculated = self.calculate_automatic_fields(session_id)
+
+            # sugerir zonas de problema desde analisis ia
+            suggested_zones = self.suggest_issue_zones(session_id)
+
+            # combinar datos automaticos y manuales
+            evaluation_dict = {
+                "session_id": session_id,
+                "evaluator_id": instructor_id,
+                "date": datetime.now(),
+                # Campos automáticos
+                "final_score": auto_calculated["final_score"],
+                "avg_reaction_time": auto_calculated["avg_reaction_time"],
+                "avg_draw_time": auto_calculated["avg_draw_time"],
+                "hit_factor": auto_calculated["hit_factor"],
+                # Campos manuales del instructor
+                "strengths": evaluation_data.strengths,
+                "weaknesses": evaluation_data.weaknesses,
+                "recomendations": evaluation_data.recommendations,
+                "overall_technique_rating": evaluation_data.overall_technique_rating,
+                "instructor_notes": evaluation_data.instructor_notes,
+                # Zonas de problema (sugeridas por IA, editables por instructor)
+                "primary_issue_zone": evaluation_data.primary_issue_zone
+                or suggested_zones.get("primary"),
+                "secondary_issue_zone": evaluation_data.secondary_issue_zone
+                or suggested_zones.get("secondary"),
+            }
+
+            # crear evaluacion en bd
+            evaluation = self.evaluation_repo.create(self.db, evaluation_dict)
+
+            # actualizar estadisticas avanzadas del tirador
+            self._update_advanced_shooter_stats(session_id, evaluation.id)
+
+            return {
+                "success": True,
+                "evaluation_id": str(evaluation.id),
+                "final_score": evaluation.final_score,
+                "classification": self._determinate_classification(
+                    evaluation.final_score
+                ),
+                "message": "Evaluación creada exitosamente",
+            }
+
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"❌Error creating evaluation: {e}")
+            raise HTTPException(status_code=500, detail="Error al crear la evaluación")
+
+    def calculate_automatic_fields(self, session_id: UUID) -> Dict:
+        """calcula datos automaticos basados en los datos de la sesion
+
+        Args:
+            session_id (UUID): _description_
+
+        Returns:
+            Dict: _description_
+        """
+        try:
+            session = self.session_repo.get_with_exercises(self.db, session_id)
             if not session:
-                return None, "PRACTICE_SESSION_NOT_FOUND"
+                raise HTTPException(status_code=404, detail="Sesión no encontrada")
+            exercises = session.exercises
 
-            # verificar que la sesion no tenga una evaluacion
-            existing_evaluation = PracticeEvaluationRepository.get_by_session_id(
-                self.db, evaluation_data.session_id
-            )
-            if existing_evaluation:
-                return None, "SESSION_ALREADY_EVALUATED"
-            # verficar que el evaluador exista (si es proporcionado)
-            if evaluation_data.evaluator_id:
-                evaluator = UserRepository.get_by_id(
-                    self.db, evaluation_data.evaluator_id
-                )
-                if not evaluator:
-                    return None, "EVALUATOR_NOT_FOUND"
-                if evaluator.role not in [
-                    RoleEnum.INSTRUCTOR,
-                    RoleEnum.INSTRUCTOR_JEFE,
-                    RoleEnum.ADMIN,
-                ]:
-                    return None, "EVALUATOR_NOT_AUTHORIZED"
+            # 1 final score basado en la precision + factores adicionales
+            base_score = session.accuracy_percentage or 0.0
 
-            # convertir datos a diccionario
-            evaluation_dict = evaluation_data.model_dump()
+            # bonificaciones por volumen y consistencia
+            if session.total_shots_fired >= 50:
+                base_score += 5.0
+            elif session.total_shots_fired >= 30:
+                base_score += 2.0
 
-            new_evaluation = PracticeEvaluationRepository.create(
-                self.db, evaluation_dict
-            )
-
-            self._update_shooter_stats(session.shooter_id, new_evaluation)
-
-            return PracticeEvaluationRead.model_validate(new_evaluation), None
-        except Exception as e:
-            self.db.rollback()
-            return None, f"ERROR_CREATING_EVALUATION: {str(e)}"
-
-    def get_evaluation_by_id(
-        self, evaluation_id: UUID
-    ) -> Tuple[Optional[PracticeEvaluationDetail], Optional[str]]:
-        evaluation = PracticeEvaluationRepository.get_by_id(self.db, evaluation_id)
-        if not evaluation:
-            return None, "EVALUATION_NOT_FOUND"
-
-        return PracticeEvaluationDetail.model_validate(evaluation), None
-
-    def get_evaluation_by_session(
-        self, session_id: UUID
-    ) -> Tuple[Optional[PracticeEvaluationDetail], Optional[str]]:
-        session = PracticeSessionRepository.get_by_id(self.db, session_id)
-        if not session:
-            return None, "PRACTICE_SESSION_NOT_FOUND"
-
-        evaluation = PracticeEvaluationRepository.get_by_session_id(self.db, session_id)
-        if not evaluation:
-            return None, "EVALUATION_NOT_FOUND"
-
-        return PracticeEvaluationDetail.model_validate(evaluation), None
-
-    def get_all_evaluations(
-        self, filter_params: PracticeEvaluationFilter
-    ) -> PracticeEvaluationList:
-        evaluations = []
-        total_count = 0
-
-        # aplicar filtros para los parametros proporcionados
-        if filter_params.session_id:
-            evaluation = PracticeEvaluationRepository.get_by_session_id(
-                self.db, filter_params.session_id
-            )
-            evaluations = [evaluation] if evaluation else []
-            total_count = 1 if evaluation else 0
-        elif filter_params.shooter_id:
-            evaluations = PracticeEvaluationRepository.get_by_shooter(
-                self.db,
-                filter_params.shooter_id,
-                filter_params.skip,
-                filter_params.limit,
-            )
-            total_count = len(
-                PracticeEvaluationRepository.get_by_shooter(
-                    self.db, filter_params.shooter_id
-                )
-            )
-        elif filter_params.evaluator_id:
-            evaluations = PracticeEvaluationRepository.get_by_evaluator(
-                self.db,
-                filter_params.evaluator_id,
-                filter_params.skip,
-                filter_params.limit,
-            )
-            total_count = len(
-                PracticeEvaluationRepository.get_by_evaluator(
-                    self.db, filter_params.evaluator_id
-                )
-            )
-        else:
-            evaluations = PracticeEvaluationRepository.get_all(
-                self.db, filter_params.skip, filter_params.limit
-            )
-
-            total_query = self.db.query(PracticeEvaluationModel).count()
-            total_count = total_query
-
-        page = (filter_params.skip // filter_params.limit) + 1
-        pages = math.ceil(total_count / filter_params.limit) if total_count > 0 else 1
-
-        items = [PracticeEvaluationRead.model_validate(eval) for eval in evaluations]
-
-        return PracticeEvaluationList(
-            items=items,
-            total=total_count,
-            page=page,
-            size=filter_params.limit,
-            pages=pages,
-        )
-
-    def update_evaluation(
-        self, evaluation_id: UUID, evaluation_data: PracticeEvaluationUpdate
-    ) -> Tuple[Optional[PracticeEvaluationRead], Optional[str]]:
-        try:
-            # verificar que la evaluacion exista
-            existing_evaluation = PracticeEvaluationRepository.get_by_id(
-                self.db, evaluation_id
-            )
-            if not existing_evaluation:
-                return None, "PRACTICE_EVALUATION_NOT_FOUND"
-
-            # verificar que el evaluador existe (si lo proporcionan)
-            if evaluation_data.evaluator_id:
-                evaluator = UserRepository.get_by_id(
-                    self.db, evaluation_data.evaluator_id
-                )
-                if not evaluator:
-                    return None, "EVALUATOR_NOT_FOUND"
-                if evaluator.role not in [
-                    RoleEnum.INSTRUCTOR,
-                    RoleEnum.INSTRUCTOR_JEFE,
-                    RoleEnum.ADMIN,
-                ]:
-                    return None, "EVALUATOR_NOT_AUTHORIZED"
-
-            # convertir datos a dict
-            evaluation_dict = evaluation_data.model_dump(exclude_unset=True)
-
-            updated_evaluation = PracticeEvaluationRepository.update(
-                self.db, evaluation_id, evaluation_dict
-            )
-
-            if not updated_evaluation:
-                return None, "ERROR_UPDATING_EVALUATION"
-
-            # obtener la session para acceder al tirador
-            session = PracticeSessionRepository.get_by_id(
-                self.db, updated_evaluation.session_id
-            )
-
-            # actualizar las estadisticas del tirador si se cambiaron datos relevantes
-            relevant_fields = {
-                "final_score",
-                "classification",
-                "primary_issue_zone",
-                "secondary_issue_zone",
-            }
-            if any(field in evaluation_dict for field in relevant_fields):
-                self._update_shooter_stats(session.shooter_id, updated_evaluation)
-
-            return PracticeEvaluationRead.model_validate(updated_evaluation), None
-        except Exception as e:
-            self.db.rollback()
-            return None, f"ERROR_UPDATING_EVALUATION: {str(e)}"
-
-    def delete_evaluation(self, evaluation_id: UUID) -> Tuple[bool, Optional[str]]:
-        try:
-            existing_evaluation = PracticeEvaluationRepository.get_by_id(
-                self.db, evaluation_id
-            )
-            if not existing_evaluation:
-                return False, "PRACTICE_EVALUATION_NOT_FOUND"
-
-            session = PracticeSessionRepository.get_by_id(
-                self.db, existing_evaluation.session_id
-            )
-            shooter_id = session.shooter_id
-
-            success = PracticeEvaluationRepository.delete(self.db, evaluation_id)
-
-            if not success:
-                return False, "ERROR_DELETING_EVALUATION"
-
-            # recalcular las estadisticas del tirador
-            self._recalculate_shooter_stats(shooter_id)
-
-            return True, None
-        except Exception as e:
-            self.db.rollback()
-            return False, f"ERROR_DELETING_EVALUATION: {str(e)}"
-
-    def get_shooter_evaluation_statistics(
-        self, shooter_id: UUID
-    ) -> Tuple[Optional[ShooterEvaluationStatistics], Optional[str]]:
-        try:
-            # verificar que el tirador exista
-            shooter = ShooterRepository.get_by_user_id(self.db, shooter_id)
-            if not shooter:
-                return None, "SHOOTER_NOT_FOUND"
-
-            # obtener las evaluaciones del tirador
-            evaluations = PracticeEvaluationRepository.get_by_shooter(
-                self.db, shooter_id
-            )
-
-            if not evaluations:
-                return None, "NO_EVALUATIONS_FOUND"
-
-            # obtener distribucion de clasificaciones
-            classification_distribution = (
-                PracticeEvaluationRepository.get_shooter_classification_distribution(
-                    self.db, shooter_id
-                )
-            )
-
-            # zonas de problemas comunes
-            issue_zones = PracticeEvaluationRepository.get_issue_zones_frequency(
-                self.db, shooter_id
-            )
-
-            # analizar tendencia reciente
-            trend_data = PracticeEvaluationRepository.get_recent_evaluations_trend(
-                self.db, shooter_id
-            )
-
-            # obtener promedios de calificacioens especificas
-            average_ratings = PracticeEvaluationRepository.get_average_ratings(
-                self.db, shooter_id
-            )
-
-            # calcular puntuacion promedio
-            avg_score = sum(eval.final_score for eval in evaluations) / len(evaluations)
-
-            # verificar si se recomienda cambio de clasificacion
-            classification_change = (
-                PracticeEvaluationRepository.check_classification_change_criteria(
-                    self.db, shooter_id, shooter.level
-                )
-            )
-
-            # obtener evaluaciones recientes para mostrar
-            recent_evaluations = (
-                PracticeEvaluationRepository.get_shooter_evaluation_history(
-                    self.db, shooter_id, 5
-                )
-            )
-
-            # Construir el objeto de estadísticas
-            statistics = ShooterEvaluationStatistics(
-                shooter_id=shooter_id,
-                total_evaluations=len(evaluations),
-                average_score=avg_score,
-                classification_distribution=classification_distribution,
-                recent_trend=trend_data["trend"],
-                average_ratings=average_ratings,
-                common_issue_zones=issue_zones,
-                classification_change_recommended=classification_change[
-                    "should_change"
-                ],
-                suggested_classification=(
-                    classification_change["suggested_level"]
-                    if classification_change["should_change"]
-                    else None
-                ),
-                latest_evaluations=[
-                    PracticeEvaluationRead.model_validate(eval)
-                    for eval in recent_evaluations
-                ],
-            )
-
-            return statistics, None
-        except Exception as e:
-            return None, f"ERROR_GETTING_STATISTICS: {str(e)}"
-
-    def get_rating_analysis(
-        self, shooter_id: UUID, category: str
-    ) -> Tuple[Optional[RatingAnalysis], Optional[str]]:
-        try:
-            # verficar que el tirador exista
-            shooter = ShooterRepository.get_by_user_id(self.db, shooter_id)
-            if not shooter:
-                return None, "SHOOTER_NOT_FOUND"
-
-            valid_categories = [
-                "posture",
-                "grip",
-                "sight_alignment",
-                "trigger_control",
-                "breathing",
-            ]
-            if category not in valid_categories:
-                return (
-                    None,
-                    f"INVALID_CATEGORY: Must be one of {', '.join(valid_categories)}",
-                )
-
-            # obtener las evaluaciones del tirador
-            evaluations = PracticeEvaluationRepository.get_by_shooter(
-                self.db, shooter_id
-            )
-
-            if not evaluations:
-                return None, "NO_EVALUATIONS_FOUND"
-
-            # mapear el nombre de la categoria al campo correspondiente
-            category_field_map = {
-                "posture": "posture_rating",
-                "grip": "grip_rating",
-                "sight_alignment": "sight_alignment_rating",
-                "trigger_control": "trigger_control_rating",
-                "breathing": "breathing_rating",
-            }
-
-            field_name = category_field_map[category]
-
-            # filtrar evaluaciones que tienen un valor para esta categoria
-            relevant_evaluations = [
-                eval for eval in evaluations if getattr(eval, field_name) is not None
-            ]
-
-            if not relevant_evaluations:
-                return None, f"NO_DATA_FOR_CATEGORY: {category}"
-
-            # calcular el promedio
-            values = [getattr(eval, field_name) for eval in relevant_evaluations]
-            average = sum(values) / len(values)
-
-            # determinar tendencia (simplificado)
-            if len(relevant_evaluations) >= 3:
-                recent_values = [
-                    getattr(eval, field_name) for eval in relevant_evaluations[-3:]
+            # penalizaacion por gran disparidad entre ejercicios
+            if exercises:
+                accuracies = [
+                    ex.accuracy_percentage for ex in exercises if ex.accuracy_percentage
                 ]
-                if recent_values[-1] > recent_values[0]:
-                    trend = "improving"
-                elif recent_values[-1] < recent_values[0]:
-                    trend = "declining"
-                else:
-                    trend = "stable"
-            else:
-                trend = "insufficient_data"
+                if accuracies and len(accuracies) > 1:
+                    accuracy_variance = max(accuracies) - min(accuracies)
+                    if accuracy_variance > 30:  # mas de 30% de diferencia
+                        base_score -= 5.0
 
-            # Generar sugerencias basadas en el promedio
-            # TODO: Generar sugerencias con IA
-            suggestions = None
-            if average < 5:
-                suggestions = f"Focus on improving {category} technique. Consider specific exercises targeting this area."
-            elif average < 7:
-                suggestions = f"Your {category} technique is adequate but could benefit from refinement."
-            else:
-                suggestions = f"Your {category} technique is strong. Continue to maintain this aspect."
+            final_score = min(max(base_score, 0.0), 100.0)  # entre 0 y 100
 
-            return (
-                RatingAnalysis(
-                    category=category,
-                    average=average,
-                    trend=trend,
-                    suggested_improvements=suggestions,
+            # tiempos
+            reaction_times = [
+                ex.reaction_time
+                for ex in exercises
+                if ex.reaction_time and ex.reaction_time > 0
+            ]
+            avg_reaction_time = (
+                sum(reaction_times) / len(reaction_times) if reaction_times else None
+            )
+
+            # 3. Hit Factor (Hits/Tiempo) - métrica IPSC
+            total_hits = session.total_hits or 0
+            total_time = sum(reaction_times) if reaction_times else 0
+            hit_factor = total_hits / total_time if total_time > 0 else None
+
+            return {
+                "final_score": round(final_score, 2),
+                "avg_reaction_time": (
+                    round(avg_reaction_time, 3) if avg_reaction_time else None
                 ),
-                None,
-            )
-        except Exception as e:
-            return None, f"ERROR_ANALYZING_RATING: {str(e)}"
-
-    def _update_shooter_stats(self, shooter_id: UUID, evaluation) -> None:
-        """
-        Actualiza las estadisticas del tirador basandose en la nueva evaluacion.
-        Este metodo actualiza varios aspectos de las estadisticas del tirador,
-        incluyendo precision media, zonas de error comunes, etc.
-        """
-
-        try:
-            # obtener las estadisticas del tirador
-            shooter_stats = ShooterStatsRepository.get_by_shooter_id(
-                self.db, shooter_id
-            )
-
-            if not shooter_stats:
-                return
-
-            # Obtener session de la evaluacion para acceder a los datos de disparos
-            session = PracticeSessionRepository.get_by_id(
-                self.db, evaluation.session_id
-            )
-
-            # actualizar estadisticas basicas
-            stats_updates = {}
-
-            # actualizar datos de error comunes
-            if evaluation.primary_issue_zone:
-                # simplificado, solo tomando la zona primaria actual TODO: revisar esto
-                stats_updates["common_primary_zone"] = evaluation.primary_issue_zone
-
-            # actualizar estadisticas de tiempo si estan disponibles
-            if evaluation.avg_draw_time is not None:
-                # media ponderada para draw_time_avg
-                current_avg = shooter_stats.draw_time_avg
-                new_value = evaluation.avg_draw_time
-
-                # si el primer valor lo asignamos directamente
-                if current_avg == 0:
-                    stats_updates["draw_time_avg"] = new_value
-                else:
-                    # caso contrario, actualizamos con una media ponderada simple
-                    # (damos mayor peso al valor historico para estabilidad)
-                    stats_updates["draw_time_avg"] = current_avg * 0.8 + new_value * 0.2
-
-            if evaluation.avg_reload_time is not None:
-                current_avg = shooter_stats.reload_time_avg
-                new_value = evaluation.avg_reload_time
-
-                if current_avg == 0:
-                    stats_updates["reload_time_avg"] = new_value
-                else:
-                    stats_updates["reload_time_avg"] = (
-                        current_avg * 0.8 + new_value * 0.2
-                    )
-
-            # actualizar hit factor
-            if evaluation.hit_factor is not None:
-                current_avg = shooter_stats.average_hit_factor
-                new_value = evaluation.hit_factor
-
-                if current_avg == 0:
-                    stats_updates["average_hit_factor"] = new_value
-                else:
-                    stats_updates["average_hit_factor"] = (
-                        current_avg * 0.8 + new_value * 0.2
-                    )
-
-            # actualizar la efectividad basada en la evaluacion actual
-            stats_updates["effectivenes"] = evaluation.final_score
-
-            # actulizar estadisticas de tendencia
-            trend_data = PracticeEvaluationRepository.get_recent_evaluations_trend(
-                self.db, shooter_id
-            )
-            if "trend_value" in trend_data:
-                stats_updates["trend_accuracy"] = trend_data["trend_value"]
-
-            # calcular promedio de ultimas 10 sesiones
-            recent_evaluations = (
-                PracticeEvaluationRepository.get_shooter_evaluation_history(
-                    self.db, shooter_id, 10
-                )
-            )
-            if recent_evaluations:
-                avg_score = sum(eval.final_score for eval in recent_evaluations) / len(
-                    recent_evaluations
-                )
-                stats_updates["last_10_sessions_avg"] = avg_score
-
-            # actualizar precision global basado en los datos de la sesion
-            if session.total_shots_fired > 0:
-                # actualizamos el total de disparos en las estadisticas
-                new_total = shooter_stats.total_shots + session.total_shots_fired
-                stats_updates["total_shots"] = new_total
-
-                # calculamos la nueva precision global
-                current_hits = shooter_stats.accuracy * shooter_stats.total_shots / 100
-                new_hits = current_hits + session.total_hits
-                new_accuracy = (new_hits / new_total) * 100
-                stats_updates["accuracy"] = new_accuracy
-
-            # actualizamos las estadisticas del tirador
-            ShooterStatsRepository.update(self.db, shooter_id, stats_updates)
-
-            # verificar si debemos actualizar la clasificacion del tirador
-            self._check_and_update_classification(shooter_id)
-        except Exception as e:
-            print(f"❌❌⚠️⚠️Error updating shooter stats: {str(e)}")
-
-    def _check_and_update_classification(self, shooter_id: UUID) -> None:
-        """
-        Verifica si es necesario actualizar la clasificacion del tirador
-        basandose en su historial reciente de evaluaciones
-        """
-
-        try:
-            shooter = ShooterRepository.get_by_user_id(self.db, shooter_id)
-
-            if not shooter:
-                return
-            # verificar criterios para cambio de clasificacion
-            classification_change = (
-                PracticeEvaluationRepository.check_classification_change_criteria(
-                    self.db, shooter_id, shooter.level
-                )
-            )
-
-            # si se recomienda un cambio actualizamos la clasificacion
-            if classification_change["should_change"]:
-                ShooterStatsRepository.update_classification(
-                    self.db, shooter_id, classification_change["suggested_level"]
-                )
-        except Exception as e:
-            print(f"❌❌⚠️⚠️Error checking shooter classification: {str(e)}")
-
-    def _recalculate_shooter_stats(self, shooter_id: UUID) -> None:
-        """
-        Recalcula completamente las estadisticas de un tirador basandose en todas sus sesiones y evaluaciones historicas
-        """
-        try:
-            # obtener todas las sesiones del tirador
-            sessions = PracticeSessionRepository.get_by_shooter(self.db, shooter_id)
-
-            # obtener todas las  evaluaciones del tirador
-            evaluations = PracticeEvaluationRepository.get_by_shooter(
-                self.db, shooter_id
-            )
-
-            if not sessions or not evaluations:
-                return
-
-            # inicializar contadores
-            total_shots = 0
-            total_hits = 0
-
-            # acumular los disparos y aciertos de todas las sesiones
-            for session in sessions:
-                total_shots += session.total_shots_fired
-                total_hits += session.total_hits
-
-            # calcular precision global
-            accuracy = (total_hits / total_shots) * 100 if total_shots > 0 else 0
-
-            # calcular promedios de tiempos
-            draw_times = [
-                eval.avg_draw_time
-                for eval in evaluations
-                if eval.avg_draw_time is not None
-            ]
-            reload_times = [
-                eval.avg_reload_time
-                for eval in evaluations
-                if eval.avg_reload_time is not None
-            ]
-            hit_factors = [
-                eval.hit_factor for eval in evaluations if eval.hit_factor is not None
-            ]
-
-            draw_time_avg = sum(draw_times) / len(draw_times) if draw_times else 0
-            reload_time_avg = (
-                sum(reload_times) / len(reload_times) if reload_times else 0
-            )
-            hit_factors_avg = sum(hit_factors) / len(hit_factors) if hit_factors else 0
-
-            # obtener la ultima evaluacion para efectividad
-            latest_eval = evaluations[0] if evaluations else None
-            effectiveness = latest_eval.final_score if latest_eval else 0
-
-            # analizar tendencias
-            trend_data = PracticeEvaluationRepository.get_recent_evaluations_trend(
-                self.db, shooter_id
-            )
-            trend_accuracy = trend_data.get("trend_value", 0)
-
-            # calcular promedio de ultimas 10 sesiones
-            recent_evaluations = (
-                evaluations[:10] if len(evaluations) >= 10 else evaluations
-            )
-            last_10_avg = (
-                sum(eval.final_score for eval in recent_evaluations)
-                / len(recent_evaluations)
-                if recent_evaluations
-                else 0
-            )
-
-            issue_zones = PracticeEvaluationRepository.get_issue_zones_frequency(
-                self.db, shooter_id
-            )
-            common_zone = max(issue_zones, key=issue_zones.get) if issue_zones else None
-
-            stats_updates = {
-                "total_shots": total_shots,
-                "accuracy": accuracy,
-                "draw_time_avg": draw_time_avg,
-                "reload_time_avg": reload_time_avg,
-                "average_hit_factor": hit_factors_avg,
-                "effectiveness": effectiveness,
-                "trend_accuracy": trend_accuracy,
-                "last_10_sessions_avg": last_10_avg,
-                "common_error_zones": common_zone,
+                "avg_draw_time": (
+                    round(avg_reaction_time, 3) if avg_reaction_time else None
+                ),  # Por ahora igual
+                "hit_factor": round(hit_factor, 3) if hit_factor else None,
             }
 
-            ShooterStatsRepository.update(self.db, shooter_id, stats_updates)
-            self._check_and_update_classification(shooter_id)
         except Exception as e:
-            print(f"❌❌⚠️⚠️Error recalculating shooter stats: {str(e)}")
+            # Valores por defecto si falla el cálculo
+            return {
+                "final_score": 0.0,
+                "avg_reaction_time": None,
+                "avg_draw_time": None,
+                "hit_factor": None,
+            }
+
+    def suggest_issue_zones(self, session_id: UUID) -> Dict:
+        """
+        sugiere zonas problematicas basadas en analisis de IA de las imagenes
+        """
+
+        try:
+            exercises = self.exercise_repo.get_by_session_id(self.db, session_id)
+
+            zone_counts = {}
+
+            for exercise in exercises:
+                if exercise.target_image_id:
+                    analysis = self.analysis_repo.get_by_image_id(
+                        self.db, exercise.target_image_id
+                    )
+
+                    if analysis and analysis.impact_coordinates:
+                        # analizar impactos fuera del blanco
+                        impacts_outside = [
+                            impact
+                            for impact in analysis.impact_coordinates
+                            if not impact.get("dentro_blanco", True)
+                        ]
+                        for impact in impacts_outside:
+                            zone = self._classify_impact_zone(
+                                impact.get("x", 0), impact.get("y", 0)
+                            )
+                            if zone:
+                                zone_counts[zone] = zone_counts.get(zone, 0) + 1
+            # obtener las 2 zonas mas problematicas
+            if zone_counts:
+                sorted_zones = sorted(
+                    zone_counts.items(), key=lambda x: x[1], reverse=True
+                )
+                return {
+                    "primary": sorted_zones[0][0] if len(sorted_zones) > 0 else None,
+                    "secondary": sorted_zones[1][0] if len(sorted_zones) > 1 else None,
+                }
+            return {"primary": None, "secondary": None}
+        except Exception as e:
+            logger.error(f"❌Error sugiriendo zonas de problema: {e}")
+            return {"primary": None, "secondary": None}
+
+    def get_evaluation_form_data(
+        self, session_id: UUID, instructor_id: UUID
+    ) -> EvaluationFormData:
+        """
+        Obtiene datos para pre-llenar el formulario de evaluación
+        """
+        try:
+            # Validar permisos
+            self._validate_evaluation_creation(session_id, instructor_id)
+
+            # Calcular campos automáticos
+            auto_calculated = self.calculate_automatic_fields(session_id)
+
+            # Sugerir zonas de problema
+            suggested_zones = self.suggest_issue_zones(session_id)
+
+            # Obtener contexto del tirador
+            session = self.session_repo.get_with_exercises(self.db, session_id)
+            shooter_context = self._get_shooter_context(session.shooter_id)
+
+            return EvaluationFormData(
+                session_id=session_id,
+                auto_calculated=auto_calculated,
+                suggested_zones=suggested_zones,
+                shooter_context=shooter_context,
+                classification_suggestion=self._determine_classification(
+                    auto_calculated["final_score"]
+                ),
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"❌Error obteniendo datos del formulario: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error obteniendo datos del formulario: {str(e)}",
+            )
+
+    def _validate_evaluation_creation(self, session_id: UUID, instructor_id: UUID):
+        """
+        Valida que se pueda crear la evaluación
+        """
+        # Verificar que la sesión existe
+        session = self.session_repo.get_by_id(self.db, session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
+        # Verificar que está asignada al instructor
+        if session.instructor_id != instructor_id:
+            raise HTTPException(
+                status_code=403, detail="Sesión no asignada a este instructor"
+            )
+
+        # Verificar que está finalizada
+        if not session.is_finished:
+            raise HTTPException(
+                status_code=400, detail="La sesión debe estar finalizada"
+            )
+
+        # Verificar que no tiene evaluación previa
+        existing_evaluation = self.evaluation_repo.get_by_session_id(
+            self.db, session_id
+        )
+        if existing_evaluation:
+            raise HTTPException(status_code=400, detail="La sesión ya tiene evaluación")
+
+    def _update_advanced_shooter_stats(self, session_id: UUID, evaluation_id: UUID):
+        """
+        Actualiza estadísticas avanzadas del tirador después de evaluación
+        """
+        try:
+            session = self.session_repo.get_by_id(self.db, session_id)
+            if session:
+                # Llamar al servicio de estadísticas para actualización post-evaluación
+                # TODO
+                self.stats_service.update_advanced_stats_after_evaluation(
+                    session.shooter_id, evaluation_id
+                )
+        except Exception as e:
+            # Log error pero no fallar la evaluación por esto
+            print(f"⚠️ Error actualizando estadísticas avanzadas: {str(e)}")
+
+    def _determinate_classification(self, final_score: float) -> str:
+        """
+        Determina la clasificación del tirador basado en el puntaje final
+        """
+        if final_score >= 90:
+            return ShooterLevelEnum.EXPERTO.value
+        elif final_score >= 75:
+            return ShooterLevelEnum.CONFIABLE.value
+        elif final_score >= 50:
+            return ShooterLevelEnum.MEDIO.value
+        else:
+            return ShooterLevelEnum.REGULAR.value
+
+    def _classify_impact_zone(self, x: float, y: float) -> Optional[str]:
+        """
+        Clasifica la zona del impacto basado en coordenadas
+        """
+        # Definir zonas basadas en coordenadas (ejemplo simplificado)
+        # Asumimos un blanco de 100x100 con centro en (50, 50)
+        # Simplificado - puedes hacer más complejo según tus blancos
+        if abs(x) > abs(y):
+            if x > 0:
+                return "Lateral Derecho"
+            else:
+                return "Lateral Izquierdo"
+        else:
+            if y > 0:
+                return "Superior"
+            else:
+                return "Inferior"
+
+    def _get_shooter_context(self, shooter_id: UUID) -> Dict:
+        """
+        Obtiene contexto del tirador para la evaluación
+        """
+        try:
+            # Obtener estadísticas actuales
+            stats = self.stats_service.get_complete_shooter_stats(shooter_id)
+
+            # Obtener evaluaciones recientes
+            recent_evaluations = self.evaluation_repo.get_shooter_evaluation_history(
+                self.db, shooter_id, limit=3
+            )
+
+            return {
+                "current_stats": stats,
+                "recent_evaluations_count": len(recent_evaluations),
+                "last_classification": (
+                    recent_evaluations[0].classification if recent_evaluations else None
+                ),
+                "improvement_trend": len(recent_evaluations) >= 2,
+            }
+        except:
+            return {"current_stats": {}, "recent_evaluations_count": 0}
