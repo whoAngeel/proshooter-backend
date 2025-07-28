@@ -27,7 +27,7 @@ async def analyze_exercise_image(
     """
     Analiza la imagen de un ejercicio y devuelve los resultados del análisis.
     """
-    result, error = servcie.analyze_excersise_image(
+    result, error = servcie.analyze_exersise_image(
         exercise_id=exercise_id,
         confidence_threshold=request.confidence_threshold,
         force_reanalysis=request.force_reanalysis,
