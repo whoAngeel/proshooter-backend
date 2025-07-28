@@ -45,6 +45,19 @@ class TargetAnalysisModel(Base):
     model_version = Column(String, nullable=True, default="1.0")
     confidence_threshold = Column(Float, default=0.25)
 
+    # Nuevos campos de puntuacion
+    total_score = Column(Integer, default=0, nullable=False)
+    average_score_per_shot = Column(Float, default=0.0, nullable=False)
+    max_score_achieved = Column(Integer, default=0, nullable=False)
+    score_distribution = Column(JSON, nullable=True)  # {"10": 2}
+
+    # campos de agrupamiento
+    shooting_group_diameter = Column(
+        Float, nullable=True
+    )  # Diámetro del grupo de disparos
+    group_center_x = Column(Float, nullable=True)
+    group_center_y = Column(Float, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
