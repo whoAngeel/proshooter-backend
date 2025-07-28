@@ -27,6 +27,13 @@ from src.presentation.schemas.practice_session_schema import (
     IndividualPracticeSessionStatistics,
     IndividualPracticeSessionDetailLite,
 )
+from src.presentation.schemas.practice_session_schema import (
+    MyPracticeSessionSummary,
+    PracticeExerciseSummary,
+)
+from src.application.services.practice_evaluation_service import (
+    PracticeEvaluationService,
+)
 
 from src.presentation.schemas.instructor import PracticeSessionCreateRequest
 from src.application.services.club_instructor import ClubInstructorService
@@ -365,15 +372,11 @@ class PracticeSessionService:
         is_finished: Optional[bool] = None,
         skip: int = 0,
         limit: int = 5,
-    ) -> List[IndividualPracticeSessionDetailLite]:
-        from src.presentation.schemas.practice_session_schema import (
-            PracticeExerciseSummary,
-            MyPracticeSessionSummary,
-        )
-
+    ) -> List[MyPracticeSessionSummary]:
         sessions = PracticeSessionRepository.get_user_sessions(
             self.db, user_id, is_finished, skip=skip, limit=limit
         )
+        eval_service = PracticeEvaluationService(self.db)
         result = []
         for session in sessions:
             exercises = [
@@ -388,6 +391,16 @@ class PracticeSessionService:
                 )
                 for ex in session.exercises
             ]
+            evaluation = eval_service.get_by_session_id(session.id)
+            evaluation_info = None
+            if evaluation:
+                evaluation_info = {
+                    "id": evaluation.id,
+                    "final_score": evaluation.final_score,
+                    "classification": eval_service.get_classification_value(
+                        evaluation.classification
+                    ),
+                }
             result.append(
                 MyPracticeSessionSummary(
                     id=session.id,
@@ -399,6 +412,7 @@ class PracticeSessionService:
                     total_hits=session.total_hits,
                     accuracy_percentage=session.accuracy_percentage,
                     exercises=exercises,
+                    evaluation=evaluation_info,
                 )
             )
         return result

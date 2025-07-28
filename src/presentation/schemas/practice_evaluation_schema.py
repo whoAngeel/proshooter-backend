@@ -20,7 +20,7 @@ class EvaluationCreateRequest(BaseModel):
     )
 
     overall_technique_rating: Optional[float] = Field(
-        None, ge=1.0, le=10.0, description="Calificación técnica general (1-10)"
+        None, ge=0.0, le=10.0, description="Calificación técnica general (0-10)"
     )
     instructor_notes: Optional[str] = Field(
         None, max_length=2000, description="Notas adicionales del instructor"
@@ -36,8 +36,8 @@ class EvaluationCreateRequest(BaseModel):
 
     @field_validator("overall_technique_rating")
     def validate_rating(cls, v):
-        if v is not None and (v < 1.0 or v > 10.0):
-            raise ValueError("Rating debe estar entre 1.0 y 10.0")
+        if v is not None and (v < 0.0 or v > 10.0):
+            raise ValueError("Rating debe estar entre 0.0 y 10.0")
         return v
 
 

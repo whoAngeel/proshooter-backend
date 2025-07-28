@@ -106,6 +106,10 @@ class PracticeEvaluationService:
             # actualizar estadisticas avanzadas del tirador
             self._update_advanced_shooter_stats(session_id, evaluation.id)
 
+            self._check_automatic_classification_update(
+                session_id, evaluation.final_score
+            )
+
             return {
                 "success": True,
                 "evaluation_id": str(evaluation.id),
@@ -121,6 +125,32 @@ class PracticeEvaluationService:
         except Exception as e:
             logger.error(f"❌Error creating evaluation: {e}")
             raise HTTPException(status_code=500, detail="Error al crear la evaluación")
+
+    def _check_automatic_classification_update(
+        self, session_id: UUID, final_score: float
+    ):
+        try:
+            session = self.session_repo.get_by_id(self.db, session_id)
+            if session:
+                from src.application.services.auto_classification import (
+                    AutoClassificationService,
+                )
+
+                auto_service = AutoClassificationService(self.db)
+
+                eval_classification = self._determinate_classification(final_score)
+
+                upgraded = auto_service.check_and_update_classification(
+                    session.shooter_id, eval_classification
+                )
+                if upgraded:
+                    logger.info(
+                        f"✅ Clasificación automática actualizada para el tirador {session.shooter_id}"
+                    )
+        except Exception as e:
+            logger.error(
+                f"❌ Error al verificar actualización automática de clasificación: {e}"
+            )
 
     def calculate_automatic_fields(self, session_id: UUID) -> Dict:
         """calcula datos automaticos basados en los datos de la sesion

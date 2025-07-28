@@ -161,6 +161,7 @@ class MyPracticeSessionSummary(BaseModel):
     total_hits: int
     accuracy_percentage: float
     exercises: List[PracticeExerciseSummary]
+    evaluation: Optional[Dict[str, Any]] = None  # Nuevo campo
 
     model_config = {"from_attributes": True}
 
