@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from uuid import uuid4
 from sqlalchemy import (
     Column,
@@ -68,6 +69,37 @@ class TargetAnalysisModel(Base):
         back_populates="analysis",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def fresh_shots_count(self) -> int:
+        """Total de disparos frescos detectados"""
+        return self.fresh_impacts_inside + self.fresh_impacts_outside
+
+    @property
+    def score_efficiency_percentage(self) -> float:
+        """Porcentaje de eficiencia de puntuacion"""
+        if self.fresh_shots_count == 0:
+            return 0.0
+        max_possible_score = (
+            self.fresh_shots_count * 10
+        )  # Asumiendo max score por shot es 10
+        return (
+            (self.total_score / max_possible_score) * 100
+            if max_possible_score > 0
+            else 0.0
+        )
+
+    @property
+    def has_scoring_data(self) -> bool:
+        """Indica si este analisis tiene datos de puntuacion"""
+        return self.total_score > 0 or self.score_distribution is not None
+
+    @property
+    def group_center(self) -> Optional[dict]:
+        """Centro del grupo como diccionario"""
+        if self.group_center_x is not None and self.group_center_y is not None:
+            return {"x": self.group_center_x, "y": self.group_center_y}
+        return None
 
 
 from .target_image_model import TargetImageModel
