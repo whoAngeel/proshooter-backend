@@ -33,6 +33,7 @@ from src.application.services.scoring_calculator import ScoringCalculatorService
 from src.application.services.detection_converter import DetectionConverter
 from src.domain.value_objects.target_config import TargetConfigurations, TargetType
 from src.domain.validator.target_analysis_validators import TargetAnalysisValidator
+from src.domain.services.distance_based_scoring import DistanceBasedScoringService
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class EnhancedTargetAnalysisService:
             TargetConfigurations.PRO_SHOOTER
         )
         self.detection_converter = DetectionConverter()
+        self.distance_scoring = DistanceBasedScoringService(max_distance_ratio=1.0)
 
     # ✅ MÉTODO PRINCIPAL MEJORADO (compatible con el existente)
     def analyze_exercise_image(
@@ -61,6 +63,7 @@ class EnhancedTargetAnalysisService:
         confidence_threshold: float = 0.25,
         force_reanalysis: bool = False,
         enable_scoring: bool = True,  # NUEVO: Parámetro opcional para activar puntuación
+        scoring_method: str = "linear",  # NUEVO: Método de puntuación ("linear", "exponential", "zones")
     ) -> Tuple[Optional[ExerciseAnalysisResponse], Optional[str]]:
         """
         Método mejorado que mantiene compatibilidad total con la versión existente
@@ -115,7 +118,7 @@ class EnhancedTargetAnalysisService:
             if enable_scoring:
                 try:
                     scoring_data, enhanced_detections = self._calculate_scoring_data(
-                        detections, image_width, image_height
+                        detections, image_width, image_height, scoring_method
                     )
                     logger.info(
                         f"📄 Puntuación calculada: {scoring_data.get('total_score', 0)} puntos"
@@ -210,7 +213,11 @@ class EnhancedTargetAnalysisService:
         return pil_image.size  # (width, height)
 
     def _calculate_scoring_data(
-        self, detections: List[Dict], image_width: int, image_height: int
+        self,
+        detections: List[Dict],
+        image_width: int,
+        image_height: int,
+        scoring_method: str = "linear",
     ) -> Tuple[Dict[str, Any], List[Dict]]:
         """
         Calcula datos de puntuación para las detecciones
@@ -223,45 +230,64 @@ class EnhancedTargetAnalysisService:
             detections, only_fresh=True
         )
 
-        # Validar coordenadas
-        is_valid, error_msg = TargetAnalysisValidator.validate_shot_coordinates(
-            shot_coordinates, image_width, image_height
-        )
-        if not is_valid:
-            raise ValueError(f"Coordenadas inválidas: {error_msg}")
+        if not shot_coordinates:
+            return self._empty_scoring_data(), detections
 
-        # Calcular puntuaciones individuales
-        shot_scores, score_distribution = (
-            self.scoring_calculator.calculate_multiple_shots_score(
-                shot_coordinates, image_width, image_height
+        shot_scores = []
+        score_distribution = {str(i): 0 for i in range(0, 11)}
+        for coordinate in shot_coordinates:
+            shot_score = self.distance_scoring.calculate_shot_score_by_distance(
+                coordinate, image_width, image_height, scoring_method=scoring_method
             )
-        )
+            shot_scores.append(shot_score)
+            score_distribution[str(shot_score.score)] += 1
 
-        # Calcular estadísticas de grupo
-        group_stats = self.scoring_calculator.calculate_group_statistics(shot_scores)
+        gropu_stats = self.scoring_calculator.calculate_group_statistics(shot_scores)
 
-        # Calcular métricas totales
+        # calcular metricas totales
         total_score = sum(shot.score for shot in shot_scores)
-        avg_score = total_score / len(shot_scores) if shot_scores else 0.0
+        avg_score = total_score / len(shot_scores) if shot_scores else 0
         max_score = max((shot.score for shot in shot_scores), default=0)
 
-        # Preparar datos de puntuación
+        # preparar datos de puntuacion
         scoring_data = {
             "total_score": total_score,
             "average_score_per_shot": avg_score,
             "max_score_achieved": max_score,
             "score_distribution": score_distribution,
-            "shooting_group_diameter": group_stats.diameter,
-            "group_center_x": group_stats.center_x,
-            "group_center_y": group_stats.center_y,
+            "shooting_group_diameter": gropu_stats.diameter,
+            "group_center_x": gropu_stats.center_x,
+            "group_center_y": gropu_stats.center_y,
         }
 
-        # Enriquecer detecciones con datos de puntuación
-        enhanced_detections = self.detection_converter.shot_scores_to_detection_format(
-            shot_scores
-        )
+        enhanced_detections = []
+        for i, detection in enumerate(detections):
+            if detection.get("es_fresco", False) and i < len(shot_scores):
+                shot_score = shot_scores[i]
+                enhanced_detection = {
+                    **detection,
+                    "scores": shot_score.score,  #
+                    "zone": shot_score.zone,
+                    "distance_from_center": shot_score.distance_from_center_pixels,
+                    "distance_ratio": shot_score.distance_from_center_ratio,
+                }
+                enhanced_detections.append(enhanced_detection)
+            else:
+                enhanced_detections.append(detection)
 
         return scoring_data, enhanced_detections
+
+    def _empty_scoring_data(self) -> Dict[str, Any]:
+        """Datos vacíos cuando no hay disparos frescos"""
+        return {
+            "total_score": 0,
+            "average_score_per_shot": 0.0,
+            "max_score_achieved": 0,
+            "score_distribution": {str(i): 0 for i in range(0, 11)},
+            "shooting_group_diameter": 0.0,
+            "group_center_x": 0.0,
+            "group_center_y": 0.0,
+        }
 
     def _prepare_basic_analysis_data(
         self, stats: dict, detections: list, confidence_threshold: float

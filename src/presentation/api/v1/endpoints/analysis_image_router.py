@@ -37,6 +37,11 @@ router = APIRouter(
 async def analyze_exercise_image(
     exercise_id: UUID = Path(..., description="ID del ejercicio a analizar"),
     request: ExerciseAnalysisRequest = Body(..., description="Parámetros de análisis"),
+    scoring_method: str = Query(
+        ...,
+        description="Método de puntuación a utilizar: 'linear', 'exponential', 'zones'",
+        regex="^(linear|exponential|zones)$",
+    ),
     service: EnhancedTargetAnalysisService = Depends(
         TargetAnalysisServiceFactory.create_enhanced_service
     ),
@@ -51,6 +56,7 @@ async def analyze_exercise_image(
             exercise_id=exercise_id,
             confidence_threshold=request.confidence_threshold,
             force_reanalysis=request.force_reanalysis,
+            scoring_method=scoring_method,
         )
 
         if error:

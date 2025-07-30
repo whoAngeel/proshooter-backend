@@ -505,7 +505,6 @@ class PracticeExerciseService:
 
                     info_text = (
                         f"Score: {score_str} | "
-                        f"Conf: {confianza_str} | "
                         f"Zone: {zone_str} | "
                         f"Dist: {dist_center_str}"
                     )
