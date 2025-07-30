@@ -468,6 +468,14 @@ async def upload_exercise_image(
     return result
 
 
+from src.application.services.target_analysis_factory import (
+    TargetAnalysisServiceFactory,
+)
+from src.application.services.enhanced_target_analysis_service import (
+    EnhancedTargetAnalysisService,
+)
+
+
 @router.get(
     "/exercises/{exercise_id}/image-with-impacts", response_class=StreamingResponse
 )

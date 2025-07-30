@@ -5,8 +5,10 @@ from uuid import UUID
 from datetime import datetime
 import math
 from fastapi import UploadFile
+import json
 import io
 import requests
+import logging
 import cv2
 import numpy as np
 from PIL import Image
@@ -45,6 +47,8 @@ from src.presentation.schemas.target_images_schema import (
     TargetImageUploadResponse,
 )
 from src.infraestructure.utils.s3_utils import upload_file_to_s3
+
+logger = logging.getLogger(__name__)
 
 
 class PracticeExerciseService:
@@ -433,6 +437,11 @@ class PracticeExerciseService:
             if not analysis.impact_coordinates:
                 return None, "NO_IMPACT_COORDINATES"
 
+            # logger.info(f"impacts found: {len(analysis.impact_coordinates)}")
+            # logger.info(
+            #     f"Impactos: {json.dumps(analysis.impact_coordinates, indent=2)}"
+            # )
+
             if not image.file_path or not image.file_path.startswith("http"):
                 return None, "IMAGE_FILE_PATH_INVALID"
 
@@ -469,6 +478,48 @@ class PracticeExerciseService:
                     es_fresco = impact.get("es_fresco", False)
                     color = (0, 255, 0) if es_fresco else (255, 0, 0)
                     cv2.circle(image_np, (x, y), 15, color, thickness=3)
+
+                    # Corrección: obtener valores legibles y seguros
+                    score_val = impact.get("scores")
+                    score_str = str(score_val) if score_val not in [None, ""] else "-"
+
+                    zone_val = impact.get("zone")
+                    zone_str = str(zone_val) if zone_val not in [None, ""] else "-"
+
+                    confianza_val = impact.get("confianza")
+                    try:
+                        confianza_float = float(confianza_val)
+                        confianza_str = f"{confianza_float:.2f}"
+                    except (ValueError, TypeError):
+                        confianza_str = "-"
+
+                    try:
+                        dist_center = float(impact.get("distance_from_center", None))
+                        dist_center_str = (
+                            f"{dist_center:.1f}"
+                            if dist_center not in [None, 0]
+                            else "-"
+                        )
+                    except (ValueError, TypeError):
+                        dist_center_str = "-"
+
+                    info_text = (
+                        f"Score: {score_str} | "
+                        f"Conf: {confianza_str} | "
+                        f"Zone: {zone_str} | "
+                        f"Dist: {dist_center_str}"
+                    )
+                    cv2.putText(
+                        image_np,
+                        info_text,
+                        (x + 20, y - 20),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (255, 255, 255),
+                        1,
+                        cv2.LINE_AA,
+                    )
+
                 result = image_np
 
             result_image = Image.fromarray(result)

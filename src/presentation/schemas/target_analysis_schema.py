@@ -425,7 +425,7 @@ class EnhancedExerciseAnalysisRequestWithValidation(EnhancedExerciseAnalysisRequ
             raise ValueError(f"target_type debe ser uno de: {valid_types}")
         return v
 
-    @model_validator
+    @model_validator(mode="after")
     def validate_scoring_requirements(cls, values):
         enable_scoring = values.get("enable_scoring", True)
         target_type = values.get("target_type", "PRO_SHOOTER")

@@ -5,13 +5,14 @@ from src.domain.entities.scoring import (
     ShotCoordinate,
     ShotScore,
     GroupStatistics,
-    TargetConfiguration,
 )
+
+from src.domain.value_objects.target_config import TargetConfiguration
 
 
 class ScoringCalculatorService:
     def __init__(self, target_config: TargetConfiguration):
-        self.target_config = target_config
+        self.config = target_config
 
     def calculate_shot_score(
         self, shot_coordinate: ShotCoordinate, image_width: int, image_height: int
@@ -106,8 +107,8 @@ class ScoringCalculatorService:
         y_coords = [shot.coordinates.y for shot in shot_scores]
 
         # centro del grupo (centroide)
-        group_center_x = np.mean(x_coords)
-        group_center_y = np.mean(y_coords)
+        group_center_x = float(np.mean(x_coords))
+        group_center_y = float(np.mean(y_coords))
 
         # calcular diametro del grupo (maxima distancia entre disparos)
         max_distance = 0.0
