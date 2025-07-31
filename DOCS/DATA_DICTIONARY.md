@@ -91,6 +91,16 @@ Campos:
 - precision_exercise_accuracy: Float, precisión en ejercicios de precisión
 - reaction_exercise_accuracy: Float, precisión en ejercicios de reacción
 - movement_exercise_accuracy: Float, precisión en ejercicios de movimiento
+
+# Nuevos campos de puntuación
+- average_score: Float, puntuación promedio general
+- best_score_session: Integer, mejor puntuación en una sesión
+- best_shot_ever: Integer, mejor disparo registrado
+- score_trend: Float, tendencia de puntuación
+- precision_exercise_avg_score: Float, promedio de puntuación en ejercicios de precisión
+- reaction_exercise_avg_score: Float, promedio de puntuación en ejercicios de reacción
+- movement_exercise_avg_score: Float, promedio de puntuación en ejercicios de movimiento
+
 - common_error_zones: String, zonas comunes de error
 - created_at: DateTime, fecha de creación
 - updated_at: DateTime, fecha de última actualización
@@ -123,6 +133,17 @@ Campos:
 - total_hits: Integer, total de impactos
 - accuracy_percentage: Float, porcentaje de aciertos
 - evaluation_pending: Boolean, indica si la sesión está pendiente de evaluación
+- is_finished: Boolean, indica si la sesión está finalizada
+
+# Nuevos campos de puntuación
+- total_session_score: Integer, puntuación total de la sesión
+- average_score_per_exercise: Float, puntuación promedio por ejercicio
+- average_score_per_shot: Float, puntuación promedio por disparo
+- best_shot_score: Integer, mejor disparo de la sesión
+
+# Eficiencia
+- session_score_efficiency: Float, eficiencia de puntuación (%)
+
 - created_at: DateTime, fecha de creación
 - updated_at: DateTime, fecha de última actualización
 
@@ -145,6 +166,17 @@ Campos:
 - hits: Integer, impactos logrados
 - accuracy_percentage: Float, porcentaje de aciertos
 - reaction_time: Float, tiempo de reacción
+
+# Nuevos campos de puntuación
+- total_score: Float, puntuación total del ejercicio
+- average_score_per_shot: Float, puntuación promedio por disparo
+- max_score_achieved: Integer, mejor puntuación individual
+- score_distribution: String (JSON), distribución de puntuación por zonas
+- group_diameter: Float, diámetro del grupo de disparos (píxeles)
+
+# Relaciones
+- target_image_id: UUID, referencia a TARGET_IMAGES
+
 - created_at: DateTime, fecha de creación
 - updated_at: DateTime, fecha de última actualización
 
@@ -274,11 +306,39 @@ Campos:
 - id: UUID, identificador único (PK)
 - target_image_id: UUID, referencia a TARGET_IMAGES
 - analysis_timestamp: DateTime, fecha y hora del análisis
+
+# Estadísticas de impactos detectados
 - total_impacts_detected: Integer, impactos detectados
-- zone_distribution: JSON, distribución de impactos por zona
+- fresh_impacts_inside: Integer, impactos frescos dentro del blanco
+- fresh_impacts_outside: Integer, impactos frescos fuera del blanco
+- covered_impacts_inside: Integer, impactos tapados dentro del blanco
+- covered_impacts_outside: Integer, impactos tapados fuera del blanco
+
+# Métricas calculadas
+- accuracy_percentage: Float, porcentaje de precisión
+- average_confidence: Float, confianza promedio
+
+# Datos detallados
 - impact_coordinates: JSON, coordenadas de los impactos
-- analysis_confidence: Float, confianza del análisis
-- analysis_method: String, método de análisis utilizado
+- zone_distribution: JSON, distribución de impactos por zona
+- confidence_stats: JSON, estadísticas de confianza
+
+# Metadata del análisis
+- analysis_method: String, método de análisis (ej: YOLO_v8)
+- model_version: String, versión del modelo
+- confidence_threshold: Float, umbral de confianza
+
+# Nuevos campos de puntuación
+- total_score: Integer, puntuación total
+- average_score_per_shot: Float, puntuación promedio por disparo
+- max_score_achieved: Integer, mejor puntuación individual
+- score_distribution: JSON, distribución de puntuación por zonas
+
+# Campos de agrupamiento
+- shooting_group_diameter: Float, diámetro del grupo de disparos
+- group_center_x: Float, centro del grupo X
+- group_center_y: Float, centro del grupo Y
+
 - created_at: DateTime, fecha de creación
 - updated_at: DateTime, fecha de última actualización
 
