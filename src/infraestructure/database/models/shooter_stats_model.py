@@ -1,13 +1,28 @@
-from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, Float, String, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    UUID,
+    DateTime,
+    func,
+    ForeignKey,
+    Integer,
+    Float,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
 
+
 class ShooterStatsModel(Base):
     __tablename__ = "shooter_stats"
-    shooter_id = Column(UUID(as_uuid=True), ForeignKey('shooters.user_id', ondelete="CASCADE"), primary_key=True)
+    shooter_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("shooters.user_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
 
     total_shots = Column(Integer, default=0, nullable=False)
-    accuracy = Column(Integer, default=0, nullable=False) # Porcentaje de precision
+    accuracy = Column(Integer, default=0, nullable=False)  # Porcentaje de precision
     # average_score = Column(Integer, default=0, nullable=False)
     reaction_shots = Column(Integer, default=0, nullable=False)
     presicion_shots = Column(Integer, default=0, nullable=False)
@@ -18,13 +33,26 @@ class ShooterStatsModel(Base):
     average_hit_factor = Column(Float, default=0, nullable=False)
     effectiveness = Column(Float, default=0, nullable=False)
 
-    trend_accuracy = Column(Float, default=0.0) # Tendencia de precision
-    last_10_sessions_avg = Column(Float, default=0.0) # promedio de las ultimas 10 sesiones
+    trend_accuracy = Column(Float, default=0.0)  # Tendencia de precision
+    last_10_sessions_avg = Column(
+        Float, default=0.0
+    )  # promedio de las ultimas 10 sesiones
 
     # campos especificos por tipo de ejercicio
     precision_exercise_accuracy = Column(Float, default=0.0)
     reaction_exercise_accuracy = Column(Float, default=0.0)
     movement_exercise_accuracy = Column(Float, default=0.0)
+
+    # ✅ NUEVOS CAMPOS DE PUNTUACIÓN
+    average_score = Column(Float, default=0.0, nullable=True)
+    best_score_session = Column(Integer, default=0, nullable=True)
+    best_shot_ever = Column(Integer, default=0, nullable=True)
+    score_trend = Column(Float, default=0.0, nullable=True)  # Tendencia de puntuación
+
+    # Promedios por tipo de ejercicio
+    precision_exercise_avg_score = Column(Float, default=0.0, nullable=True)
+    reaction_exercise_avg_score = Column(Float, default=0.0, nullable=True)
+    movement_exercise_avg_score = Column(Float, default=0.0, nullable=True)
 
     common_error_zones = Column(String, nullable=True)
 
@@ -33,8 +61,8 @@ class ShooterStatsModel(Base):
 
     shooter = relationship("ShooterModel", back_populates="stats")
 
-
     def __repr__(self):
         return f"ShooterStats(shooter_id={self.shooter_id})"
+
 
 from src.infraestructure.database.models.shooter_model import ShooterModel

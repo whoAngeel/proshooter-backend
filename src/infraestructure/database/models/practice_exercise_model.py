@@ -31,6 +31,13 @@ class PracticeExerciseModel(Base):
     accuracy_percentage = Column(Float, default=0.0)
     reaction_time = Column(Float, nullable=True)
 
+    # nuevos
+    total_score = Column(Float, default=0.0, nullable=False)
+    average_score_per_shot = Column(Float, default=0.0, nullable=False)
+    max_score_achieved = Column(Integer, default=0, nullable=False)
+    score_distribution = Column(String, nullable=True)
+    group_diameter = Column(Float, nullable=True)  # diametro del grupo de pixeles
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -46,6 +53,21 @@ class PracticeExerciseModel(Base):
     target_image = relationship(
         "TargetImageModel", back_populates="exercise", uselist=False
     )
+
+    @property
+    def has_scoring_data(self) -> bool:
+        return self.total_score > 0 or self.score_distribution is not None
+
+    @property
+    def score_efficiency_percentage(self) -> float:
+        if self.ammunition_used == 0:
+            return 0.0
+        max_possible_score = self.ammunition_used * 10
+        return (
+            (self.total_score / max_possible_score) * 100
+            if max_possible_score > 0
+            else 0.0
+        )
 
     def __repr__(self):
         return f"PracticeExercise(id={self.id}, session_id={self.session_id}, exercise_type_id={self.exercise_type_id}, target_id={self.target_id}, weapon_id={self.weapon_id}, ammunition_id={self.ammunition_id}, distance={self.distance}, firing_cadence={self.firing_cadence}, time_limit={self.time_limit}, ammunition_allocated={self.ammunition_allocated}, ammunition_used={self.ammunition_used}, hits={self.hits}, accuracy_percentage={self.accuracy_percentage}, reaction_time={self.reaction_time})"

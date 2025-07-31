@@ -32,6 +32,11 @@ class IndividualPracticeSessionModel(Base):
     evaluation_pending = Column(Boolean, default=True)
     is_finished = Column(Boolean, default=False)
 
+    total_session_score = Column(Integer, default=0, nullable=False)
+    average_score_per_exercise = Column(Float, default=0.0, nullable=False)
+    average_score_per_shot = Column(Float, default=0.0, nullable=False)
+    best_shot_score = Column(Integer, default=0, nullable=False)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -46,6 +51,21 @@ class IndividualPracticeSessionModel(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+
+    @property
+    def has_scoring_data(self) -> bool:
+        """Indica si esta sesión tiene datos de puntuación"""
+        return self.total_session_score > 0
+
+    @property
+    def session_score_efficiency(self) -> float:
+        """Eficiencia de puntuación de la sesión"""
+        if self.total_shots_fired == 0:
+            return 0.0
+        max_possible = self.total_shots_fired * 10
+        return (
+            (self.total_session_score / max_possible) * 100 if max_possible > 0 else 0.0
+        )
 
     def __repr__(self):
         return f"<IndividualPracticeSession(id={self.id}, shooter_id={self.shooter_id}, instructor_id={self.instructor_id}, date={self.date}, location={self.location}, total_shots_fired={self.total_shots_fired}, total_hits={self.total_hits}, accuracy_percentage={self.accuracy_percentage})>"
