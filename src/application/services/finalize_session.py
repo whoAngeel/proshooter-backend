@@ -4,7 +4,7 @@ from typing import Dict, Optional, List
 from fastapi import HTTPException
 from datetime import datetime
 from fastapi import Depends
-
+import logging
 
 from src.infraestructure.database.session import get_db
 
@@ -21,6 +21,8 @@ from src.presentation.schemas.sesion_finalization import (
     SessionValidationResult,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class SessionFinalizationService:
     def __init__(self, db: Session = Depends(get_db)):
@@ -33,62 +35,51 @@ class SessionFinalizationService:
         self, session_id: UUID, shooter_id: UUID
     ) -> SessionFinalizationResult:
         try:
-            # verificar que la sesion existe y pertenece al tirador
+            # 1. Verificar sesión
             session = self.session_repo.get_by_id(db=self.db, session_id=session_id)
-
             if not session:
-                raise HTTPException(
-                    status_code=404, detail="Sesión de entrenamiento no encontrada"
-                )
+                raise HTTPException(status_code=404, detail="Sesión no encontrada")
 
             if session.shooter_id != shooter_id:
-                raise HTTPException(
-                    status_code=403,
-                    detail="No tienes permiso para finalizar esta sesión",
-                )
+                raise HTTPException(status_code=403, detail="Sin permisos")
 
             if session.is_finished:
-                raise HTTPException(
-                    status_code=400, detail="La sesión ya ha sido finalizada"
-                )
+                raise HTTPException(status_code=400, detail="Sesión ya finalizada")
 
-            # 2 validar que la sesion este lista para finalizar
+            # 2. Validar que esté lista
             validation = self.validate_session_for_completion(session_id)
             if not validation.can_finish:
                 raise HTTPException(status_code=400, detail=validation.reason)
 
-            # 3 consolidar todos los ejercicios una ultima vez
+            # 3. ✅ CONSOLIDAR con puntuación
             consolidation_result = (
-                self.consolidation_service.consolidate_all_session_exercises(
-                    session_id=session_id
-                )
+                self.consolidation_service.consolidate_all_session_exercises(session_id)
             )
 
-            # 4 calcular estadisticas finales de la sesion
-            final_stats = self.session_repo.calculate_totals(self.db, session_id)
+            # 4. ✅ CALCULAR totales finales CON puntuación
+            final_stats = self.session_repo.calculate_totals_with_scoring(
+                self.db, session_id
+            )
 
             if final_stats.get("error"):
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Error calculando totales de la sesión: {final_stats['error']}",
+                    detail=f"Error calculando totales: {final_stats['error']}",
                 )
 
+            # 5. Finalizar sesión
             evaluation_pending = session.instructor_id is not None
-
-            # 5 finalizar la sesion
-            # success = self.session_repo.finish_session(self.db, session_id)
             success = self.session_repo.finish_session_with_evaluation_status(
                 self.db, session_id, evaluation_pending
             )
 
             if not success:
-                raise HTTPException(
-                    status_code=500, detail="Error finalizando la sesión"
-                )
+                raise HTTPException(status_code=500, detail="Error finalizando")
 
-            self._update_basic_shooter_stats(session_id, shooter_id)
+            # 6. ✅ ACTUALIZAR estadísticas del tirador CON puntuación
+            self._update_shooter_stats_with_scoring(session_id, shooter_id)
 
-            # 6 obtener sesion actualizada
+            # 7. Obtener sesión actualizada
             updated_session = self.session_repo.get_by_id(self.db, session_id)
 
             return SessionFinalizationResult(
@@ -103,13 +94,21 @@ class SessionFinalizationService:
                 evaluation_pending=updated_session.evaluation_pending,
                 has_assigned_instructor=updated_session.instructor_id is not None,
                 message=self._get_finalization_message(updated_session),
+                # ✅ NUEVOS campos de puntuación en la respuesta
+                total_session_score=getattr(updated_session, "total_session_score", 0),
+                average_score_per_exercise=getattr(
+                    updated_session, "average_score_per_exercise", 0.0
+                ),
+                best_shot_score=getattr(updated_session, "best_shot_score", 0),
             )
-        except HTTPException as he:
-            raise he
+
+        except HTTPException:
+            raise
         except Exception as e:
+            logger.error(f"Error finalizando sesión {session_id}: {str(e)}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Error finalizando la sesión [{session_id}]: {str(e)}",
+                detail=f"Error finalizando sesión: {str(e)}",
             )
 
     def validate_session_for_completion(
@@ -224,10 +223,19 @@ class SessionFinalizationService:
                 "total_shots": session.total_shots_fired,
                 "total_hits": session.total_hits,
                 "accuracy": session.accuracy_percentage,
+                "total_session_score": getattr(session, "total_session_score", 0),
+                "average_score_per_exercise": getattr(
+                    session, "average_score_per_exercise", 0.0
+                ),
+                "average_score_per_shot": getattr(
+                    session, "average_score_per_shot", 0.0
+                ),
+                "best_shot_score": getattr(session, "best_shot_score", 0),
                 "validation_message": validation.reason,
             }
 
         except Exception as e:
+            logger.error(f"❌ Error obteniendo estado de sesión {session_id}: {e}")
             return {"error": str(e)}
 
     def reopen_session(self, session_id: UUID, shooter_id) -> Dict:
@@ -311,3 +319,104 @@ class SessionFinalizationService:
             return "Sesión finalizada. La evaluación por parte del instructor está pendiente."
         else:
             return "Sesión finalizada y completada. No requiere evaluación."
+
+    def _calculate_session_score_efficiency(self, session) -> float:
+        """Calcula eficiencia de puntuación de la sesión"""
+        if session.total_shots_fired == 0:
+            return 0.0
+
+        total_score = getattr(session, "total_session_score", 0)
+        max_possible = session.total_shots_fired * 10  # 10 puntos máximo por disparo
+
+        return (total_score / max_possible) * 100 if max_possible > 0 else 0.0
+
+    def _update_shooter_stats_with_scoring(self, session_id: UUID, shooter_id: UUID):
+        """✅ ACTUALIZADO: Incluye estadísticas de puntuación"""
+        try:
+            from src.application.services.shooter_stats import ShooterStatsService
+
+            stats_service = ShooterStatsService(self.db)
+
+            # ✅ NUEVO: Método que incluye puntuación
+            stats_service.update_stats_with_scoring_after_session(
+                session_id=session_id, shooter_id=shooter_id
+            )
+
+            logger.info(
+                f"✅ Estadísticas con puntuación actualizadas para tirador {shooter_id}"
+            )
+
+        except Exception as e:
+            logger.error(f"⚠️ Error actualizando stats con puntuación: {str(e)}")
+            # Fallback al método básico si falla
+            try:
+                from src.application.services.shooter_stats import ShooterStatsService
+
+                stats_service = ShooterStatsService(self.db)
+                stats_service.update_basic_stats_after_session(
+                    session_id=session_id, shooter_id=shooter_id
+                )
+            except Exception as fallback_error:
+                logger.error(f"⚠️ Fallback también falló: {str(fallback_error)}")
+
+    # ✅ NUEVO: Método para obtener resumen completo de puntuación
+    def get_session_scoring_summary(self, session_id: UUID) -> Dict:
+        """Obtiene resumen completo de puntuación de la sesión"""
+        try:
+            session = self.session_repo.get_with_exercises(self.db, session_id)
+            if not session:
+                return {"error": "Sesión no encontrada"}
+
+            exercises_with_scoring = []
+            total_exercises_with_scoring = 0
+
+            for exercise in session.exercises:
+                if hasattr(exercise, "total_score") and exercise.total_score > 0:
+                    total_exercises_with_scoring += 1
+                    exercises_with_scoring.append(
+                        {
+                            "exercise_id": str(exercise.id),
+                            "exercise_type": (
+                                exercise.exercise_type.name
+                                if exercise.exercise_type
+                                else "Unknown"
+                            ),
+                            "total_score": exercise.total_score,
+                            "average_score_per_shot": exercise.average_score_per_shot,
+                            "max_score_achieved": exercise.max_score_achieved,
+                            "ammunition_used": exercise.ammunition_used,
+                            "score_efficiency": (
+                                (
+                                    exercise.total_score
+                                    / (exercise.ammunition_used * 10)
+                                    * 100
+                                )
+                                if exercise.ammunition_used > 0
+                                else 0.0
+                            ),
+                            "group_diameter": exercise.group_diameter,
+                        }
+                    )
+
+            return {
+                "session_id": str(session_id),
+                "total_exercises": len(session.exercises),
+                "exercises_with_scoring": total_exercises_with_scoring,
+                "total_session_score": getattr(session, "total_session_score", 0),
+                "average_score_per_exercise": getattr(
+                    session, "average_score_per_exercise", 0.0
+                ),
+                "average_score_per_shot": getattr(
+                    session, "average_score_per_shot", 0.0
+                ),
+                "best_shot_score": getattr(session, "best_shot_score", 0),
+                "session_score_efficiency": self._calculate_session_score_efficiency(
+                    session
+                ),
+                "exercises_details": exercises_with_scoring,
+                "has_complete_scoring": total_exercises_with_scoring
+                == len(session.exercises),
+            }
+        except Exception as e:
+            logger.error(f"Error obteniendo resumen de puntuación: {str(e)}")
+            return {"error": str(e)}

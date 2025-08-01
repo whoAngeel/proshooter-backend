@@ -121,6 +121,12 @@ class PracticeExerciseRead(PracticeExerciseBase):
     accuracy_percentage: float
     created_at: datetime
     updated_at: Optional[datetime] = None
+    # Campos de puntuación y agrupamiento
+    total_score: Optional[int] = None
+    average_score_per_shot: Optional[float] = None
+    max_score_achieved: Optional[int] = None
+    score_distribution: Optional[Dict[str, int]] = None
+    group_diameter: Optional[float] = None
 
     model_config = {"from_attributes": True}
 
@@ -169,6 +175,12 @@ class PracticeExerciseDetail(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
     target_image: Optional[TargetImageRead]
+    # Campos de puntuación y agrupamiento
+    total_score: Optional[int] = None
+    average_score_per_shot: Optional[float] = None
+    max_score_achieved: Optional[int] = None
+    score_distribution: Optional[Dict[str, int]] = None
+    group_diameter: Optional[float] = None
 
     model_config = {"from_attributes": True}
 

@@ -38,7 +38,7 @@ async def login(
     return LoginResponse(**login_response)
 
 
-@router.post("/login/json", response_model=LoginResponse)
+@router.post("/login/json/", response_model=LoginResponse)
 async def login_json(login_data: LoginRequest, auth_service: AuthService = Depends()):
     """
     Endpoint alternativo para iniciar sesión usando JSON en lugar de form-data.
@@ -58,7 +58,7 @@ async def login_json(login_data: LoginRequest, auth_service: AuthService = Depen
     return LoginResponse(**login_response)
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me/", response_model=UserRead)
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     """
     Endpoint para obtener los datos del usuario autenticado.

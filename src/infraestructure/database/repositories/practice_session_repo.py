@@ -79,73 +79,73 @@ class PracticeSessionRepository:
 
     @staticmethod
     def update_totals_with_scoring(db: Session, session_id: UUID) -> bool:
+        """
+        Actualiza totales de sesión incluyendo puntuación
+        """
         try:
             session = db.query(PracticeSessionModel).filter_by(id=session_id).first()
             if not session:
                 return False
 
-            exercises = (
-                db.query(PracticeExerciseModel).filter_by(session_id=session_id).all()
+            # Calcular totales
+            totals = PracticeSessionRepository.calculate_totals_with_scoring(
+                db, session_id
             )
 
-            total_shots = sum(ex.ammunition_used for ex in exercises)
-            total_hits = sum(ex.hits for ex in exercises)
-            avg_accuracy = (total_hits / total_shots * 100) if total_shots > 0 else 0.0
+            if totals.get("error"):
+                logger.error(f"Error en cálculo de totales: {totals['error']}")
+                return False
 
-            total_session_score = sum(ex.total_score for ex in exercises)
-            avg_score_per_exercise = (
-                (total_session_score / len(exercises)) if exercises else 0.0
-            )
-            avg_score_per_shot = (
-                (total_session_score / total_shots) if total_shots > 0 else 0.0
-            )
-            best_shot_score = max(
-                (ex.max_score_achieved for ex in exercises), default=0
-            )
+            # Actualizar campos básicos
+            session.total_shots_fired = totals["total_shots"]
+            session.total_hits = totals["total_hits"]
+            session.accuracy_percentage = totals["accuracy_percentage"]
 
-            session.total_shots_fired = total_shots
-            session.total_hits = total_hits
-            session.accuracy_percentage = round(avg_accuracy, 2)
-            session.total_score = total_session_score
-            session.average_score_per_exercise = round(avg_score_per_exercise, 2)
-            session.average_score_per_shot = round(avg_score_per_shot, 2)
-            session.best_shot_score = best_shot_score
+            # ✅ ACTUALIZAR campos de puntuación
+            if hasattr(session, "total_session_score"):
+                session.total_session_score = totals["total_session_score"]
+                session.average_score_per_exercise = totals[
+                    "average_score_per_exercise"
+                ]
+                session.average_score_per_shot = totals["average_score_per_shot"]
+                session.best_shot_score = totals["best_shot_score"]
 
             db.commit()
-            return True
-        except Exception as e:
-            logger.error(
-                f"❌ Error updating totals with scoring for session {session_id}: {e}"
+            logger.info(
+                f"✅ Totales con puntuación actualizados para sesión {session_id}"
             )
+            return True
+
+        except Exception as e:
             db.rollback()
+            logger.error(f"Error actualizando totales con puntuación: {str(e)}")
             return False
 
     @staticmethod
     def calculate_totals(db: Session, session_id: UUID) -> Dict:
         try:
-            query = select(
-                func.sum(PracticeExerciseModel.ammunition_used).label("total_shots"),
-                func.sum(PracticeExerciseModel.hits).label("total_hits"),
-                func.count(PracticeExerciseModel.id).label("exercise_count"),
-            ).where(PracticeExerciseModel.session_id == session_id)
+            # Obtener ejercicios de la sesión
+            exercises = (
+                db.query(PracticeExerciseModel).filter_by(session_id=session_id).all()
+            )
+            total_shots = sum(ex.ammunition_used for ex in exercises)
+            total_hits = sum(ex.hits for ex in exercises)
+            exercise_count = len(exercises)
+            accuracy_percentage = (
+                (total_hits / total_shots * 100) if total_shots > 0 else 0.0
+            )
 
-            result = db.execute(query)
-            row = result.fetchone()
-            if not row:
-                return {
-                    "total_shots_fired": 0,
-                    "ammunition_used": 0,
-                    "total_hits": 0,
-                    "accuracy_percentage": 0.0,
-                    "error": "No se encontraron ejercicios",
-                }
-            total_shots = row[0] or 0
-            total_hits = row[1] or 0
-            exercise_count = row[2] or 0
-
-            accuracy_percentage = 0.0
-            if total_shots > 0:
-                accuracy_percentage = (total_hits / total_shots) * 100
+            # Nuevos campos de puntuación
+            total_session_score = sum(getattr(ex, "total_score", 0) for ex in exercises)
+            avg_score_per_exercise = (
+                (total_session_score / exercise_count) if exercise_count > 0 else 0.0
+            )
+            avg_score_per_shot = (
+                (total_session_score / total_shots) if total_shots > 0 else 0.0
+            )
+            best_shot_score = max(
+                (getattr(ex, "max_score_achieved", 0) for ex in exercises), default=0
+            )
 
             return {
                 "total_shots_fired": total_shots,
@@ -153,6 +153,10 @@ class PracticeSessionRepository:
                 "total_hits": total_hits,
                 "accuracy_percentage": round(accuracy_percentage, 2),
                 "exercise_count": exercise_count,
+                "total_session_score": total_session_score,
+                "average_score_per_exercise": round(avg_score_per_exercise, 2),
+                "average_score_per_shot": round(avg_score_per_shot, 2),
+                "best_shot_score": best_shot_score,
                 "error": None,
             }
         except Exception as e:
@@ -161,8 +165,71 @@ class PracticeSessionRepository:
                 "ammunition_used": 0,
                 "total_hits": 0,
                 "accuracy_percentage": 0.0,
+                "exercise_count": 0,
+                "total_session_score": 0,
+                "average_score_per_exercise": 0.0,
+                "average_score_per_shot": 0.0,
+                "best_shot_score": 0,
                 "error": str(e),
             }
+
+    @staticmethod
+    def calculate_totals_with_scoring(db: Session, session_id: UUID) -> Dict:
+        """
+        Calcula totales de sesión incluyendo estadísticas de puntuación
+        """
+        try:
+            # Obtener ejercicios de la sesión
+            exercises = (
+                db.query(PracticeExerciseModel).filter_by(session_id=session_id).all()
+            )
+
+            if not exercises:
+                return {"error": "No se encontraron ejercicios"}
+
+            # Totales básicos existentes
+            total_shots = sum(ex.ammunition_used for ex in exercises)
+            total_hits = sum(ex.hits for ex in exercises)
+            avg_accuracy = (total_hits / total_shots * 100) if total_shots > 0 else 0.0
+
+            total_session_score = sum(getattr(ex, "total_score", 0) for ex in exercises)
+            exercises_with_scoring = [
+                ex for ex in exercises if getattr(ex, "total_score", 0) > 0
+            ]
+
+            avg_score_per_exercise = (
+                (total_session_score / len(exercises_with_scoring))
+                if exercises_with_scoring
+                else 0.0
+            )
+
+            avg_score_per_shot = (
+                (total_session_score / total_shots) if total_shots > 0 else 0.0
+            )
+
+            best_shot_score = max(
+                (getattr(ex, "max_score_achieved", 0) for ex in exercises), default=0
+            )
+
+            return {
+                # Básicos existentes
+                "total_shots": total_shots,
+                "total_hits": total_hits,
+                "accuracy_percentage": round(avg_accuracy, 2),
+                "total_session_score": total_session_score,
+                "average_score_per_exercise": round(avg_score_per_exercise, 2),
+                "average_score_per_shot": round(avg_score_per_shot, 2),
+                "best_shot_score": best_shot_score,
+                "exercises_with_scoring": len(exercises_with_scoring),
+                "score_coverage": len(exercises_with_scoring) / len(exercises) * 100,
+                # Metadatos
+                "total_exercises": len(exercises),
+                "calculation_timestamp": datetime.now().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculando totales con puntuación: {str(e)}")
+            return {"error": str(e)}
 
     @staticmethod
     def finish_session(db: Session, session_id: UUID) -> bool:

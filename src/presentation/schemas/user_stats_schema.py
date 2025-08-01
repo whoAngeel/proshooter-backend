@@ -19,6 +19,14 @@ class ShooterStatsBase(BaseModel):
     precision_exercise_accuracy: float = 0.0
     reaction_exercise_accuracy: float = 0.0
     movement_exercise_accuracy: float = 0.0
+    # --- Nuevos campos de puntuación ---
+    average_score: float = 0.0
+    best_score_session: int = 0
+    best_shot_ever: int = 0
+    score_trend: float = 0.0
+    precision_exercise_avg_score: float = 0.0
+    reaction_exercise_avg_score: float = 0.0
+    movement_exercise_avg_score: float = 0.0
 
 
 class ShooterStatsCreate(ShooterStatsBase):

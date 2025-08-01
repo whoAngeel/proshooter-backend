@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime
 
@@ -26,25 +26,26 @@ class SessionValidationResult(BaseModel):
 
 
 class SessionFinalizationResult(BaseModel):
-    """
-    Resultado de finalizar una sesión
-    """
+    """✅ ACTUALIZADO: Resultado de finalización con puntuación"""
 
-    session_id: UUID = Field(description="ID de la sesión finalizada")
-    finalized_successfully: bool = Field(description="Si se finalizó exitosamente")
-    total_exercises: int = Field(description="Total de ejercicios en la sesión")
-    consolidated_exercises: int = Field(
-        description="Ejercicios consolidados exitosamente"
-    )
-    failed_exercises: int = Field(description="Ejercicios que fallaron al consolidar")
-    final_stats: Dict = Field(description="Estadísticas finales de la sesión")
-    consolidation_warnings: List[str] = Field(
-        default=[], description="Advertencias de consolidación"
-    )
-    finalization_timestamp: datetime = Field(description="Timestamp de finalización")
-    evaluation_pending: bool = Field(description="Si está pendiente de evaluación")
-    message: str = Field(description="Mensaje descriptivo")
-    has_assigned_instructor: bool = Field(description="Si tiene instructor asignado")
+    # Campos existentes
+    session_id: UUID
+    finalized_successfully: bool
+    total_exercises: int
+    consolidated_exercises: int
+    failed_exercises: int
+    final_stats: Dict[str, Any]
+    consolidation_warnings: List[str]
+    finalization_timestamp: datetime
+    evaluation_pending: bool
+    has_assigned_instructor: bool
+    message: str
+
+    # ✅ NUEVOS campos de puntuación
+    total_session_score: int = 0
+    average_score_per_exercise: float = 0.0
+    best_shot_score: int = 0
+    score_efficiency: Optional[float] = None
 
 
 # Esquemas para requests/responses de endpoints
