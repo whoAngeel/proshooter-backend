@@ -1,6 +1,9 @@
 from sqlalchemy.orm import Session
+from datetime import datetime
+from typing import List, Dict
 from uuid import UUID
 import logging
+
 from src.infraestructure.database.repositories.shooter_stats_repo import (
     ShooterStatsRepository,
 )
@@ -16,10 +19,14 @@ from src.infraestructure.database.repositories.target_analysis_repo import (
 from src.infraestructure.database.repositories.practice_evaluation_repo import (
     PracticeEvaluationRepository,
 )
-from src.presentation.schemas.user_stats_schema import ShooterStatsUpdate
-from typing import Dict
 from src.domain.enums.classification_enum import ShooterLevelEnum
-
+from src.infraestructure.database.models.shooter_stats_model import ShooterStatsModel
+from src.infraestructure.database.models.practice_session_model import (
+    IndividualPracticeSessionModel,
+)
+from src.infraestructure.database.models.practice_exercise_model import (
+    PracticeExerciseModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,67 +40,332 @@ class ShooterStatsService:
         self.analysis_repo = TargetAnalysisRepository()
         self.evaluation_repo = PracticeEvaluationRepository()
 
-    def update_basic_stats_after_session(self, session_id: UUID, shooter_id: UUID):
+    def update_stats_with_scoring_after_session(
+        self, session_id: UUID, shooter_id: UUID
+    ) -> bool:
         """
-        Actualiza estadísticas completas del tirador después de finalizar sesión
-        Ahora calcula TODOS los campos del modelo
+        ✅ MÉTODO PRINCIPAL: Actualiza estadísticas completas con puntuación
         """
         try:
-            # Obtener o crear estadísticas del tirador
+            # 1. Obtener sesión
+            session = self.session_repo.get_by_id(self.db, session_id)
+            if not session:
+                logger.error(f"Sesión {session_id} no encontrada")
+                return False
+
+            # 2. Obtener ejercicios
+            exercises = self.exercise_repo.get_by_session_id(self.db, session_id)
+
+            # 3. Obtener o crear estadísticas del tirador
+            shooter_stats = (
+                self.db.query(ShooterStatsModel)
+                .filter_by(shooter_id=shooter_id)
+                .first()
+            )
+            if not shooter_stats:
+                shooter_stats = ShooterStatsModel(shooter_id=shooter_id)
+                self.db.add(shooter_stats)
+
+            # 4. Calcular todas las estadísticas
+            basic_stats = self._calculate_basic_stats_from_session(session, exercises)
+            scoring_stats = self._calculate_scoring_stats_from_session(
+                session, exercises
+            )
+            historical_stats = self._calculate_historical_scoring_stats(shooter_id)
+            exercise_type_stats = self._calculate_exercise_type_scoring_stats(
+                shooter_id
+            )
+
+            # Combinar estadísticas históricas con las de tipo
+            all_stats = {**historical_stats, **exercise_type_stats}
+
+            # 5. Actualizar modelo
+            self._update_shooter_stats_model(
+                shooter_stats, basic_stats, scoring_stats, all_stats
+            )
+
+            self.db.commit()
+            logger.info(
+                f"✅ Stats con puntuación actualizadas para tirador {shooter_id}"
+            )
+            return True
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"❌ Error actualizando stats con puntuación: {str(e)}")
+            return False
+
+    def update_basic_stats_after_session(
+        self, session_id: UUID, shooter_id: UUID
+    ) -> bool:
+        """
+        ✅ MÉTODO BÁSICO: Para compatibilidad hacia atrás (sin puntuación)
+        """
+        try:
             stats = self.stats_repo.get_by_shooter_id(self.db, shooter_id)
             if not stats:
                 stats = self.stats_repo.create(self.db, shooter_id)
                 if not stats:
                     return False
 
-            # Obtener sesión y ejercicios
             session = self.session_repo.get_by_id(self.db, session_id)
             if not session or not session.is_finished:
                 return False
 
             exercises = self.exercise_repo.get_by_session_id(self.db, session_id)
 
-            # Calcular todas las estadísticas
+            # Calcular estadísticas básicas
             updates = {}
-
-            # 1. ESTADÍSTICAS BÁSICAS
             updates.update(self._calculate_basic_stats(stats, session, exercises))
-
-            # 2. ESTADÍSTICAS POR TIPO DE EJERCICIO
-            updates.update(self._calculate_exercise_type_stats(shooter_id, exercises))
-
-            # 3. TIEMPOS PROMEDIO
+            updates.update(
+                self._calculate_exercise_type_accuracy_stats(shooter_id, exercises)
+            )
             updates.update(self._calculate_average_times(stats, exercises))
-
-            # 4. MÉTRICAS AVANZADAS
             updates.update(
                 self._calculate_advanced_metrics(shooter_id, session, exercises)
             )
-
-            # 5. TENDENCIAS Y PROMEDIOS
             updates.update(self._calculate_trends_and_averages(shooter_id))
 
-            # 6. ZONAS DE ERROR COMUNES
-            updates.update(self._calculate_common_error_zones(exercises))
-
-            # 7. Actualizar en BD
+            # Actualizar en BD
             self.stats_repo.update(self.db, shooter_id, updates)
-            print(f"✅ Estadísticas actualizadas para tirador {shooter_id}")
-
+            logger.info(
+                f"✅ Estadísticas básicas actualizadas para tirador {shooter_id}"
+            )
             return True
 
         except Exception as e:
-            print(f"⚠️ Error actualizando estadísticas completas: {str(e)}")
+            logger.error(f"⚠️ Error actualizando estadísticas básicas: {str(e)}")
             return False
 
-    def _calculate_basic_stats(self, stats, session, exercises) -> Dict:
-        """
-        Estadísticas básicas: disparos totales, precisión general, contadores
-        """
-        # Total de disparos (sumar ammunition_used real, no allocated)
-        session_shots = sum(ex.ammunition_used or 0 for ex in exercises)
+    # ✅ MÉTODOS DE CÁLCULO DE PUNTUACIÓN (PRINCIPALES)
+    def _calculate_scoring_stats_from_session(self, session, exercises: List) -> Dict:
+        """Calcula estadísticas de puntuación de la sesión actual"""
+        exercises_with_scoring = [
+            ex
+            for ex in exercises
+            if hasattr(ex, "total_score") and getattr(ex, "total_score", 0) > 0
+        ]
 
-        # Contadores por tipo de ejercicio
+        if not exercises_with_scoring:
+            return {
+                "session_total_score": 0,
+                "session_avg_score": 0.0,
+                "session_best_shot": 0,
+                "session_score_efficiency": 0.0,
+                "exercises_with_scoring": 0,
+            }
+
+        total_score = sum(
+            getattr(ex, "total_score", 0) for ex in exercises_with_scoring
+        )
+        total_shots = sum(ex.ammunition_used for ex in exercises_with_scoring)
+        avg_score_per_shot = total_score / total_shots if total_shots > 0 else 0.0
+        best_shot = max(
+            getattr(ex, "max_score_achieved", 0) for ex in exercises_with_scoring
+        )
+
+        max_possible = total_shots * 10
+        score_efficiency = (
+            (total_score / max_possible * 100) if max_possible > 0 else 0.0
+        )
+
+        return {
+            "session_total_score": total_score,
+            "session_avg_score": avg_score_per_shot,
+            "session_best_shot": best_shot,
+            "session_score_efficiency": score_efficiency,
+            "exercises_with_scoring": len(exercises_with_scoring),
+        }
+
+    def _calculate_historical_scoring_stats(self, shooter_id: UUID) -> Dict:
+        """Calcula estadísticas históricas de puntuación del tirador"""
+        try:
+            recent_sessions = (
+                self.db.query(IndividualPracticeSessionModel)
+                .filter_by(shooter_id=shooter_id, is_finished=True)
+                .filter(IndividualPracticeSessionModel.total_session_score > 0)
+                .order_by(IndividualPracticeSessionModel.date.desc())
+                .limit(10)
+                .all()
+            )
+
+            if not recent_sessions:
+                return {
+                    "avg_score": 0.0,
+                    "best_session_score": 0,
+                    "best_shot_ever": 0,
+                    "score_trend": 0.0,
+                    "sessions_with_scoring": 0,
+                }
+
+            total_scores = [s.total_session_score for s in recent_sessions]
+            avg_scores = [
+                s.average_score_per_shot
+                for s in recent_sessions
+                if s.average_score_per_shot > 0
+            ]
+            best_shots = [
+                s.best_shot_score for s in recent_sessions if s.best_shot_score > 0
+            ]
+
+            avg_score = sum(avg_scores) / len(avg_scores) if avg_scores else 0.0
+            best_session_score = max(total_scores) if total_scores else 0
+            best_shot_ever = max(best_shots) if best_shots else 0
+            score_trend = self._calculate_score_trend(avg_scores)
+
+            return {
+                "avg_score": avg_score,
+                "best_session_score": best_session_score,
+                "best_shot_ever": best_shot_ever,
+                "score_trend": score_trend,
+                "sessions_with_scoring": len(recent_sessions),
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculando stats históricos: {str(e)}")
+            return {
+                "avg_score": 0.0,
+                "best_session_score": 0,
+                "best_shot_ever": 0,
+                "score_trend": 0.0,
+                "sessions_with_scoring": 0,
+            }
+
+    def _calculate_exercise_type_scoring_stats(self, shooter_id: UUID) -> Dict:
+        """✅ CORREGIDO: Calcula promedios de puntuación por tipo de ejercicio"""
+        try:
+            exercises_with_scoring = (
+                self.db.query(PracticeExerciseModel)
+                .join(PracticeExerciseModel.session)
+                .join(PracticeExerciseModel.exercise_type)
+                .filter(
+                    IndividualPracticeSessionModel.shooter_id == shooter_id,
+                    IndividualPracticeSessionModel.is_finished == True,
+                    PracticeExerciseModel.total_score > 0,
+                )
+                .all()
+            )
+
+            logger.info(
+                f"🔍 Encontrados {len(exercises_with_scoring)} ejercicios con puntuación"
+            )
+
+            if not exercises_with_scoring:
+                return {
+                    "precision_exercise_avg_score": 0.0,
+                    "reaction_exercise_avg_score": 0.0,
+                    "movement_exercise_avg_score": 0.0,
+                }
+
+            # Agrupar por tipo
+            precision_scores = []
+            reaction_scores = []
+            movement_scores = []
+
+            for ex in exercises_with_scoring:
+                if ex.exercise_type and ex.average_score_per_shot > 0:
+                    exercise_type = ex.exercise_type.type.lower()
+                    score = ex.average_score_per_shot
+
+                    if exercise_type == "precision":
+                        precision_scores.append(score)
+                    elif exercise_type == "reaction":
+                        reaction_scores.append(score)
+                    elif exercise_type == "movement":
+                        movement_scores.append(score)
+
+            logger.info(
+                f"📊 Precision: {len(precision_scores)}, Reaction: {len(reaction_scores)}, Movement: {len(movement_scores)}"
+            )
+
+            return {
+                "precision_exercise_avg_score": (
+                    round(sum(precision_scores) / len(precision_scores), 2)
+                    if precision_scores
+                    else 0.0
+                ),
+                "reaction_exercise_avg_score": (
+                    round(sum(reaction_scores) / len(reaction_scores), 2)
+                    if reaction_scores
+                    else 0.0
+                ),
+                "movement_exercise_avg_score": (
+                    round(sum(movement_scores) / len(movement_scores), 2)
+                    if movement_scores
+                    else 0.0
+                ),
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Error calculando promedios por tipo: {str(e)}")
+            return {
+                "precision_exercise_avg_score": 0.0,
+                "reaction_exercise_avg_score": 0.0,
+                "movement_exercise_avg_score": 0.0,
+            }
+
+    def _calculate_score_trend(self, avg_scores: List[float]) -> float:
+        """Calcula tendencia de puntuación (positiva = mejorando)"""
+        if len(avg_scores) < 6:
+            return 0.0
+
+        recent_avg = sum(avg_scores[:3]) / 3
+        previous_avg = sum(avg_scores[3:6]) / 3
+        return recent_avg - previous_avg
+
+    def _update_shooter_stats_model(
+        self,
+        shooter_stats,
+        basic_stats: Dict,
+        scoring_stats: Dict,
+        all_stats: Dict,
+    ):
+        """✅ CORREGIDO: Actualiza TODOS los campos del modelo"""
+
+        # Estadísticas básicas
+        shooter_stats.total_shots = basic_stats.get(
+            "total_shots", shooter_stats.total_shots
+        )
+        shooter_stats.accuracy = int(
+            basic_stats.get("accuracy", shooter_stats.accuracy)
+        )
+
+        # ✅ CORREGIR: Estadísticas de puntuación general
+        if hasattr(shooter_stats, "average_score"):
+            shooter_stats.average_score = all_stats.get("avg_score", 0.0)
+            shooter_stats.best_score_session = all_stats.get("best_session_score", 0)
+            shooter_stats.best_shot_ever = all_stats.get("best_shot_ever", 0)
+            shooter_stats.score_trend = all_stats.get("score_trend", 0.0)
+
+            # ✅ AGREGAR: Promedios por tipo de ejercicio
+            shooter_stats.precision_exercise_avg_score = all_stats.get(
+                "precision_exercise_avg_score", 0.0
+            )
+            shooter_stats.reaction_exercise_avg_score = all_stats.get(
+                "reaction_exercise_avg_score", 0.0
+            )
+            shooter_stats.movement_exercise_avg_score = all_stats.get(
+                "movement_exercise_avg_score", 0.0
+            )
+
+        shooter_stats.updated_at = datetime.now()
+
+    # ✅ MÉTODOS BÁSICOS (SIN PUNTUACIÓN) - MANTENIDOS PARA COMPATIBILIDAD
+    def _calculate_basic_stats_from_session(self, session, exercises: List) -> Dict:
+        """Calcula estadísticas básicas de la sesión"""
+        total_shots = sum(ex.ammunition_used for ex in exercises)
+        total_hits = sum(ex.hits for ex in exercises)
+        accuracy = (total_hits / total_shots * 100) if total_shots > 0 else 0.0
+
+        return {
+            "total_shots": total_shots,
+            "total_hits": total_hits,
+            "accuracy": accuracy,
+        }
+
+    def _calculate_basic_stats(self, stats, session, exercises) -> Dict:
+        """Estadísticas básicas: disparos totales, precisión general"""
+        session_shots = sum(ex.ammunition_used or 0 for ex in exercises)
         precision_shots, reaction_shots = self._count_shots_by_type(exercises)
 
         return {
@@ -105,13 +377,10 @@ class ShooterStatsService:
             ),
         }
 
-    def _calculate_exercise_type_stats(
+    def _calculate_exercise_type_accuracy_stats(
         self, shooter_id: UUID, current_exercises
     ) -> Dict:
-        """
-        Precisión específica por tipo de ejercicio
-        """
-        # Obtener TODOS los ejercicios históricos del tirador por tipo
+        """Precisión específica por tipo de ejercicio (sin puntuación)"""
         all_sessions = self.session_repo.get_finished_sessions_by_shooter(
             self.db, shooter_id=shooter_id, limit=50
         )
@@ -123,15 +392,12 @@ class ShooterStatsService:
             )
             all_exercises.extend(session_exercises)
 
-        # Clasificar ejercicios por tipo
         precision_exercises = []
         reaction_exercises = []
         movement_exercises = []
 
         for ex in all_exercises:
             if ex.exercise_type and ex.ammunition_used and ex.ammunition_used > 0:
-                exercise_name = ex.exercise_type.name.lower()
-
                 if ex.exercise_type.type == "precision":
                     precision_exercises.append(ex)
                 elif ex.exercise_type.type == "reaction":
@@ -152,10 +418,7 @@ class ShooterStatsService:
         }
 
     def _calculate_average_times(self, stats, exercises) -> Dict:
-        """
-        Tiempos promedio de desenfunde y recarga
-        """
-        # Obtener tiempos de reacción de los ejercicios actuales
+        """Tiempos promedio de desenfunde"""
         reaction_times = [
             ex.reaction_time
             for ex in exercises
@@ -163,44 +426,34 @@ class ShooterStatsService:
         ]
 
         if reaction_times:
-            # Promedio móvil simple con tiempos existentes
             current_avg = stats.draw_time_avg or 0
             new_avg = sum(reaction_times) / len(reaction_times)
 
             if current_avg == 0:
                 draw_time_avg = new_avg
             else:
-                # Promedio ponderado (70% histórico, 30% nuevo)
                 draw_time_avg = (current_avg * 0.7) + (new_avg * 0.3)
         else:
             draw_time_avg = stats.draw_time_avg
 
         return {
             "draw_time_avg": round(draw_time_avg, 3),
-            "reload_time_avg": stats.reload_time_avg,  # Por ahora mantener el actual
+            "reload_time_avg": stats.reload_time_avg,
         }
 
     def _calculate_advanced_metrics(self, shooter_id: UUID, session, exercises) -> Dict:
-        """
-        Métricas avanzadas: hit_factor, effectiveness
-        """
-        # Hit Factor = Impactos / Tiempo (métrica usada en IPSC)
+        """Métricas avanzadas: hit_factor, effectiveness"""
         total_hits = sum(ex.hits or 0 for ex in exercises)
         total_time = sum(ex.reaction_time or 1 for ex in exercises if ex.reaction_time)
 
-        if total_time > 0:
-            hit_factor = total_hits / total_time
-        else:
-            hit_factor = 0
+        hit_factor = total_hits / total_time if total_time > 0 else 0
 
-        # Effectiveness = (Disparos efectivos / Disparos totales) * Factor de precisión
         total_shots = sum(ex.ammunition_used or 0 for ex in exercises)
-        if total_shots > 0:
-            effectiveness = (total_hits / total_shots) * (
-                session.accuracy_percentage / 100
-            )
-        else:
-            effectiveness = 0
+        effectiveness = (
+            (total_hits / total_shots) * (session.accuracy_percentage / 100)
+            if total_shots > 0
+            else 0
+        )
 
         return {
             "average_hit_factor": round(hit_factor, 3),
@@ -208,9 +461,7 @@ class ShooterStatsService:
         }
 
     def _calculate_trends_and_averages(self, shooter_id: UUID) -> Dict:
-        """
-        Tendencias y promedios de últimas sesiones
-        """
+        """Tendencias y promedios de últimas sesiones"""
         recent_sessions = self.session_repo.get_finished_sessions_by_shooter(
             self.db, shooter_id, limit=10
         )
@@ -222,153 +473,72 @@ class ShooterStatsService:
                 ),
                 "trend_accuracy": 0.0,
             }
-        # Promedio de últimas 10 sesiones
+
         avg_10_sessions = sum(s.accuracy_percentage for s in recent_sessions) / len(
             recent_sessions
         )
 
-        # Tendencia: comparar últimas 5 vs anteriores 5
+        trend = 0.0
         if len(recent_sessions) >= 6:
             last_5 = recent_sessions[:5]
             previous_5 = recent_sessions[5:10]
-
             avg_last_5 = sum(s.accuracy_percentage for s in last_5) / len(last_5)
             avg_prev_5 = sum(s.accuracy_percentage for s in previous_5) / len(
                 previous_5
             )
-
-            trend = avg_last_5 - avg_prev_5  # Positivo = mejorando
-        else:
-            trend = 0.0
-
+            trend = avg_last_5 - avg_prev_5
+        logger.info(
+            f"🔄 Tendencia de precisión calculada: {trend} (últimas 10 sesiones: {avg_10_sessions})"
+        )
         return {
             "last_10_sessions_avg": round(avg_10_sessions, 2),
             "trend_accuracy": round(trend, 2),
         }
 
-    def _calculate_common_error_zones(self, exercises) -> Dict:
-        """
-        Analiza patrones de error comunes desde los análisis de imagen
-        """
-        error_zones = []
-
-        for exercise in exercises:
-            if exercise.target_image_id:
-                # Obtener análisis de la imagen
-                analysis = self.analysis_repo.get_by_id(
-                    self.db, exercise.target_image_id
-                )
-
-                if analysis and analysis.impact_coordinates:
-                    # Analizar coordenadas de impactos fuera del blanco
-                    impacts_outside = [
-                        impact
-                        for impact in analysis.impact_coordinates
-                        if not impact.get("dentro_blanco", True)
-                    ]
-
-                    # Clasificar zonas de error (simplificado)
-                    for impact in impacts_outside:
-                        x, y = impact.get("x", 0), impact.get("y", 0)
-                        zone = self._classify_error_zone(x, y)
-                        if zone:
-                            error_zones.append(zone)
-
-        # Encontrar las zonas más comunes
-        if error_zones:
-            from collections import Counter
-
-            most_common = Counter(error_zones).most_common(3)
-            common_zones = [zone for zone, count in most_common]
-            return {"common_error_zones": ", ".join(common_zones)}
-
-        return {"common_error_zones": None}
-
-    def _count_shots_by_type(self, exercises) -> tuple:
-        """
-        Cuenta disparos por tipo usando ammunition_used (no allocated)
-        """
-        precision_shots = 0
-        reaction_shots = 0
-
-        for exercise in exercises:
-            if exercise.exercise_type and exercise.ammunition_used:
-                exercise_name = exercise.exercise_type.name.lower()
-
-                if any(
-                    word in exercise_name
-                    for word in ["precision", "precis", "precisión"]
-                ):
-                    precision_shots += exercise.ammunition_used
-                elif any(
-                    word in exercise_name
-                    for word in ["reaccion", "reaction", "reacción"]
-                ):
-                    reaction_shots += exercise.ammunition_used
-
-        return precision_shots, reaction_shots
-
+    # ✅ MÉTODOS AUXILIARES
     def _calculate_overall_accuracy_from_exercises(self, exercises, stats) -> int:
-        """
-        Calcula precisión general basada en ammunition_used vs hits reales
-        """
+        """Calcula precisión general basada en ammunition_used vs hits reales"""
         session_shots = sum(ex.ammunition_used or 0 for ex in exercises)
         session_hits = sum(ex.hits or 0 for ex in exercises)
-
-        # Combinar con estadísticas históricas
         total_shots = stats.total_shots + session_shots
 
         if total_shots > 0:
-            # Estimar hits históricos desde accuracy actual
             historical_hits = (stats.total_shots * stats.accuracy) // 100
             total_hits = historical_hits + session_hits
-
             return int((total_hits / total_shots) * 100)
 
         return stats.accuracy
 
     def _calculate_type_accuracy(self, exercises_of_type) -> float:
-        """
-        Calcula precisión promedio para un tipo específico de ejercicio
-        """
+        """Calcula precisión promedio para un tipo específico de ejercicio"""
         if not exercises_of_type:
             return 0.0
 
         total_shots = sum(ex.ammunition_used or 0 for ex in exercises_of_type)
         total_hits = sum(ex.hits or 0 for ex in exercises_of_type)
 
-        if total_shots > 0:
-            return round((total_hits / total_shots) * 100, 2)
-
-        return 0.0
+        return round((total_hits / total_shots) * 100, 2) if total_shots > 0 else 0.0
 
     def _count_shots_by_type(self, exercises) -> tuple:
-        """
-        Cuenta disparos por tipo de ejercicio basado en el nombre del tipo
-        """
+        """Cuenta disparos por tipo de ejercicio"""
         precision_shots = 0
         reaction_shots = 0
 
         for exercise in exercises:
             if exercise.exercise_type and exercise.ammunition_used:
                 exercise_type = exercise.exercise_type.type.lower()
-
-                # Clasificar por nombre del ejercicio (ajustar según tus tipos)
                 if exercise_type == "precision":
                     precision_shots += exercise.ammunition_used
-                elif exercise_type == "movement":
+                elif exercise_type in ["movement", "reaction"]:
                     reaction_shots += exercise.ammunition_used
-                # Los que no coincidan no se cuentan en categorías específicas
 
         return precision_shots, reaction_shots
 
+    # ✅ MÉTODOS DE CONSULTA
     def get_complete_shooter_stats(self, shooter_id: UUID) -> Dict:
-        """
-        Obtiene estadísticas completas para dashboard
-        """
+        """Obtiene estadísticas completas para dashboard"""
         try:
             stats = self.stats_repo.get_by_shooter_id(self.db, shooter_id)
-
             if not stats:
                 return {"error": "Estadísticas no encontradas"}
 
@@ -378,6 +548,21 @@ class ShooterStatsService:
                     "accuracy": stats.accuracy,
                     "precision_shots": stats.presicion_shots,
                     "reaction_shots": stats.reaction_shots,
+                },
+                "scoring_stats": {
+                    "average_score": getattr(stats, "average_score", 0.0),
+                    "best_session_score": getattr(stats, "best_score_session", 0),
+                    "best_shot_ever": getattr(stats, "best_shot_ever", 0),
+                    "score_trend": getattr(stats, "score_trend", 0.0),
+                    "precision_exercise_avg_score": getattr(
+                        stats, "precision_exercise_avg_score", 0.0
+                    ),
+                    "reaction_exercise_avg_score": getattr(
+                        stats, "reaction_exercise_avg_score", 0.0
+                    ),
+                    "movement_exercise_avg_score": getattr(
+                        stats, "movement_exercise_avg_score", 0.0
+                    ),
                 },
                 "averages": {
                     "last_10_sessions_avg": stats.last_10_sessions_avg,
@@ -389,65 +574,15 @@ class ShooterStatsService:
                     "effectiveness": stats.effectiveness,
                     "trend_accuracy": stats.trend_accuracy,
                 },
-                "exercise_type_accuracy": {
-                    "precision": stats.precision_exercise_accuracy,
-                    "reaction": stats.reaction_exercise_accuracy,
-                    "movement": stats.movement_exercise_accuracy,
-                },
-                "error_analysis": {"common_error_zones": stats.common_error_zones},
             }
 
         except Exception as e:
             return {"error": str(e)}
 
-    def _calculate_overall_accuracy(self, shooter_id: UUID) -> int:
-        """
-        Calcula la precisión general del tirador como un porcentaje
-        """
-        try:
-            finished_sessions = self.session_repo.get_finished_sessions_by_shooter(
-                self.db, shooter_id
-            )
-            # TODO: Despues de 100 sesiones hay que revisar esto
-            if not finished_sessions:
-                return 0
-
-            # calcular promedio ponderado por disparo
-            total_shots = sum(s.total_shots_fired for s in finished_sessions)
-            total_hits = sum(s.total_hits for s in finished_sessions)
-
-            if total_shots > 0:
-                return int((total_hits / total_shots) * 100)
-
-            return 0
-        except Exception as e:
-            print(f"❌ Error al calcular precisión general: {str(e)}")
-            return 0
-
-    def _calculate_last_10_sessions_avg(self, shooter_id: UUID) -> float:
-        try:
-            recent_sessions = self.session_repo.get_finished_sessions_by_shooter(
-                self.db, shooter_id, limit=10
-            )
-
-            if not recent_sessions:
-                return 0.0
-
-            # Promedio simple de accuracy_percentage
-            total_accuracy = sum(s.accuracy_percentage for s in recent_sessions)
-            return round(total_accuracy / len(recent_sessions), 2)
-
-        except Exception as e:
-            print(f"❌ Error al calcular promedio de últimas 10 sesiones: {str(e)}")
-            return 0.0
-
     def get_shooter_basic_stats(self, shooter_id: UUID) -> Dict:
-        """
-        Obtiene estadísticas básicas para mostrar en dashboard
-        """
+        """Obtiene estadísticas básicas para dashboard"""
         try:
             stats = self.stats_repo.get_by_shooter_id(self.db, shooter_id)
-
             if not stats:
                 return {
                     "total_shots": 0,
@@ -467,166 +602,5 @@ class ShooterStatsService:
             }
 
         except Exception as e:
-            print(f"Error obteniendo estadísticas: {str(e)}")
+            logger.error(f"Error obteniendo estadísticas: {str(e)}")
             return {"error": str(e)}
-
-    def update_advanced_stats_after_evaluation(
-        self, shooter_id: UUID, evaluation_id: UUID
-    ):
-        """
-        Actualiza estadisticas avanzadas SOLO despues de evaluacion
-        campos que no se calculan con finalizacion basica
-        """
-        try:
-            # obtener estadisticas actuales
-            stats = self.stats_repo.get_by_shooter_id(self.db, shooter_id)
-            if not stats:
-                return False
-
-            # obtener evaluacion recien creada
-            evaluation = self.evaluation_repo.get_by_id(self.db, evaluation_id)
-            if not evaluation:
-                return False
-
-            # obtener sesion para contexto
-            session = self.session_repo.get_by_id(self.db, evaluation.session_id)
-            if not session:
-                return False
-            updates = {}
-
-            # 1. TIEMPOS PROMEDIO (solo si hay datos en evaluación)
-            if evaluation.avg_draw_time and evaluation.avg_draw_time > 0:
-                # Promedio móvil con peso al nuevo valor
-                current_draw = stats.draw_time_avg or 0
-                if current_draw == 0:
-                    updates["draw_time_avg"] = evaluation.avg_draw_time
-                else:
-                    # 70% histórico + 30% nuevo
-                    updates["draw_time_avg"] = (current_draw * 0.7) + (
-                        evaluation.avg_draw_time * 0.3
-                    )
-
-            # 2. HIT FACTOR PROMEDIO
-            if evaluation.hit_factor and evaluation.hit_factor > 0:
-                current_hit_factor = stats.average_hit_factor or 0
-                if current_hit_factor == 0:
-                    updates["average_hit_factor"] = evaluation.hit_factor
-                else:
-                    # Promedio móvil
-                    updates["average_hit_factor"] = (current_hit_factor * 0.8) + (
-                        evaluation.hit_factor * 0.2
-                    )
-
-            # 3. EFFECTIVENESS (combinando datos cuantitativos + cualitativos)
-            if evaluation.overall_technique_rating:
-                # Combinar precisión objetiva + evaluación técnica subjetiva
-                objective_precision = session.accuracy_percentage / 100  # 0-1
-                subjective_technique = evaluation.overall_technique_rating / 10  # 0-1
-
-                # Peso: 70% objetivo, 30% subjetivo
-                effectiveness = (objective_precision * 0.7) + (
-                    subjective_technique * 0.3
-                )
-
-                current_effectiveness = stats.effectiveness or 0
-                if current_effectiveness == 0:
-                    updates["effectiveness"] = effectiveness
-                else:
-                    # Promedio móvil
-                    updates["effectiveness"] = (current_effectiveness * 0.7) + (
-                        effectiveness * 0.3
-                    )
-
-            # 4. COMMON ERROR ZONES (actualizar con zonas identificadas)
-            if evaluation.primary_issue_zone or evaluation.secondary_issue_zone:
-                new_zones = []
-                if evaluation.primary_issue_zone:
-                    new_zones.append(evaluation.primary_issue_zone)
-                if evaluation.secondary_issue_zone:
-                    new_zones.append(evaluation.secondary_issue_zone)
-
-                # Combinar con zonas existentes
-                current_zones = stats.common_error_zones or ""
-                current_zones_list = [
-                    z.strip() for z in current_zones.split(",") if z.strip()
-                ]
-
-                # Agregar nuevas zonas
-                all_zones = current_zones_list + new_zones
-
-                # Contar frecuencias y mantener las 3 más comunes
-                from collections import Counter
-
-                zone_counts = Counter(all_zones)
-                most_common = [zone for zone, count in zone_counts.most_common(3)]
-
-                updates["common_error_zones"] = ", ".join(most_common)
-
-            # 5. Redondear valores
-            for key, value in updates.items():
-                if isinstance(value, float) and key != "common_error_zones":
-                    updates[key] = round(value, 3)
-
-            # 6. Actualizar en BD si hay cambios
-            if updates:
-                self.stats_repo.update(self.db, shooter_id, updates)
-
-                # Log para debugging
-                logger.info(
-                    f"📊 Stats avanzadas actualizadas para tirador {shooter_id}: {list(updates.keys())}"
-                )
-
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Error actualizando estadísticas avanzadas: {str(e)}")
-            return False
-
-    def get_evaluation_impact_summary(
-        self, shooter_id: UUID, evaluation_id: UUID
-    ) -> Dict:
-        """
-        Resumen del impacto de una evaluacion en las estadisticas del tirador
-        """
-        try:
-            # obtener estadisticas antes y despues (simplificado)
-            current_stats = self.get_complete_shooter_stats(shooter_id)
-
-            evaluation = self.evaluation_repo.get_by_id(self.db, evaluation_id)
-            if not evaluation:
-                return {"error": "Evaluación no encontrada"}
-
-            return {
-                "evaluation_score": evaluation.final_score,
-                "classification": self._determine_classification(
-                    evaluation.final_score
-                ),
-                "updated_fields": [
-                    "draw_time_avg",
-                    "average_hit_factor",
-                    "effectiveness",
-                    "common_error_zones",
-                ],
-                "current_effectiveness": current_stats.get("advanced_metrics", {}).get(
-                    "effectiveness", 0
-                ),
-                "hit_factor": evaluation.hit_factor,
-            }
-        except Exception as e:
-            logger.error(
-                f"❌ Error obteniendo resumen de impacto de evaluación: {str(e)}"
-            )
-            return {"error": str(e)}
-
-    def _determinate_classification(self, final_score: float) -> str:
-        """
-        Determina la clasificación del tirador basado en el puntaje final
-        """
-        if final_score >= 90:
-            return ShooterLevelEnum.EXPERTO.value
-        elif final_score >= 75:
-            return ShooterLevelEnum.CONFIABLE.value
-        elif final_score >= 50:
-            return ShooterLevelEnum.MEDIO.value
-        else:
-            return ShooterLevelEnum.REGULAR.value

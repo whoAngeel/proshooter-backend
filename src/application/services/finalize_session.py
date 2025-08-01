@@ -20,6 +20,12 @@ from src.presentation.schemas.sesion_finalization import (
     SessionFinalizationResult,
     SessionValidationResult,
 )
+from src.infraestructure.database.models.practice_session_model import (
+    IndividualPracticeSessionModel,
+)
+from src.infraestructure.database.models.practice_exercise_model import (
+    PracticeExerciseModel,
+)
 
 logger = logging.getLogger(__name__)
 
