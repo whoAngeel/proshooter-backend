@@ -35,25 +35,30 @@ class ExerciseMetricsUpdate(BaseModel):
     impacts_outside_target: Optional[int] = Field(
         None, description="Impactos fuera del blanco"
     )
+    total_score: int = 0
+    average_score_per_shot: float = 0.0
+    max_score_achieved: int = 0
+    score_distribution: Optional[Dict[str, int]] = None
+    group_diameter: Optional[float] = None
 
 
 class ExerciseConsolidationResult(BaseModel):
-    """
-    Resultado completo de la consolidación de un ejercicio
-    """
+    """Resultado actualizado de consolidación con puntuación"""
 
-    exercise_id: UUID = Field(description="ID del ejercicio consolidado")
-    updated_successfully: bool = Field(description="Si la actualización fue exitosa")
-    ammunition_used: int = Field(description="Munición usada final")
-    hits: int = Field(description="Aciertos finales")
-    accuracy_percentage: float = Field(description="Precisión final")
-    ammunition_validation: AmmunitionValidationResult = Field(
-        description="Resultado de validación de munición"
-    )
-    total_impacts_detected: int = Field(
-        description="Total de impactos detectados por IA"
-    )
-    message: str = Field(description="Mensaje descriptivo del resultado")
+    # Campos existentes
+    exercise_id: UUID
+    updated_successfully: bool
+    ammunition_used: int
+    hits: int
+    accuracy_percentage: float
+    ammunition_validation: AmmunitionValidationResult
+    total_impacts_detected: int
+    message: str
+
+    total_score: int = 0
+    average_score_per_shot: float = 0.0
+    max_score_achieved: int = 0
+    score_efficiency: Optional[float] = None
 
 
 class ExerciseConsolidationStatus(BaseModel):

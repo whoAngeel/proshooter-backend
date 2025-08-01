@@ -78,6 +78,49 @@ class PracticeSessionRepository:
             return False
 
     @staticmethod
+    def update_totals_with_scoring(db: Session, session_id: UUID) -> bool:
+        try:
+            session = db.query(PracticeSessionModel).filter_by(id=session_id).first()
+            if not session:
+                return False
+
+            exercises = (
+                db.query(PracticeExerciseModel).filter_by(session_id=session_id).all()
+            )
+
+            total_shots = sum(ex.ammunition_used for ex in exercises)
+            total_hits = sum(ex.hits for ex in exercises)
+            avg_accuracy = (total_hits / total_shots * 100) if total_shots > 0 else 0.0
+
+            total_session_score = sum(ex.total_score for ex in exercises)
+            avg_score_per_exercise = (
+                (total_session_score / len(exercises)) if exercises else 0.0
+            )
+            avg_score_per_shot = (
+                (total_session_score / total_shots) if total_shots > 0 else 0.0
+            )
+            best_shot_score = max(
+                (ex.max_score_achieved for ex in exercises), default=0
+            )
+
+            session.total_shots_fired = total_shots
+            session.total_hits = total_hits
+            session.accuracy_percentage = round(avg_accuracy, 2)
+            session.total_score = total_session_score
+            session.average_score_per_exercise = round(avg_score_per_exercise, 2)
+            session.average_score_per_shot = round(avg_score_per_shot, 2)
+            session.best_shot_score = best_shot_score
+
+            db.commit()
+            return True
+        except Exception as e:
+            logger.error(
+                f"❌ Error updating totals with scoring for session {session_id}: {e}"
+            )
+            db.rollback()
+            return False
+
+    @staticmethod
     def calculate_totals(db: Session, session_id: UUID) -> Dict:
         try:
             query = select(

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func, between, desc, select, update
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
+import json
 from src.infraestructure.database.models.practice_exercise_model import (
     PracticeExerciseModel,
 )
@@ -728,35 +729,76 @@ class PracticeExerciseRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    def update_metrics(db: Session, exercise_id: UUID, metrics: Dict) -> bool:
+    def update_metrics(
+        db: Session, exercise_id: UUID, metrics_data: Dict[str, Any]
+    ) -> bool:
+        """
+        ✅ CORREGIDO: Maneja correctamente los tipos JSON
+        """
         try:
-            allowed_fields = {
-                "ammunition_used",
-                "hits",
-                "accuracy_percentage",
-                "reaction_time",
-                "updated_at",
-            }
-            # solo actualizar los campo permitidos
-            update_data = {k: v for k, v in metrics.items() if k in allowed_fields}
-
-            if not update_data:
+            exercise = db.query(PracticeExerciseModel).filter_by(id=exercise_id).first()
+            if not exercise:
+                logger.error(f"❌ Ejercicio {exercise_id} no encontrado")
                 return False
 
-            stmt = (
-                update(PracticeExerciseModel)
-                .where(PracticeExerciseModel.id == exercise_id)
-                .values(**update_data)
+            # Campos existentes (sin cambios)
+            exercise.ammunition_used = metrics_data.get(
+                "ammunition_used", exercise.ammunition_used
+            )
+            exercise.hits = metrics_data.get("hits", exercise.hits)
+            exercise.accuracy_percentage = metrics_data.get(
+                "accuracy_percentage", exercise.accuracy_percentage
+            )
+            exercise.reaction_time = metrics_data.get(
+                "reaction_time", exercise.reaction_time
             )
 
-            result = db.execute(stmt)
-            db.commit()
+            # ✅ CORREGIDO: Campos de puntuación con validación de tipos
+            exercise.total_score = int(metrics_data.get("total_score", 0))
+            exercise.average_score_per_shot = float(
+                metrics_data.get("average_score_per_shot", 0.0)
+            )
+            exercise.max_score_achieved = int(metrics_data.get("max_score_achieved", 0))
 
-            return result.rowcount > 0
+            # ✅ SOLUCIÓN: Convertir dict a JSON string SIEMPRE para máxima compatibilidad
+            score_distribution = metrics_data.get("score_distribution", {})
+            if score_distribution is None:
+                exercise.score_distribution = None
+            elif isinstance(score_distribution, dict):
+                # Serializar dict a JSON string
+                try:
+                    exercise.score_distribution = json.dumps(score_distribution)
+                except Exception as e:
+                    logger.warning(f"⚠️ Error serializando score_distribution: {e}")
+                    exercise.score_distribution = "{}"
+            elif isinstance(score_distribution, str):
+                # Si ya es string, asignar directamente
+                exercise.score_distribution = score_distribution
+            else:
+                logger.warning(
+                    f"⚠️ Tipo inesperado para score_distribution: {type(score_distribution)}"
+                )
+                exercise.score_distribution = "{}"
+
+            # ✅ Group diameter puede ser None
+            group_diameter = metrics_data.get("group_diameter")
+            exercise.group_diameter = (
+                float(group_diameter) if group_diameter is not None else None
+            )
+
+            db.commit()
+            db.refresh(exercise)
+
+            logger.info(f"✅ Métricas actualizadas para ejercicio {exercise_id}")
+            return True
+
         except Exception as e:
             db.rollback()
-            logger.error(f"Error updating metrics: {e}")
-            raise e
+            logger.error(
+                f"❌ Error actualizando métricas del ejercicio {exercise_id}: {str(e)}"
+            )
+            logger.error(f"❌ Datos problemáticos: {metrics_data}")
+            return False
 
     @staticmethod
     def get_exercises_with_images(

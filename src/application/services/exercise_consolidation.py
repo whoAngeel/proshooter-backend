@@ -64,8 +64,8 @@ class ExerciseConsolidationService:
                 exercise, analysis
             )
 
-            # Calcular métricas del ejercicio
-            exercise_updates = self.calculate_exercise_metrics(
+            # ✅ NUEVO: Calcular métricas con puntuación
+            exercise_updates = self.calculate_exercise_metrics_with_scoring(
                 exercise, analysis, ammunition_validation
             )
 
@@ -79,8 +79,8 @@ class ExerciseConsolidationService:
                     status_code=500, detail="Error actualizando ejercicio"
                 )
 
-            # Recalcular totales de la sesión
-            self.session_repo.update_totals(self.db, exercise.session_id)
+            # ✅ NUEVO: Recalcular totales de la sesión con puntuación
+            self.session_repo.update_totals_with_scoring(self.db, exercise.session_id)
 
             return ExerciseConsolidationResult(
                 exercise_id=exercise_id,
@@ -88,18 +88,21 @@ class ExerciseConsolidationService:
                 ammunition_used=exercise_updates.ammunition_used,
                 hits=exercise_updates.hits,
                 accuracy_percentage=exercise_updates.accuracy_percentage,
+                # ✅ NUEVOS campos en el resultado
+                total_score=exercise_updates.total_score,
+                average_score_per_shot=exercise_updates.average_score_per_shot,
                 ammunition_validation=ammunition_validation,
                 total_impacts_detected=analysis.total_impacts_detected,
-                message="Ejercicio actualizado exitosamente",
+                message="Ejercicio actualizado exitosamente con puntuación",
             )
 
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Error actualizando ejercicio {exercise_id}: {str(e)}")
+            logger.error(f"❌ Error actualizando ejercicio {exercise_id}: {str(e)}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Error interno actualizando ejercicio: {str(e)}",
+                detail=f"❌ Error interno actualizando ejercicio: {str(e)}",
             )
 
     def validate_ammunition_consistency(
@@ -169,6 +172,43 @@ class ExerciseConsolidationService:
             total_impacts_detected=analysis.total_impacts_detected,
             impacts_outside_target=(analysis.fresh_impacts_outside or 0),
             # + (analysis.covered_impacts_outside or 0),
+        )
+
+    def calculate_exercise_metrics_with_scoring(
+        self, exercise, analysis, ammunition_validation
+    ) -> ExerciseMetricsUpdate:
+        """
+        ✅ NUEVO: Calcula métricas del ejercicio incluyendo puntuación
+        """
+        # Cálculos existentes (sin cambios)
+        ammunition_used = exercise.ammunition_used or exercise.ammunition_allocated or 0
+        hits_inside = analysis.fresh_impacts_inside or 0
+        accuracy_percentage = (
+            (hits_inside / ammunition_used * 100) if ammunition_used > 0 else 0.0
+        )
+        reaction_time = exercise.reaction_time if exercise.reaction_time else None
+
+        # ✅ NUEVOS: Cálculos de puntuación
+        total_score = getattr(analysis, "total_score", 0)
+        average_score_per_shot = getattr(analysis, "average_score_per_shot", 0.0)
+        max_score_achieved = getattr(analysis, "max_score_achieved", 0)
+        score_distribution = getattr(analysis, "score_distribution", {})
+        group_diameter = getattr(analysis, "shooting_group_diameter", None)
+
+        return ExerciseMetricsUpdate(
+            # Campos existentes
+            ammunition_used=ammunition_used,
+            hits=hits_inside,
+            accuracy_percentage=round(accuracy_percentage, 2),
+            reaction_time=reaction_time,
+            total_impacts_detected=analysis.total_impacts_detected,
+            impacts_outside_target=(analysis.fresh_impacts_outside or 0),
+            # ✅ NUEVOS campos de puntuación
+            total_score=total_score,
+            average_score_per_shot=round(average_score_per_shot, 2),
+            max_score_achieved=max_score_achieved,
+            score_distribution=score_distribution,
+            group_diameter=group_diameter,
         )
 
     def get_exercise_consolidation_status(self, exercise_id: UUID) -> Dict:
