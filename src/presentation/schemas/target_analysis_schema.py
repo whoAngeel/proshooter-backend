@@ -97,7 +97,6 @@ class ExerciseAnalysisResponse(BaseModel):
         return data
 
 
-# ✅ MANTENER esquema de request existente
 class ExerciseAnalysisRequest(BaseModel):
     """Esquema de request existente - mantener sin cambios"""
 
@@ -105,7 +104,6 @@ class ExerciseAnalysisRequest(BaseModel):
     force_reanalysis: Optional[bool] = False
 
 
-# ✅ NUEVO: Esquema de request extendido (opcional)
 class EnhancedExerciseAnalysisRequest(ExerciseAnalysisRequest):
     """
     Esquema de request extendido que permite controlar la puntuación

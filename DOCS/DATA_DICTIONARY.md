@@ -6,55 +6,72 @@ Este diccionario describe las entidades principales de la base de datos del sist
 ---
 
 
+
 ## USERS
 Contiene la información principal de los usuarios del sistema.
-Campos:
-- id: UUID, identificador único (PK)
-- email: String, correo electrónico
-- hashed_password: String, contraseña encriptada
-- role: Enum, rol del usuario (admin, shooter, instructor, etc.)
-- is_active: Boolean, indica si el usuario está activo
+
+| Campo            | Tipo    | Descripción                                      |
+|------------------|---------|--------------------------------------------------|
+| id               | UUID    | Identificador único (PK)                         |
+| email            | String  | Correo electrónico                               |
+| hashed_password  | String  | Contraseña encriptada                            |
+| role             | Enum    | Rol del usuario (admin, shooter, instructor, etc.)|
+| is_active        | Boolean | Indica si el usuario está activo                 |
+
+
 
 
 
 ## USER_PERSONAL_DATA
 Datos personales asociados a cada usuario.
-Campos:
-- user_id: UUID, referencia a USERS (PK)
-- first_name: String, nombre(s)
-- last_name: String, apellidos
-- birth_date: Date, fecha de nacimiento
-- gender: Enum, género (M/F/Otro)
-- nationality: String, nacionalidad
-- document_type: String, tipo de documento de identidad
-- document_number: String, número de documento
-- phone: String, teléfono de contacto
-- address: String, dirección de residencia
+
+| Campo           | Tipo   | Descripción                        |
+|-----------------|--------|------------------------------------|
+| user_id         | UUID   | Referencia a USERS (PK)            |
+| first_name      | String | Nombre(s)                          |
+| last_name       | String | Apellidos                          |
+| birth_date      | Date   | Fecha de nacimiento                |
+| gender          | Enum   | Género (M/F/Otro)                  |
+| nationality     | String | Nacionalidad                       |
+| document_type   | String | Tipo de documento de identidad     |
+| document_number | String | Número de documento                |
+| phone           | String | Teléfono de contacto               |
+| address         | String | Dirección de residencia            |
+
+
 
 
 
 ## USER_MEDICAL_DATA
 Datos médicos relevantes del usuario.
-Campos:
-- user_id: UUID, referencia a USERS (PK)
-- blood_type: String, tipo de sangre
-- allergies: String, alergias conocidas
-- medical_conditions: String, condiciones médicas relevantes
-- emergency_contact_name: String, nombre del contacto de emergencia
-- emergency_contact_phone: String, teléfono del contacto de emergencia
+
+| Campo                  | Tipo   | Descripción                        |
+|------------------------|--------|------------------------------------|
+| user_id                | UUID   | Referencia a USERS (PK)            |
+| blood_type             | String | Tipo de sangre                     |
+| allergies              | String | Alergias conocidas                 |
+| medical_conditions     | String | Condiciones médicas relevantes     |
+| emergency_contact_name | String | Nombre del contacto de emergencia  |
+| emergency_contact_phone| String | Teléfono del contacto de emergencia|
+
+
 
 
 
 ## USER_BIOMETRIC_DATA
 Datos biométricos del usuario.
-Campos:
-- user_id: UUID, referencia a USERS (PK)
-- height_cm: Integer, estatura en centímetros
-- weight_kg: Integer, peso en kilogramos
-- eye_color: String, color de ojos
-- hair_color: String, color de cabello
-- body_fat_percentage: Float, porcentaje de grasa corporal
-- bmi: Float, índice de masa corporal
+
+| Campo                | Tipo    | Descripción                        |
+|----------------------|---------|------------------------------------|
+| user_id              | UUID    | Referencia a USERS (PK)            |
+| height_cm            | Integer | Estatura en centímetros            |
+| weight_kg            | Integer | Peso en kilogramos                 |
+| eye_color            | String  | Color de ojos                      |
+| hair_color           | String  | Color de cabello                   |
+| body_fat_percentage  | Float   | Porcentaje de grasa corporal       |
+| bmi                  | Float   | Índice de masa corporal            |
+
+
 
 
 
@@ -62,298 +79,316 @@ Campos:
 
 ## SHOOTERS
 Usuarios registrados como tiradores.
-Campos:
-- user_id: UUID, referencia a USERS (PK)
-- club_id: UUID, referencia a SHOOTING_CLUBS
-- level: Enum, nivel del tirador (ver ShooterLevelEnum)
-- range: String, rango/categoría del tirador
-- nickname: String, apodo único del tirador
-- license_file: String, archivo de licencia (ruta/URL)
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
+| Campo        | Tipo    | Descripción                                 |
+|--------------|---------|---------------------------------------------|
+| user_id      | UUID    | Referencia a USERS (PK)                     |
+| club_id      | UUID    | Referencia a SHOOTING_CLUBS                 |
+| level        | Enum    | Nivel del tirador (ver ShooterLevelEnum)    |
+| range        | String  | Rango/categoría del tirador                 |
+| nickname     | String  | Apodo único del tirador                     |
+| license_file | String  | Archivo de licencia (ruta/URL)              |
+| created_at   | DateTime| Fecha de creación                           |
+| updated_at   | DateTime| Fecha de última actualización               |
+
+
 
 
 
 ## SHOOTER_STATS
 Estadísticas de rendimiento de cada tirador.
-Campos:
-- shooter_id: UUID, referencia a SHOOTERS (PK)
-- total_shots: Integer, total de disparos realizados
-- accuracy: Integer, porcentaje de precisión
-- reaction_shots: Integer, cantidad de disparos de reacción
-- presicion_shots: Integer, cantidad de disparos de precisión
-- draw_time_avg: Float, tiempo promedio de desenfunde
-- reload_time_avg: Float, tiempo promedio de recarga
-- average_hit_factor: Float, hit factor promedio
-- effectiveness: Float, efectividad general
-- trend_accuracy: Float, tendencia de precisión
-- last_10_sessions_avg: Float, promedio de las últimas 10 sesiones
-- precision_exercise_accuracy: Float, precisión en ejercicios de precisión
-- reaction_exercise_accuracy: Float, precisión en ejercicios de reacción
-- movement_exercise_accuracy: Float, precisión en ejercicios de movimiento
 
-# Nuevos campos de puntuación
-- average_score: Float, puntuación promedio general
-- best_score_session: Integer, mejor puntuación en una sesión
-- best_shot_ever: Integer, mejor disparo registrado
-- score_trend: Float, tendencia de puntuación
-- precision_exercise_avg_score: Float, promedio de puntuación en ejercicios de precisión
-- reaction_exercise_avg_score: Float, promedio de puntuación en ejercicios de reacción
-- movement_exercise_avg_score: Float, promedio de puntuación en ejercicios de movimiento
+| Campo                         | Tipo    | Descripción                                         |
+|-------------------------------|---------|-----------------------------------------------------|
+| shooter_id                    | UUID    | Referencia a SHOOTERS (PK)                          |
+| total_shots                   | Integer | Total de disparos realizados                        |
+| accuracy                      | Integer | Porcentaje de precisión                             |
+| reaction_shots                | Integer | Cantidad de disparos de reacción                    |
+| presicion_shots               | Integer | Cantidad de disparos de precisión                   |
+| draw_time_avg                 | Float   | Tiempo promedio de desenfunde                       |
+| reload_time_avg               | Float   | Tiempo promedio de recarga                          |
+| average_hit_factor            | Float   | Hit factor promedio                                 |
+| effectiveness                 | Float   | Efectividad general                                 |
+| trend_accuracy                | Float   | Tendencia de precisión                              |
+| last_10_sessions_avg          | Float   | Promedio de las últimas 10 sesiones                 |
+| precision_exercise_accuracy   | Float   | Precisión en ejercicios de precisión                |
+| reaction_exercise_accuracy    | Float   | Precisión en ejercicios de reacción                 |
+| movement_exercise_accuracy    | Float   | Precisión en ejercicios de movimiento               |
+| average_score                 | Float   | Puntuación promedio general                         |
+| best_score_session            | Integer | Mejor puntuación en una sesión                      |
+| best_shot_ever                | Integer | Mejor disparo registrado                            |
+| score_trend                   | Float   | Tendencia de puntuación                             |
+| precision_exercise_avg_score  | Float   | Promedio de puntuación en ejercicios de precisión   |
+| reaction_exercise_avg_score   | Float   | Promedio de puntuación en ejercicios de reacción    |
+| movement_exercise_avg_score   | Float   | Promedio de puntuación en ejercicios de movimiento  |
+| common_error_zones            | String  | Zonas comunes de error                              |
+| created_at                    | DateTime| Fecha de creación                                   |
+| updated_at                    | DateTime| Fecha de última actualización                       |
 
-- common_error_zones: String, zonas comunes de error
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
 
 
 
 
 ## SHOOTING_CLUBS
 Clubes de tiro registrados en el sistema.
-Campos:
-- id: UUID, identificador único (PK)
-- name: String, nombre único del club
-- description: String, descripción del club
-- chief_instructor_id: UUID, referencia a USERS (instructor jefe)
-- is_active: Boolean, indica si el club está activo
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
+| Campo               | Tipo    | Descripción                                 |
+|---------------------|---------|---------------------------------------------|
+| id                  | UUID    | Identificador único (PK)                    |
+| name                | String  | Nombre único del club                       |
+| description         | String  | Descripción del club                        |
+| chief_instructor_id | UUID    | Referencia a USERS (instructor jefe)        |
+| is_active           | Boolean | Indica si el club está activo               |
+| created_at          | DateTime| Fecha de creación                           |
+| updated_at          | DateTime| Fecha de última actualización               |
+
+
 
 
 
 ## INDIVIDUAL_PRACTICE_SESSIONS
 Sesiones individuales de práctica de tiro.
-Campos:
-- id: UUID, identificador único (PK)
-- shooter_id: UUID, referencia a SHOOTERS
-- instructor_id: UUID, referencia a USERS (puede ser nulo)
-- date: DateTime, fecha de la sesión
-- location: String, ubicación de la sesión
-- total_shots_fired: Integer, total de disparos realizados
-- total_hits: Integer, total de impactos
-- accuracy_percentage: Float, porcentaje de aciertos
-- evaluation_pending: Boolean, indica si la sesión está pendiente de evaluación
-- is_finished: Boolean, indica si la sesión está finalizada
 
-# Nuevos campos de puntuación
-- total_session_score: Integer, puntuación total de la sesión
-- average_score_per_exercise: Float, puntuación promedio por ejercicio
-- average_score_per_shot: Float, puntuación promedio por disparo
-- best_shot_score: Integer, mejor disparo de la sesión
+| Campo                      | Tipo     | Descripción                                                                 |
+|----------------------------|----------|-----------------------------------------------------------------------------|
+| id                         | UUID     | Identificador único (PK)                                                    |
+| shooter_id                 | UUID     | Referencia a SHOOTERS                                                       |
+| instructor_id              | UUID     | Referencia a USERS (puede ser nulo)                                         |
+| date                       | DateTime | Fecha de la sesión                                                          |
+| location                   | String   | Ubicación de la sesión                                                      |
+| total_shots_fired          | Integer  | Total de disparos realizados                                                |
+| total_hits                 | Integer  | Total de impactos                                                           |
+| accuracy_percentage        | Float    | Porcentaje de aciertos                                                      |
+| evaluation_pending         | Boolean  | Indica si la sesión está pendiente de evaluación                            |
+| is_finished                | Boolean  | Indica si la sesión está finalizada                                         |
+| total_session_score        | Integer  | Puntuación total de la sesión                                               |
+| average_score_per_exercise | Float    | Puntuación promedio por ejercicio                                           |
+| average_score_per_shot     | Float    | Puntuación promedio por disparo                                             |
+| best_shot_score            | Integer  | Mejor disparo de la sesión                                                  |
+| session_score_efficiency   | Float    | Eficiencia de puntuación (%) (calculada: total_session_score / (total_shots_fired * 10) * 100) |
+| created_at                 | DateTime | Fecha de creación                                                           |
+| updated_at                 | DateTime | Fecha de última actualización                                               |
 
-# Eficiencia
-- session_score_efficiency: Float, eficiencia de puntuación (%)
 
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
 
 
 
 ## PRACTICE_EXERCISES
 Ejercicios realizados dentro de una sesión de práctica.
-Campos:
-- id: UUID, identificador único (PK)
-- session_id: UUID, referencia a INDIVIDUAL_PRACTICE_SESSIONS
-- exercise_type_id: UUID, referencia a EXERCISE_TYPES
-- target_id: UUID, referencia a TARGETS
-- weapon_id: UUID, referencia a WEAPONS
-- ammunition_id: UUID, referencia a AMMUNITION
-- distance: String, distancia al blanco (en metros)
-- firing_cadence: String, cadencia de disparo
-- time_limit: String, límite de tiempo
-- ammunition_allocated: Integer, munición asignada
-- ammunition_used: Integer, munición utilizada
-- hits: Integer, impactos logrados
-- accuracy_percentage: Float, porcentaje de aciertos
-- reaction_time: Float, tiempo de reacción
 
-# Nuevos campos de puntuación
-- total_score: Float, puntuación total del ejercicio
-- average_score_per_shot: Float, puntuación promedio por disparo
-- max_score_achieved: Integer, mejor puntuación individual
-- score_distribution: String (JSON), distribución de puntuación por zonas
-- group_diameter: Float, diámetro del grupo de disparos (píxeles)
+| Campo                    | Tipo     | Descripción                                                                 |
+|--------------------------|----------|-----------------------------------------------------------------------------|
+| id                       | UUID     | Identificador único (PK)                                                    |
+| session_id               | UUID     | Referencia a INDIVIDUAL_PRACTICE_SESSIONS                                   |
+| exercise_type_id         | UUID     | Referencia a EXERCISE_TYPES                                                 |
+| target_id                | UUID     | Referencia a TARGETS                                                        |
+| weapon_id                | UUID     | Referencia a WEAPONS                                                        |
+| ammunition_id            | UUID     | Referencia a AMMUNITION                                                     |
+| distance                 | String   | Distancia al blanco (en metros)                                             |
+| firing_cadence           | String   | Cadencia de disparo (puede ser nulo)                                        |
+| time_limit               | String   | Límite de tiempo (puede ser nulo)                                           |
+| ammunition_allocated     | Integer  | Munición asignada                                                           |
+| ammunition_used          | Integer  | Munición utilizada                                                          |
+| hits                     | Integer  | Impactos logrados                                                           |
+| accuracy_percentage      | Float    | Porcentaje de aciertos                                                      |
+| reaction_time            | Float    | Tiempo de reacción (puede ser nulo)                                         |
+| total_score              | Float    | Puntuación total del ejercicio                                              |
+| average_score_per_shot   | Float    | Puntuación promedio por disparo                                             |
+| max_score_achieved       | Integer  | Mejor puntuación individual                                                 |
+| score_distribution       | String   | Distribución de puntuación por zonas (JSON, puede ser nulo)                 |
+| group_diameter           | Float    | Diámetro del grupo de disparos (píxeles, puede ser nulo)                    |
+| target_image_id          | UUID     | Referencia a TARGET_IMAGES (puede ser nulo)                                 |
+| created_at               | DateTime | Fecha de creación                                                           |
+| updated_at               | DateTime | Fecha de última actualización                                               |
+| score_efficiency_percentage | Float | Eficiencia de puntuación (%) (calculada: total_score / (ammunition_used * 10) * 100) |
 
-# Relaciones
-- target_image_id: UUID, referencia a TARGET_IMAGES
 
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
 
 
 
 ## PRACTICE_EVALUATIONS
 Evaluaciones realizadas sobre una sesión de práctica.
-Campos:
-- id: UUID, identificador único (PK)
-- session_id: UUID, referencia a INDIVIDUAL_PRACTICE_SESSIONS
-- evaluator_id: UUID, referencia a USERS
-- final_score: Float, calificación general
-- classification: Enum, clasificación del tirador (ver ShooterLevelEnum)
-- strengths: String, fortalezas observadas
-- weaknesses: String, debilidades observadas
-- recomendations: String, recomendaciones
-- posture_rating: Integer, calificación de postura (1-10)
-- grip_rating: Integer, calificación de agarre (1-10)
-- sight_alignment_rating: Integer, calificación de alineación de miras (1-10)
-- trigger_control_rating: Integer, calificación de control de disparador (1-10)
-- breathing_rating: Integer, calificación de respiración (1-10)
-- primary_issue_zone: String, zona principal de error
-- secondary_issue_zone: String, zona secundaria de error
-- avg_reaction_time: Float, tiempo promedio de reacción
-- avg_draw_time: Float, tiempo promedio de desenfunde
-- avg_reload_time: Float, tiempo promedio de recarga
-- hit_factor: Float, puntos/tiempo (métrica IPSC)
-- date: DateTime, fecha de la evaluación
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
+| Campo                   | Tipo     | Descripción                                         |
+|-------------------------|----------|-----------------------------------------------------|
+| id                      | UUID     | Identificador único (PK)                            |
+| session_id              | UUID     | Referencia a INDIVIDUAL_PRACTICE_SESSIONS           |
+| evaluator_id            | UUID     | Referencia a USERS (puede ser nulo)                 |
+| final_score             | Float    | Calificación general                                |
+| classification          | Enum     | Clasificación del tirador (ShooterLevelEnum)        |
+| strengths               | String   | Fortalezas observadas (puede ser nulo)              |
+| weaknesses              | String   | Debilidades observadas (puede ser nulo)             |
+| recomendations          | String   | Recomendaciones (puede ser nulo)                    |
+| overall_technique_rating| Float    | Calificación técnica global (puede ser nulo)        |
+| instructor_notes        | String   | Notas del instructor (puede ser nulo)               |
+| primary_issue_zone      | String   | Zona principal de error (puede ser nulo)            |
+| secondary_issue_zone    | String   | Zona secundaria de error (puede ser nulo)           |
+| avg_reaction_time       | Float    | Tiempo promedio de reacción (puede ser nulo)        |
+| avg_draw_time           | Float    | Tiempo promedio de desenfunde (puede ser nulo)      |
+| avg_reload_time         | Float    | Tiempo promedio de recarga (puede ser nulo)         |
+| hit_factor              | Float    | Puntos/tiempo (métrica IPSC, puede ser nulo)        |
+| date                    | DateTime | Fecha de la evaluación                              |
+| created_at              | DateTime | Fecha de creación                                   |
+| updated_at              | DateTime | Fecha de última actualización                       |
+
+
 
 
 
 ## EXERCISE_TYPES
 Tipos de ejercicios disponibles.
-Campos:
-- id: UUID, identificador único (PK)
-- name: String, nombre del tipo de ejercicio
-- description: String, descripción del ejercicio
-- difficulty: Integer, dificultad del ejercicio
-- objective: String, objetivo del ejercicio
-- development: String, desarrollo o instrucciones
-- is_active: Boolean, indica si el tipo de ejercicio está activo
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
+| Campo        | Tipo      | Descripción                           |
+|--------------|-----------|---------------------------------------|
+| id           | UUID      | Identificador único (PK)              |
+| name         | String    | Nombre del tipo de ejercicio          |
+| description  | String    | Descripción del ejercicio             |
+| difficulty   | Integer   | Dificultad del ejercicio              |
+| objective    | String    | Objetivo del ejercicio                |
+| development  | String    | Desarrollo o instrucciones            |
+| is_active    | Boolean   | Indica si el tipo de ejercicio está activo |
+| created_at   | DateTime  | Fecha de creación                     |
+| updated_at   | DateTime  | Fecha de última actualización         |
+
 
 
 
 ## WEAPONS
 Armas registradas en el sistema.
-Campos:
-- id: UUID, identificador único (PK)
-- name: String, nombre del arma
-- brand: String, marca del arma
-- model: String, modelo del arma
-- serial_number: String, número de serie (único)
-- weapon_type: Enum, tipo de arma (ver WeaponTypeEnum)
-- caliber: String, calibre
-- description: String, descripción adicional
-- is_active: Boolean, indica si el arma está activa
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
+| Campo         | Tipo    | Descripción                              |
+|---------------|---------|------------------------------------------|
+| id            | UUID    | Identificador único (PK)                 |
+| name          | String  | Nombre del arma                         |
+| brand         | String  | Marca del arma                          |
+| model         | String  | Modelo del arma                         |
+| serial_number | String  | Número de serie (único)                 |
+| weapon_type   | Enum    | Tipo de arma (ver WeaponTypeEnum)       |
+| caliber       | String  | Calibre                                 |
+| description   | String  | Descripción adicional                   |
+| is_active     | Boolean | Indica si el arma está activa           |
+| created_at    | DateTime| Fecha de creación                       |
+| updated_at    | DateTime| Fecha de última actualización           |
+
 
 
 
 ## AMMUNITION
 Municiones registradas en el sistema.
-Campos:
-- id: UUID, identificador único (PK)
-- name: String, nombre de la munición
-- brand: String, marca de la munición
-- caliber: String, calibre
-- ammo_type: Enum, tipo de munición (ver AmmoType)
-- grain_weight: Float, peso en granos
-- velocity: Float, velocidad en pies por segundo
-- description: String, descripción adicional
-- price_per_round: Float, precio por unidad
-- is_active: Boolean, indica si la munición está activa
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
+| Campo          | Tipo    | Descripción                              |
+|----------------|---------|------------------------------------------|
+| id             | UUID    | Identificador único (PK)                 |
+| name           | String  | Nombre de la munición                    |
+| brand          | String  | Marca de la munición                     |
+| caliber        | String  | Calibre                                  |
+| ammo_type      | Enum    | Tipo de munición (ver AmmoType)          |
+| grain_weight   | Float   | Peso en granos                           |
+| velocity       | Float   | Velocidad en pies por segundo            |
+| description    | String  | Descripción adicional                    |
+| price_per_round| Float   | Precio por unidad                        |
+| is_active      | Boolean | Indica si la munición está activa        |
+| created_at     | DateTime| Fecha de creación                        |
+| updated_at     | DateTime| Fecha de última actualización            |
+
 
 
 
 ## WEAPON_AMMUNITION_COMPATIBILITY
 Compatibilidad entre armas y municiones.
-Campos:
-- id: UUID, identificador único (PK)
-- weapon_id: UUID, referencia a WEAPONS
-- ammunition_id: UUID, referencia a AMMUNITION
-- created_at: DateTime, fecha de creación
+
+| Campo         | Tipo    | Descripción                        |
+|---------------|---------|------------------------------------|
+| id            | UUID    | Identificador único (PK)           |
+| weapon_id     | UUID    | Referencia a WEAPONS               |
+| ammunition_id | UUID    | Referencia a AMMUNITION            |
+| created_at    | DateTime| Fecha de creación                  |
+
 
 
 
 ## TARGETS
 Blancos utilizados en los ejercicios.
-Campos:
-- id: UUID, identificador único (PK)
-- name: String, nombre del blanco
-- target_type: Enum, tipo de blanco (ver TargetType)
-- description: String, descripción del blanco
-- scoring_zones: JSON, configuración de zonas de puntuación
-- dimensions: String, dimensiones físicas (ancho x alto)
-- distance_recommended: Float, distancia recomendada en metros
-- is_active: Boolean, indica si el blanco está activo
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
+| Campo                | Tipo    | Descripción                                 |
+|----------------------|---------|---------------------------------------------|
+| id                   | UUID    | Identificador único (PK)                    |
+| name                 | String  | Nombre del blanco                           |
+| target_type          | Enum    | Tipo de blanco (ver TargetType)             |
+| description          | String  | Descripción del blanco                      |
+| scoring_zones        | JSON    | Configuración de zonas de puntuación        |
+| dimensions           | String  | Dimensiones físicas (ancho x alto)          |
+| distance_recommended | Float   | Distancia recomendada en metros             |
+| is_active            | Boolean | Indica si el blanco está activo             |
+| created_at           | DateTime| Fecha de creación                           |
+| updated_at           | DateTime| Fecha de última actualización               |
+
 
 
 
 ## TARGET_IMAGES
 Imágenes de los blancos generadas durante los ejercicios.
-Campos:
-- id: UUID, identificador único (PK)
-- exercise_id: UUID, referencia a PRACTICE_EXERCISES
-- file_path: String, ruta del archivo de imagen
-- file_size: Integer, tamaño del archivo (bytes)
-- content_type: String, tipo de contenido (MIME)
-- uploaded_at: DateTime, fecha y hora de carga
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
 
+| Campo        | Tipo     | Descripción                                 |
+|--------------|----------|---------------------------------------------|
+| id           | UUID     | Identificador único (PK)                    |
+| exercise_id  | UUID     | Referencia a PRACTICE_EXERCISES             |
+| file_path    | String   | Ruta del archivo de imagen                  |
+| file_size    | Integer  | Tamaño del archivo (bytes)                  |
+| content_type | String   | Tipo de contenido (MIME)                    |
+| uploaded_at  | DateTime | Fecha y hora de carga                       |
+| created_at   | DateTime | Fecha de creación                           |
+| updated_at   | DateTime | Fecha de última actualización               |
 
 
 ## TARGET_ANALYSES
-Resultados de análisis realizados sobre imágenes de blancos.
-Campos:
-- id: UUID, identificador único (PK)
-- target_image_id: UUID, referencia a TARGET_IMAGES
-- analysis_timestamp: DateTime, fecha y hora del análisis
+Análisis realizados sobre imágenes de blancos detectados.
 
-# Estadísticas de impactos detectados
-- total_impacts_detected: Integer, impactos detectados
-- fresh_impacts_inside: Integer, impactos frescos dentro del blanco
-- fresh_impacts_outside: Integer, impactos frescos fuera del blanco
-- covered_impacts_inside: Integer, impactos tapados dentro del blanco
-- covered_impacts_outside: Integer, impactos tapados fuera del blanco
-
-# Métricas calculadas
-- accuracy_percentage: Float, porcentaje de precisión
-- average_confidence: Float, confianza promedio
-
-# Datos detallados
-- impact_coordinates: JSON, coordenadas de los impactos
-- zone_distribution: JSON, distribución de impactos por zona
-- confidence_stats: JSON, estadísticas de confianza
-
-# Metadata del análisis
-- analysis_method: String, método de análisis (ej: YOLO_v8)
-- model_version: String, versión del modelo
-- confidence_threshold: Float, umbral de confianza
-
-# Nuevos campos de puntuación
-- total_score: Integer, puntuación total
-- average_score_per_shot: Float, puntuación promedio por disparo
-- max_score_achieved: Integer, mejor puntuación individual
-- score_distribution: JSON, distribución de puntuación por zonas
-
-# Campos de agrupamiento
-- shooting_group_diameter: Float, diámetro del grupo de disparos
-- group_center_x: Float, centro del grupo X
-- group_center_y: Float, centro del grupo Y
-
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
-
+| Campo                      | Tipo     | Descripción                                                                 |
+|----------------------------|----------|-----------------------------------------------------------------------------|
+| id                         | UUID     | Identificador único (PK)                                                    |
+| target_image_id            | UUID     | Referencia a TARGET_IMAGES                                                  |
+| analysis_timestamp         | DateTime | Fecha y hora del análisis                                                   |
+| total_impacts_detected     | Integer  | Total de impactos detectados                                                |
+| fresh_impacts_inside       | Integer  | Impactos frescos dentro del blanco                                          |
+| fresh_impacts_outside      | Integer  | Impactos frescos fuera del blanco                                           |
+| covered_impacts_inside     | Integer  | Impactos cubiertos dentro del blanco                                        |
+| covered_impacts_outside    | Integer  | Impactos cubiertos fuera del blanco                                         |
+| accuracy_percentage        | Float    | Porcentaje de precisión (calculado)                                         |
+| average_confidence         | Float    | Confianza promedio de detección                                             |
+| impact_coordinates         | JSON     | Coordenadas de los impactos detectados                                      |
+| zone_distribution          | JSON     | Distribución de impactos por zona (opcional)                                |
+| confidence_stats           | JSON     | Estadísticas de confianza de los impactos                                   |
+| analysis_method            | String   | Método de análisis utilizado (ej: YOLO_v8)                                  |
+| model_version              | String   | Versión del modelo de análisis                                              |
+| confidence_threshold       | Float    | Umbral de confianza utilizado                                               |
+| total_score                | Integer  | Puntuación total obtenida                                                   |
+| average_score_per_shot     | Float    | Puntuación promedio por disparo                                             |
+| max_score_achieved         | Integer  | Mejor puntuación individual                                                 |
+| score_distribution         | JSON     | Distribución de puntuación por zonas (ej: {"10": 2})                      |
+| shooting_group_diameter    | Float    | Diámetro del grupo de disparos (opcional)                                   |
+| group_center_x             | Float    | Coordenada X del centro del grupo (opcional)                                |
+| group_center_y             | Float    | Coordenada Y del centro del grupo (opcional)                                |
+| created_at                 | DateTime | Fecha de creación                                                           |
+| updated_at                 | DateTime | Fecha de última actualización                                               |
+| score_efficiency_percentage| Float    | Eficiencia de puntuación (%) (calculada: total_score / (fresh_shots_count * 10) * 100) |
+| has_scoring_data           | Boolean  | Indica si el análisis tiene datos de puntuación (calculado)                 |
+| group_center               | JSON     | Centro del grupo como diccionario {"x": float, "y": float} (calculado)   |
 
 
 ## SHOOTING_RECOMMENDATIONS
 Recomendaciones generadas a partir de los análisis de tiro.
-Campos:
-- id: UUID, identificador único (PK)
-- analysis_id: UUID, referencia a TARGET_ANALYSES
-- primary_issue_zone: String, zona principal de error
-- primary_issue_zone_description: String, descripción de la zona principal de error
-- secondary_issue_zone: String, zona secundaria de error
-- secondary_issue_zone_description: String, descripción de la zona secundaria de error
-- recommended_exercises: JSON, ejercicios recomendados
-- recommendation_description: String, descripción de la recomendación
-- created_at: DateTime, fecha de creación
-- updated_at: DateTime, fecha de última actualización
+
+| Campo                         | Tipo    | Descripción                                 |
+|-------------------------------|---------|---------------------------------------------|
+| id                            | UUID    | Identificador único (PK)                    |
+| analysis_id                   | UUID    | Referencia a TARGET_ANALYSES                |
+| primary_issue_zone            | String  | Zona principal de error                     |
+| primary_issue_zone_description| String  | Descripción de la zona principal de error    |
+| secondary_issue_zone          | String  | Zona secundaria de error                    |
+| secondary_issue_zone_description | String| Descripción de la zona secundaria de error  |
+| recommended_exercises         | JSON    | Ejercicios recomendados                     |
+| recommendation_description    | String  | Descripción de la recomendación             |
+| created_at                    | DateTime| Fecha de creación                           |
+| updated_at                    | DateTime| Fecha de última actualización               |

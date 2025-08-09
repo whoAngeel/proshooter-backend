@@ -99,10 +99,6 @@ class UserService:
         """
         return UserRepository.promote_role(db, user_id, new_role)
 
-    # TODO: validar los requisitos para promover a un tirador
-
-    # Verificar si tiene registro como tirador
-
     @staticmethod
     def create_personal_data(
         db: Session, user_id: UUID, data_in: UserPersonalDataCreate

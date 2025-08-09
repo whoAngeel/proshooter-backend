@@ -356,10 +356,6 @@ class BulletDetector:
         }
 
 
-# NO crear instancia global en import
-# bullet_detector = BulletDetector()  # ← Comentado
-
-
 def get_bullet_detector() -> BulletDetector:
     """
     Función helper para obtener la instancia del detector.
