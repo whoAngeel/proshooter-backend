@@ -235,7 +235,7 @@ class UserPersonalDataRepository:
         if not personal_data_db:
             return None
         update_dict = data_in.model_dump(exclude_unset=True)
-        for key, value in update_dict.item():
+        for key, value in update_dict.items():
             setattr(personal_data_db, key, value)
 
         db.commit()
