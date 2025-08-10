@@ -1127,7 +1127,7 @@ class PDFReportGenerator:
             return f"data:image/png;base64,{image_data}"
 
         except Exception as e:
-            print(f"Error creando análisis de zonas de error: {e}")
+            logger.error(f"❌ Error creando análisis de zonas de error: {e}")
             return None
 
     def _add_image_analysis_section(

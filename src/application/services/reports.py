@@ -620,13 +620,17 @@ class ReportService:
     ) -> List[Dict[str, Any]]:
         """Obtener ejercicios que tienen imágenes con análisis"""
         exercises_with_images = []
-
+        total_exercises = 0
+        with_image = 0
+        with_analysis = 0
         for session in sessions:
             for exercise in session.get("exercises", []):
+                total_exercises += 1
                 if exercise.get("has_target_image"):
-                    # Obtener análisis de la imagen
+                    with_image += 1
                     image_analysis = self._get_exercise_image_analysis(exercise["id"])
                     if image_analysis:
+                        with_analysis += 1
                         exercise_data = {
                             **exercise,
                             "image_analysis": image_analysis,
@@ -634,6 +638,12 @@ class ReportService:
                             "session_location": session.get("location"),
                         }
                         exercises_with_images.append(exercise_data)
+        print(f"Total ejercicios: {total_exercises}")
+        print(f"Con imagen: {with_image}")
+        print(f"Con imagen y análisis: {with_analysis}")
+        print(
+            f"Ejercicios con imagen y análisis agregados: {len(exercises_with_images)}"
+        )
 
         return exercises_with_images
 
