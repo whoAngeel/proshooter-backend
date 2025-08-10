@@ -113,7 +113,7 @@ async def create_medical_data(
     return {"message": "Datos médicos creados", "data": medical_data}
 
 
-@router.patch("/medical-data")
+@router.patch("/medical-data/")
 def update_medical_data(
     data_in: UserMedicalDataUpdate,
     db: Session = Depends(get_db),
@@ -131,7 +131,7 @@ def update_medical_data(
 
 
 # * ------ BIO METRIC DATA ------
-@router.post("/biometric-data")
+@router.post("/biometric-data/")
 def add_biometric_data(
     data_in: UserBiometricDataCreate,
     db: Session = Depends(get_db),
@@ -148,7 +148,7 @@ def add_biometric_data(
     return {"message": "Datos biometricos creados", "data": biometric_data}
 
 
-@router.patch("/biometric-data")
+@router.patch("/biometric-data/")
 def update_biometric_data(
     data_in: UserBiometricDataUpdate,
     db: Session = Depends(get_db),
@@ -168,7 +168,7 @@ def update_biometric_data(
 # *------- SHOOTER DATA -------
 
 
-@router.patch("/shooter-nickname")
+@router.patch("/shooter-nickname/")
 def update_shooter_nickname(
     nickname: str = Body(..., embed=True, min_length=3, max_length=20),
     shooter_service: ShooterService = Depends(),
@@ -192,7 +192,7 @@ def update_shooter_nickname(
 from fastapi import File, UploadFile
 
 
-@router.patch("/shooter-license-file")
+@router.patch("/shooter-license-file/")
 async def update_shooter_license_file(
     file: UploadFile = File(...),
     shooter_service: ShooterService = Depends(),
