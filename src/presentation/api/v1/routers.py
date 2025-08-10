@@ -18,6 +18,7 @@ from .endpoints import instructor_router as instructor
 from .endpoints import target_images_router as target_images
 from .endpoints import instructor_dashboard_router as instructor_dashboard
 from .endpoints import reports
+from .endpoints import shooter_evaluation_viewing
 
 router = APIRouter()
 router.include_router(health.router)
@@ -38,3 +39,4 @@ router.include_router(instructor.router)
 router.include_router(target_images.router)
 router.include_router(instructor_dashboard.router)
 router.include_router(reports.router)
+router.include_router(shooter_evaluation_viewing.router)

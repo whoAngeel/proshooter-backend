@@ -61,6 +61,18 @@ class UserModel(Base):
         uselist=False,
     )
 
+    @property
+    def full_name(self):
+        if self.personal_data:
+            nombres = [self.personal_data.first_name]
+            if self.personal_data.second_name:
+                nombres.append(self.personal_data.second_name)
+            apellidos = [self.personal_data.last_name1]
+            if self.personal_data.last_name2:
+                apellidos.append(self.personal_data.last_name2)
+            return f"{' '.join(nombres)} {' '.join(apellidos)}"
+        return self.email
+
     def __repr__(self):
         return f"User(id={self.id}, email={self.email}, role={self.role}, is_active={self.is_active})"
 
