@@ -20,10 +20,17 @@ class ReportRequest(BaseModel):
     include_analysis: bool = True
 
 
+class AnalysisImage(BaseModel):
+    image_data: str
+    exercise_name: str
+    session_date: str
+    analysis: dict
+
+
 class ReportData(BaseModel):
     shooter_info: dict
     sessions: List[dict]
     statistics: dict
     evaluations: List[dict]
     exercises: List[dict]
-    analysis_images: List[str] = []
+    analysis_images: List[AnalysisImage] = []

@@ -88,6 +88,10 @@ class PDFReportGenerator:
             story.extend(self._add_exercises_section(report_data.exercises))
             story.append(Spacer(1, 20))
 
+        if report_data.analysis_images:
+            story.extend(self._add_image_analysis_section(report_data.analysis_images))
+            story.append(Spacer(1, 20))
+
         # Análisis de disparos con imágenes
         if report_data.include_analysis and report_data.analysis_images:
             story.extend(self._add_analysis_section(report_data.analysis_images))
@@ -119,6 +123,9 @@ class PDFReportGenerator:
 
         # Resumen estadístico
         story.extend(self._add_monthly_summary(report_data))
+        story.append(Spacer(1, 20))
+
+        story.extend(self._add_image_analysis_section(report_data.analysis_images))
         story.append(Spacer(1, 20))
 
         # Evolución del tirador
@@ -1122,3 +1129,99 @@ class PDFReportGenerator:
         except Exception as e:
             print(f"Error creando análisis de zonas de error: {e}")
             return None
+
+    def _add_image_analysis_section(
+        self, analysis_images: List[Any]  # Puede ser List[AnalysisImage]
+    ) -> List:
+        """Agregar sección de análisis de imágenes con impactos detectados"""
+        elements = []
+
+        if not analysis_images:
+            return elements
+
+        subtitle = Paragraph(
+            "ANÁLISIS DE IMÁGENES CON IMPACTOS DETECTADOS",
+            self.custom_styles["subtitle"],
+        )
+        elements.append(subtitle)
+
+        for img_data in analysis_images:
+            analysis = img_data.analysis
+
+            # Título del ejercicio
+            exercise_title = Paragraph(
+                f"EJERCICIO: {img_data.exercise_name} - {str(img_data.session_date)[:10]}",
+                self.custom_styles["normal_bold"],
+            )
+
+            elements.append(exercise_title)
+            elements.append(Spacer(1, 10))
+
+            # Tabla de datos del análisis
+            analysis_data = [
+                ["Total de Impactos:", str(analysis.get("total_impacts", 0))],
+                [
+                    "Impactos Frescos (Dentro):",
+                    str(analysis.get("fresh_impacts_inside", 0)),
+                ],
+                [
+                    "Impactos Frescos (Fuera):",
+                    str(analysis.get("fresh_impacts_outside", 0)),
+                ],
+                ["Precisión:", f"{analysis.get('accuracy_percentage', 0):.1f}%"],
+                ["Puntuación Total:", f"{analysis.get('total_score', 0)} pts"],
+                [
+                    "Puntuación Promedio/Disparo:",
+                    f"{analysis.get('average_score_per_shot', 0):.1f} pts",
+                ],
+                [
+                    "Diámetro de Agrupación:",
+                    (
+                        f"{analysis.get('group_diameter', 0):.1f}mm"
+                        if analysis.get("group_diameter")
+                        else "N/A"
+                    ),
+                ],
+            ]
+
+            analysis_table = Table(analysis_data, colWidths=[2.5 * inch, 2 * inch])
+            analysis_table.setStyle(
+                TableStyle(
+                    [
+                        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.blue),
+                    ]
+                )
+            )
+
+            elements.append(analysis_table)
+            elements.append(Spacer(1, 10))
+
+            # Imagen con impactos marcados
+            try:
+                image_data = img_data.image_data
+                if image_data:
+                    import base64
+                    from io import BytesIO
+                    from reportlab.lib.utils import ImageReader
+
+                    image_bytes = base64.b64decode(image_data)
+                    image_buffer = BytesIO(image_bytes)
+
+                    # Redimensionar para el PDF
+                    target_image = Image(image_buffer, width=4 * inch, height=3 * inch)
+                    elements.append(target_image)
+
+            except Exception as e:
+                logger.error(f"❌ Error agregando imagen al PDF: {e}")
+                error_text = Paragraph(
+                    "Error cargando imagen de análisis", self.styles["Normal"]
+                )
+                elements.append(error_text)
+
+            elements.append(Spacer(1, 20))
+
+        return elements

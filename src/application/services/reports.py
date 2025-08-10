@@ -1,6 +1,14 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
 import logging
+import io
+import requests
+import cv2
+import base64
+import numpy as np
+from PIL import Image as PILImage
+
+# from PIL import Image
 from fastapi import HTTPException, Depends
 from typing import List, Any, Tuple, Optional, Dict
 from reportlab.lib import colors
@@ -607,7 +615,188 @@ class ReportService:
 
         return True
 
+    def _get_exercises_with_images(
+        self, sessions: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Obtener ejercicios que tienen imágenes con análisis"""
+        exercises_with_images = []
+
+        for session in sessions:
+            for exercise in session.get("exercises", []):
+                if exercise.get("has_target_image"):
+                    # Obtener análisis de la imagen
+                    image_analysis = self._get_exercise_image_analysis(exercise["id"])
+                    if image_analysis:
+                        exercise_data = {
+                            **exercise,
+                            "image_analysis": image_analysis,
+                            "session_date": session.get("date"),
+                            "session_location": session.get("location"),
+                        }
+                        exercises_with_images.append(exercise_data)
+
+        return exercises_with_images
+
+    def _get_exercise_image_analysis(
+        self, exercise_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Obtener análisis de imagen de un ejercicio específico"""
+        from src.infraestructure.database.models.practice_exercise_model import (
+            PracticeExerciseModel,
+        )
+        from src.infraestructure.database.models.target_image_model import (
+            TargetImageModel,
+        )
+        from sqlalchemy.orm import joinedload
+
+        try:
+            exercise = (
+                self.db.query(PracticeExerciseModel)
+                .options(
+                    joinedload(PracticeExerciseModel.target_image).joinedload(
+                        TargetImageModel.analyses
+                    )
+                )
+                .filter(PracticeExerciseModel.id == exercise_id)
+                .first()
+            )
+
+            if not exercise or not exercise.target_image:
+                return None
+
+            image = exercise.target_image
+            if not image.analyses:
+                return None
+
+            analysis = image.analyses[0]  # Último análisis
+
+            return {
+                "analysis_id": str(analysis.id),
+                "total_impacts": analysis.total_impacts_detected,
+                "fresh_impacts_inside": analysis.fresh_impacts_inside,
+                "fresh_impacts_outside": analysis.fresh_impacts_outside,
+                "accuracy_percentage": analysis.accuracy_percentage,
+                "total_score": analysis.total_score,
+                "average_score_per_shot": analysis.average_score_per_shot,
+                "max_score_achieved": analysis.max_score_achieved,
+                "group_diameter": analysis.shooting_group_diameter,
+                "group_center": analysis.group_center,
+                "impact_coordinates": analysis.impact_coordinates,
+                "score_distribution": analysis.score_distribution,
+                "analysis_timestamp": analysis.analysis_timestamp.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            }
+
+        except Exception as e:
+            self.logger.error(f"❌ Error obteniendo análisis de imagen: {e}")
+            return None
+
+    def _get_exercise_image_with_impacts(
+        self, exercise_id: str, mode: str = "impacts"
+    ) -> Optional[str]:
+        """Generar imagen con impactos marcados y convertir a base64 para PDF"""
+        from src.infraestructure.database.models.practice_exercise_model import (
+            PracticeExerciseModel,
+        )
+        from src.infraestructure.database.models.target_image_model import (
+            TargetImageModel,
+        )
+        from sqlalchemy.orm import joinedload
+
+        try:
+            exercise = (
+                self.db.query(PracticeExerciseModel)
+                .options(
+                    joinedload(PracticeExerciseModel.target_image).joinedload(
+                        TargetImageModel.analyses
+                    )
+                )
+                .filter(PracticeExerciseModel.id == exercise_id)
+                .first()
+            )
+
+            if not exercise or not exercise.target_image:
+                return None
+
+            image = exercise.target_image
+            if not image.analyses or not image.analyses[0].impact_coordinates:
+                return None
+
+            analysis = image.analyses[0]
+
+            # Descargar imagen
+            if not image.file_path or not image.file_path.startswith("http"):
+                return None
+
+            response = requests.get(image.file_path)
+            if response.status_code != 200:
+                return None
+
+            # Procesar imagen
+            pil_image = PILImage.open(io.BytesIO(response.content)).convert("RGB")
+            image_np = np.array(pil_image)
+            h, w = image_np.shape[:2]
+
+            # Dibujar impactos
+            for impact in analysis.impact_coordinates:
+                x = int(impact.get("centro_x", 0))
+                y = int(impact.get("centro_y", 0))
+                es_fresco = impact.get("es_fresco", False)
+
+                # Color: verde para frescos, rojo para cubiertos
+                color = (0, 255, 0) if es_fresco else (255, 0, 0)
+                cv2.circle(image_np, (x, y), 15, color, thickness=3)
+
+                # Información del impacto
+                score = impact.get("scores", "-")
+                zone = impact.get("zone", "-")
+
+                info_text = f"Score: {score} | Zone: {zone}"
+                cv2.putText(
+                    image_np,
+                    info_text,
+                    (x + 20, y - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 255),
+                    1,
+                    cv2.LINE_AA,
+                )
+
+            # Convertir a base64
+            result_image = PILImage.fromarray(image_np)
+            buf = io.BytesIO()
+            result_image.save(buf, format="JPEG", quality=85)
+            buf.seek(0)
+
+            return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+        except Exception as e:
+            self.logger.error(f"❌ Error generando imagen con impactos: {e}")
+            return None
+
     def _generate_analysis_images(self, sessions: List[Dict[str, Any]]) -> List[str]:
-        """Generar imágenes de análisis"""
-        # Por ahora retornamos lista vacía, se puede expandir después
-        return []
+        """Generar imágenes de análisis basadas en las sesiones"""
+        images = []
+
+        try:
+            # Obtener ejercicios con imágenes
+            exercises_with_images = self._get_exercises_with_images(sessions)
+
+            for exercise in exercises_with_images[:5]:  # Máximo 5 imágenes por reporte
+                image_base64 = self._get_exercise_image_with_impacts(exercise["id"])
+                if image_base64:
+                    images.append(
+                        {
+                            "image_data": image_base64,
+                            "exercise_name": exercise.get("exercise_type", "Ejercicio"),
+                            "session_date": exercise.get("session_date"),
+                            "analysis": exercise.get("image_analysis", {}),
+                        }
+                    )
+
+        except Exception as e:
+            self.logger.error(f"❌ Error generando imágenes de análisis: {e}")
+
+        return images
