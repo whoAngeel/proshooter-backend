@@ -9,13 +9,20 @@ RUN apt-get update && apt-get install -y \
     gcc \
     libgl1-mesa-glx \
     libglib2.0-0 \
+    python3-dev \
+    build-essential \
+    libfreetype6-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 # Copiar archivos de dependencias
 COPY requirements.txt .
 
 # Instalar dependencias de Python
+RUN pip install --no-cache-dir wheel
+RUN pip install --no-cache-dir numpy
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install alembic
+
 
 # Copiar el código de la aplicación
 COPY . .
