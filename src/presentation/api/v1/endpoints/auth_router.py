@@ -85,7 +85,7 @@ from src.presentation.schemas.password_reset_schemas import *
 from src.application.services.reset_password_service import PasswordResetServcie
 
 
-@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+@router.post("/forgot-password/", response_model=ForgotPasswordResponse)
 async def forgotPassword(
     request: ForgotPasswordRequest,
     password_reset_service: PasswordResetServcie = Depends(),
@@ -102,7 +102,7 @@ async def forgotPassword(
         )
 
 
-@router.post("/reset-password", response_model=ResetPasswordResponse)
+@router.post("/reset-password/", response_model=ResetPasswordResponse)
 async def reset_password(
     request: ResetPasswordRequest,
     service: PasswordResetServcie = Depends(),
