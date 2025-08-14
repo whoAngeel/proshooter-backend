@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     gcc \
-    # libgl1 \
+    libgl1 \
     libglib2.0-0 \
     python3-dev \
     build-essential \
