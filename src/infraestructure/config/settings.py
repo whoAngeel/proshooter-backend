@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list = ["*"]
 
+    # Resend email config
+    RESEND_API_KEY: str
+    RESEND_SENDER_EMAIL: str = "Pro Shooter API <noreply>@proshooter.site"
+
+    # Password Reset Configuration
+    RESET_TOKEN_EXPIRE_MINUTES: int = 15
+    FRONTEND_URL: str = "https://www.proshooter.site/"
+
     # Entorno
     ENV: str = "development"
     DEBUG: bool = True

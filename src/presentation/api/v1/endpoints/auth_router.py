@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-
+import logging
 
 from src.presentation.schemas.auth_schema import (
     LoginRequest,
@@ -11,6 +11,7 @@ from src.application.services.auth_service import AuthService
 from src.infraestructure.auth.jwt_config import get_current_user
 from src.presentation.schemas.user_schemas import UserRead
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 
@@ -78,3 +79,49 @@ async def register_user(
 ):
     response = auth_service.register(register_data)
     return LoginResponse(**response)
+
+
+from src.presentation.schemas.password_reset_schemas import *
+from src.application.services.reset_password_service import PasswordResetServcie
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+async def forgotPassword(
+    request: ForgotPasswordRequest,
+    password_reset_service: PasswordResetServcie = Depends(),
+):
+    try:
+        result = await password_reset_service.request_password_reset(request.email)
+        return ForgotPasswordResponse(
+            message=result["message"], success=result["success"]
+        )
+    except Exception as e:
+        logger.error(f"Error al procesar la solicitud: {e}")
+        return ForgotPasswordResponse(
+            message="Error al procesar la solicitud", success=False
+        )
+
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+async def reset_password(
+    request: ResetPasswordRequest,
+    service: PasswordResetServcie = Depends(),
+):
+    try:
+        result = await service.reset_password(request.token, request.new_password)
+
+        if not result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["message"],
+            )
+        return ResetPasswordResponse(
+            message=result["message"], success=result["success"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al procesar la solicitud: {e}")
+        return ResetPasswordResponse(
+            message="Error al procesar la solicitud", success=False
+        )

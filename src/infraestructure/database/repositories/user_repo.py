@@ -153,6 +153,16 @@ class UserRepository:
             return None, "DATABASE_ERROR"
 
     @staticmethod
+    def update_user_password(self, user_id: UUID, new_password_hash: str) -> UserModel:
+        stmt = select(UserModel).where(UserModel.id == user_id)
+        user = self.db.execute(stmt).scalar_one_or_none()
+
+        if user:
+            user.password = new_password_hash
+            self.db.commit()
+            self.db.refresh(user)
+
+    @staticmethod
     def search_by_combined_criteria(
         db: Session, filter_params: dict, skip: int = 0, limit: int = 100
     ) -> list:

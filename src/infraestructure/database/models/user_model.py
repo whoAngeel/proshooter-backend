@@ -60,6 +60,9 @@ class UserModel(Base):
         back_populates="chief_instructor",
         uselist=False,
     )
+    password_reset_tokens = relationship(
+        "PasswordResetTokenModel", back_populates="user"
+    )
 
     @property
     def full_name(self):
@@ -78,6 +81,9 @@ class UserModel(Base):
 
 
 from src.infraestructure.database.models.shooter_model import ShooterModel
+from src.infraestructure.database.models.password_reset_model import (
+    PasswordResetTokenModel,
+)
 
 
 class UserPersonalDataModel(Base):
