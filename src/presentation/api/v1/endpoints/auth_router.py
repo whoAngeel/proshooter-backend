@@ -82,13 +82,13 @@ async def register_user(
 
 
 from src.presentation.schemas.password_reset_schemas import *
-from src.application.services.reset_password_service import PasswordResetServcie
+from src.application.services.reset_password_service import PasswordResetService
 
 
 @router.post("/forgot-password/", response_model=ForgotPasswordResponse)
 async def forgotPassword(
     request: ForgotPasswordRequest,
-    password_reset_service: PasswordResetServcie = Depends(),
+    password_reset_service: PasswordResetService = Depends(),
 ):
     try:
         result = await password_reset_service.request_password_reset(request.email)
@@ -105,7 +105,7 @@ async def forgotPassword(
 @router.post("/reset-password/", response_model=ResetPasswordResponse)
 async def reset_password(
     request: ResetPasswordRequest,
-    service: PasswordResetServcie = Depends(),
+    service: PasswordResetService = Depends(),
 ):
     try:
         result = await service.reset_password(request.token, request.new_password)

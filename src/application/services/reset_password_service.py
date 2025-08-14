@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class PasswordResetServcie:
+class PasswordResetService:
 
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
@@ -37,7 +37,7 @@ class PasswordResetServcie:
     async def request_password_reset(self, email: str) -> dict:
         """Solicitar recuperacion de contrasena"""
         try:
-            user = self.user_repo.get_by_email(email)
+            user = self.user_repo.get_by_email(self.db, email)
             if not user:
                 return {
                     "success": True,
@@ -47,7 +47,9 @@ class PasswordResetServcie:
 
             # generar nuevo token
             token, hash_token = self._generate_reset_token()
-            expires_at = datetime.now() + timedelta(minutes=self.token_expiry_minutes)
+            expires_at = datetime.utcnow() + timedelta(
+                minutes=self.token_expiry_minutes
+            )
 
             # guardar token en bd
             self.reset_repo.create_reset_token(
@@ -73,7 +75,7 @@ class PasswordResetServcie:
                 "message": "Si el email existe en nuestro sistema, recibirás un enlace de recuperación.",
             }
         except Exception as e:
-            logger.info(
+            logger.error(
                 f"❌ Error al procesar la solicitud de recuperación de contraseña: {e}"
             )
             return {
@@ -94,13 +96,13 @@ class PasswordResetServcie:
                 }
 
             # Buscar el usuario
-            user = self.user_repo.get_by_id(reset_token.user_id)
+            user = self.user_repo.get_by_id(self.db, reset_token.user_id)
             if not user:
                 return {"success": False, "message": "Usuario no encontrado."}
 
             # Actualizar la contraseña
             hashed_password = hash_password(new_password)
-            self.user_repo.update_user_password(user.id, hashed_password)
+            self.user_repo.update_user_password(self.db, user.id, hashed_password)
 
             self.reset_repo.mark_token_as_used(reset_token.id)
 
@@ -110,7 +112,7 @@ class PasswordResetServcie:
 
             return {"success": True, "message": "Contraseña restablecida con éxito."}
         except Exception as e:
-            logger.info(
+            logger.error(
                 f"❌ Error al procesar la solicitud de restablecimiento de contraseña: {e}"
             )
             return {
