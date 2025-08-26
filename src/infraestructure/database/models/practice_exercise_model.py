@@ -1,4 +1,4 @@
-from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, Float, String
+from sqlalchemy import Column, UUID, DateTime, func, ForeignKey, Integer, Float, String, JSON
 from sqlalchemy.orm import relationship
 from src.infraestructure.database.session import Base
 from uuid import uuid4
@@ -35,7 +35,7 @@ class PracticeExerciseModel(Base):
     total_score = Column(Float, default=0.0, nullable=False)
     average_score_per_shot = Column(Float, default=0.0, nullable=False)
     max_score_achieved = Column(Integer, default=0, nullable=False)
-    score_distribution = Column(String, nullable=True)
+    score_distribution = Column(JSON, nullable=True)
     group_diameter = Column(Float, nullable=True)  # diametro del grupo de pixeles
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
