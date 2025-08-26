@@ -129,7 +129,18 @@ class PracticeExerciseRead(PracticeExerciseBase):
     group_diameter: Optional[float] = None
 
     model_config = {"from_attributes": True}
-
+    
+    @field_validator('score_distribution', mode='before')
+    @classmethod
+    def parse_score_distribution(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return None
+        return v
 
 class TargetAnalysisRead(BaseModel):
     id: UUID
