@@ -151,23 +151,23 @@ class PracticeExerciseService:
     def get_session_exercises(
         self, session_id: UUID
     ) -> Tuple[Optional[List[PracticeExerciseRead]], Optional[str]]:
-    session = IndividualPracticeSessionRepository.get_by_id(self.db, session_id)
-    if not session:
-        return None, "PRACTICE_SESSION_NOT_FOUND"
+        session = IndividualPracticeSessionRepository.get_by_id(self.db, session_id)
+        if not session:
+            return None, "PRACTICE_SESSION_NOT_FOUND"
 
-    exercises = PracticeExerciseRepository.get_by_session(self.db, session_id)
-    
-    # Procesar score_distribution antes de validar
-    processed_exercises = []
-    for ex in exercises:
-        if hasattr(ex, 'score_distribution') and isinstance(ex.score_distribution, str):
-            try:
-                ex.score_distribution = json.loads(ex.score_distribution)
-            except json.JSONDecodeError:
-                ex.score_distribution = None
-        processed_exercises.append(ex)
+        exercises = PracticeExerciseRepository.get_by_session(self.db, session_id)
+        
+        # Procesar score_distribution antes de validar
+        processed_exercises = []
+        for ex in exercises:
+            if hasattr(ex, 'score_distribution') and isinstance(ex.score_distribution, str):
+                try:
+                    ex.score_distribution = json.loads(ex.score_distribution)
+                except json.JSONDecodeError:
+                    ex.score_distribution = None
+            processed_exercises.append(ex)
 
-    return [PracticeExerciseRead.model_validate(ex) for ex in processed_exercises], None
+        return [PracticeExerciseRead.model_validate(ex) for ex in processed_exercises], None
 
     def udpate_exercise(
         self, exercise_id: UUID, exercise_data: PracticeExerciseUpdate
