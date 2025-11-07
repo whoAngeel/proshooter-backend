@@ -294,8 +294,8 @@ class PracticeExerciseService:
                 max_size_mb=5,  # 5 MB
             )
             
-            print("Intentando subir imagen")
-            print("File Url", file_url)
+            logger.info("Intentando subir imagen")
+            logger.info("File Url", file_url)
             image_dict = {
                 "file_path": file_url,
                 "file_size": file.size,
