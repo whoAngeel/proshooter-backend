@@ -283,6 +283,8 @@ class PracticeExerciseService:
                 return None, "EXERCISE_ALREADY_HAS_IMAGE"
 
             folder = f"target_images/{user_id}"
+            
+            
             file_url = upload_file_to_s3(
                 file,
                 file_name_prefix="exercise_image",
@@ -291,6 +293,9 @@ class PracticeExerciseService:
                 allowed_types=["image/png", "image/jpeg"],
                 max_size_mb=5,  # 5 MB
             )
+            
+            print("Intentando subir imagen")
+            print("File Url", file_url)
             image_dict = {
                 "file_path": file_url,
                 "file_size": file.size,
