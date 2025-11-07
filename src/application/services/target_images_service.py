@@ -50,7 +50,7 @@ class TargetImagesService:
 
             file_url = upload_file_to_s3(
                 file,
-                bucket_name="proshooter",
+                bucket_name="proshooterdata",
                 folder=folder,
                 allowed_types=["image/png", "image/jpeg"],
             )

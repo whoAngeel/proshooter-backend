@@ -272,7 +272,7 @@ class PracticeExerciseService:
 
                     try:
                         delete_file_from_s3(
-                            old_image.file_path, bucket_name="proshooter"
+                            old_image.file_path, bucket_name="proshooterdata"
                         )
                     except Exception as e:
                         print(f"Error eliminando imagen anterior de S3: {str(e)}")
@@ -286,7 +286,7 @@ class PracticeExerciseService:
             file_url = upload_file_to_s3(
                 file,
                 file_name_prefix="exercise_image",
-                bucket_name="proshooter",
+                bucket_name="proshooterdata",
                 folder=folder,
                 allowed_types=["image/png", "image/jpeg"],
                 max_size_mb=5,  # 5 MB
