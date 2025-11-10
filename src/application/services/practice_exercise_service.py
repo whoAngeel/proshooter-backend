@@ -1,52 +1,52 @@
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from typing import List, Optional, Tuple, Dict, Any
-from uuid import UUID
-from datetime import datetime
-import math
-from fastapi import UploadFile
-import json
 import io
-import requests
+import json
 import logging
+import math
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+from uuid import UUID
+
 import cv2
 import numpy as np
+import requests
+from fastapi import Depends, UploadFile
 from PIL import Image
+from sqlalchemy.orm import Session
 
+from src.infraestructure.database.repositories.ammunition_repo import (
+    AmmunitionRepository,
+)
+from src.infraestructure.database.repositories.exercise_type_repo import (
+    ExerciseTypeRepository,
+)
 from src.infraestructure.database.repositories.practice_exercise_repo import (
     PracticeExerciseRepository,
 )
 from src.infraestructure.database.repositories.practice_session_repo import (
     PracticeSessionRepository as IndividualPracticeSessionRepository,
 )
-from src.infraestructure.database.repositories.exercise_type_repo import (
-    ExerciseTypeRepository,
-)
-from src.infraestructure.database.repositories.target_repo import TargetRepository
-from src.infraestructure.database.repositories.weapon_repo import WeaponRepository
-from src.infraestructure.database.repositories.ammunition_repo import (
-    AmmunitionRepository,
-)
 from src.infraestructure.database.repositories.shooter_repo import ShooterRepository
 from src.infraestructure.database.repositories.target_images_repo import (
     TargetImagesRepository,
 )
+from src.infraestructure.database.repositories.target_repo import TargetRepository
+from src.infraestructure.database.repositories.weapon_repo import WeaponRepository
 from src.infraestructure.database.session import get_db
+from src.infraestructure.utils.s3_utils import upload_file_to_s3
 from src.presentation.schemas.practice_exercise_schema import (
-    PracticeExerciseCreate,
-    PracticeExerciseRead,
-    PracticeExerciseDetail,
-    PracticeExerciseUpdate,
-    PracticeExerciseList,
-    PracticeExerciseStatistics,
-    PracticeExerciseFilter,
     PerformanceAnalysis,
+    PracticeExerciseCreate,
+    PracticeExerciseDetail,
+    PracticeExerciseFilter,
+    PracticeExerciseList,
+    PracticeExerciseRead,
+    PracticeExerciseStatistics,
+    PracticeExerciseUpdate,
 )
 from src.presentation.schemas.target_images_schema import (
     TargetImageUpdate,
     TargetImageUploadResponse,
 )
-from src.infraestructure.utils.s3_utils import upload_file_to_s3
 
 logger = logging.getLogger(__name__)
 
@@ -156,18 +156,22 @@ class PracticeExerciseService:
             return None, "PRACTICE_SESSION_NOT_FOUND"
 
         exercises = PracticeExerciseRepository.get_by_session(self.db, session_id)
-        
+
         # Procesar score_distribution antes de validar
         processed_exercises = []
         for ex in exercises:
-            if hasattr(ex, 'score_distribution') and isinstance(ex.score_distribution, str):
+            if hasattr(ex, "score_distribution") and isinstance(
+                ex.score_distribution, str
+            ):
                 try:
                     ex.score_distribution = json.loads(ex.score_distribution)
                 except json.JSONDecodeError:
                     ex.score_distribution = None
             processed_exercises.append(ex)
 
-        return [PracticeExerciseRead.model_validate(ex) for ex in processed_exercises], None
+        return [
+            PracticeExerciseRead.model_validate(ex) for ex in processed_exercises
+        ], None
 
     def udpate_exercise(
         self, exercise_id: UUID, exercise_data: PracticeExerciseUpdate
@@ -283,8 +287,7 @@ class PracticeExerciseService:
                 return None, "EXERCISE_ALREADY_HAS_IMAGE"
 
             folder = f"target_images/{user_id}"
-            
-            
+
             file_url = upload_file_to_s3(
                 file,
                 file_name_prefix="exercise_image",
@@ -293,9 +296,10 @@ class PracticeExerciseService:
                 allowed_types=["image/png", "image/jpeg"],
                 max_size_mb=5,  # 5 MB
             )
-            
+
             logger.info("Intentando subir imagen")
-            logger.info("File Url", file_url)
+            # Use logger formatting with placeholders to avoid TypeError when args are provided
+            logger.info("File Url: %s", file_url)
             image_dict = {
                 "file_path": file_url,
                 "file_size": file.size,
