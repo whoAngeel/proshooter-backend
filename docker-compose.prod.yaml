@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -34,6 +34,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DATABASE_URL: ${DATABASE_URL}
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       RESEND_API_KEY: ${RESEND_API_KEY}
       RESEND_SENDER_EMAIL: ${RESEND_SENDER_EMAIL}
