@@ -1,5 +1,5 @@
-from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
 
 load_dotenv()
 
@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # AWS S3
     AWS_ACCESS_KEY: str
     AWS_SECRET_ACCESS_KEY: str
-    AWS_REGION: str = "us-east-1"
+    AWS_REGION: str = "us-east-2"
 
     # Servidor
     HOST: str = "0.0.0.0"
