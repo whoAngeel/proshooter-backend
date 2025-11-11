@@ -74,28 +74,98 @@ def upload_file_to_s3(
     logger.info("=" * 50)
     # ========== END DEBUG ==========
 
-    s3 = boto3.client(
-        "s3",
-        aws_access_key_id=settings.AWS_ACCESS_KEY,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=settings.AWS_REGION,
-    )
+    # Crear cliente S3 con configuración explícita
+    # En producción, es importante especificar la región correcta
+    try:
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_REGION,
+        )
+        # Verificar que el cliente se creó correctamente
+        logger.info("✅ S3 client created successfully")
+    except Exception as e:
+        logger.error("❌ Error creating S3 client: %s", str(e))
+        raise HTTPException(
+            status_code=500, detail=f"Error al crear cliente S3: {str(e)}"
+        )
 
     file_extension = file.filename.rsplit(".", 1)[-1].lower()
     base_filename = file_name_prefix
     fecha = datetime.now().strftime("%Y%m%d")
     key = f"{folder}/{base_filename}_{fecha}.{file_extension}"
 
+    # Mapear extensiones a ContentType
+    content_type_map = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "pdf": "application/pdf",
+    }
+    
+    # Determinar ContentType: usar el del archivo si está disponible, sino mapear por extensión
+    content_type = file.content_type
+    if not content_type or content_type == "application/octet-stream":
+        content_type = content_type_map.get(file_extension, "application/octet-stream")
+    
     logger.info("Uploading to S3 - Key: %s", key)
+    logger.info("Content Type: %s", content_type)
+    logger.info("Environment: %s", settings.ENV)
 
     try:
-        s3.upload_fileobj(file.file, bucket_name, key)
-        logger.info("✅ File uploaded successfully: %s", key)
+        # Leer el contenido del archivo en memoria
+        file.file.seek(0)
+        file_content = file.file.read()
+        file.file.seek(0)  # Resetear para posibles reintentos
+        
+        # Especificar ContentType explícitamente usando ExtraArgs
+        # Esto es importante para buckets con políticas estrictas o ACLs deshabilitadas
+        extra_args = {
+            "ContentType": content_type,
+        }
+        
+        # Intentar primero con upload_fileobj
+        try:
+            s3.upload_fileobj(
+                file.file, 
+                bucket_name, 
+                key,
+                ExtraArgs=extra_args
+            )
+            logger.info("✅ File uploaded successfully using upload_fileobj: %s", key)
+        except Exception as upload_error:
+            # Si upload_fileobj falla, intentar con put_object como alternativa
+            logger.warning("⚠️ upload_fileobj failed, trying put_object: %s", str(upload_error))
+            try:
+                s3.put_object(
+                    Bucket=bucket_name,
+                    Key=key,
+                    Body=file_content,
+                    ContentType=content_type,
+                )
+                logger.info("✅ File uploaded successfully using put_object: %s", key)
+            except Exception as put_error:
+                # Si ambos fallan, lanzar el error original de upload_fileobj
+                logger.error("❌ Both upload methods failed")
+                raise upload_error
+        
     except Exception as e:
         logger.error("❌ S3 Upload Error: %s", str(e))
         logger.error("❌ Error Type: %s", type(e).__name__)
+        logger.error("❌ Bucket: %s", bucket_name)
+        logger.error("❌ Key: %s", key)
+        logger.error("❌ Region: %s", settings.AWS_REGION)
+        logger.error("❌ ENV: %s", settings.ENV)
+        logger.error("❌ Content Type: %s", content_type)
+        
+        # Proporcionar más información en el error
+        error_detail = f"Error al subir el archivo a S3: {str(e)}"
+        if "AccessDenied" in str(e):
+            error_detail += " | Verifica: 1) Permisos IAM (s3:PutObject), 2) Políticas del bucket, 3) ACLs del bucket, 4) Variables de entorno AWS_ACCESS_KEY y AWS_SECRET_ACCESS_KEY en el contenedor"
+        
         raise HTTPException(
-            status_code=500, detail=f"Error al subir el archivo a S3: {str(e)}"
+            status_code=500, detail=error_detail
         )
 
     url = f"https://{bucket_name}.s3.amazonaws.com/{key}"
