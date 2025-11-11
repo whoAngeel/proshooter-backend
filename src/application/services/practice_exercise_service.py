@@ -261,6 +261,15 @@ class PracticeExerciseService:
     def upload_exercise_image(
         self, exercise_id: UUID, file: UploadFile, user_id: UUID, replace: bool = False
     ) -> Tuple[Optional[TargetImageUploadResponse], Optional[str]]:
+        logger.info(
+            "Uploading exercise image | exercise_id=%s user_id=%s replace=%s filename=%s content_type=%s",
+            str(exercise_id),
+            str(user_id),
+            replace,
+            getattr(file, "filename", None),
+            getattr(file, "content_type", None),
+        )
+
         exercise = PracticeExerciseRepository.get_by_id(self.db, exercise_id)
         if not exercise:
             return None, "EXERCISE_NOT_FOUND"
@@ -271,6 +280,11 @@ class PracticeExerciseService:
                     self.db, exercise.target_image_id
                 )
                 if old_image:
+                    logger.info(
+                        "Replacing existing image | old_image_id=%s old_image_path=%s",
+                        str(old_image.id),
+                        old_image.file_path,
+                    )
                     # Eliminar de S3
                     from src.infraestructure.utils.s3_utils import delete_file_from_s3
 
@@ -278,6 +292,7 @@ class PracticeExerciseService:
                         delete_file_from_s3(
                             old_image.file_path, bucket_name="proshooterdata"
                         )
+                        logger.info("✅ Previous image deleted from S3 and DB")
                     except Exception as e:
                         print(f"Error eliminando imagen anterior de S3: {str(e)}")
                     # Eliminar de la base de datos
@@ -288,6 +303,7 @@ class PracticeExerciseService:
 
             folder = f"target_images/{user_id}"
 
+            logger.info("Preparing S3 upload | bucket=%s folder=%s", "proshooterdata", folder)
             file_url = upload_file_to_s3(
                 file,
                 file_name_prefix="exercise_image",
