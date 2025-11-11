@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status, Response
+import logging
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
@@ -27,6 +28,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+logger = logging.getLogger(__name__)
 
 @router.post(
     "/", response_model=PracticeExerciseRead, status_code=status.HTTP_201_CREATED
@@ -449,11 +451,37 @@ async def upload_exercise_image(
         400: Error en el archivo o procesamiento
         404: Ejercicio no encontrado
     """
+    # Logs de entrada para depuración
+    try:
+        img_name = getattr(image, "filename", None)
+        img_ct = getattr(image, "content_type", None)
+        img_size = getattr(image, "size", None)
+        logger.info(
+            "[upload_exercise_image] incoming | exercise_id=%s replace=%s filename=%s content_type=%s size=%s",
+            str(exercise_id),
+            replace,
+            img_name,
+            img_ct,
+            img_size,
+        )
+        print(
+            f"[upload_exercise_image] incoming exercise_id={exercise_id} replace={replace} filename={img_name} content_type={img_ct}"
+        )
+    except Exception:
+        logger.warning("[upload_exercise_image] could not log request metadata")
+
     user_id = current_user.id
 
-    result, error = service.upload_exercise_image(
-        exercise_id, image, user_id, replace=replace
-    )
+    try:
+        result, error = service.upload_exercise_image(
+            exercise_id, image, user_id, replace=replace
+        )
+    except Exception as e:
+        logger.exception("Unhandled exception in service.upload_exercise_image")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"UNHANDLED_EXCEPTION: {str(e)}",
+        )
 
     if error:
         if error == "EXERCISE_NOT_FOUND":
@@ -465,6 +493,8 @@ async def upload_exercise_image(
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
 
+    logger.info("[upload_exercise_image] success | exercise_id=%s image_id=%s", str(exercise_id), getattr(result, "image_id", None))
+    print(f"[upload_exercise_image] success exercise_id={exercise_id} image_id={getattr(result, 'image_id', None)}")
     return result
 
 
