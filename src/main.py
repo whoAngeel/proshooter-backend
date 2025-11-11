@@ -7,17 +7,39 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.infraestructure.config.settings import settings
 from src.presentation.api.v1.routers import router as router_v1
 
-logging.basicConfig(
-    level=settings.LOG_LEVEL,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(
-            sys.stdout
-        ),  # Asegurar que sale a stdout (Docker lo captura)
-    ],
-)
-
-logger = logging.getLogger(__name__)
+LOG_LEVEL = settings.LOG_LEVEL if hasattr(settings, "LOG_LEVEL") else "INFO"
+logging_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
+    },
+    "handlers": {
+        "stdout": {
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+            "formatter": "default",
+        }
+    },
+    "root": {
+        "handlers": ["stdout"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "uvicorn": {"handlers": ["stdout"], "level": LOG_LEVEL, "propagate": False},
+        "uvicorn.error": {
+            "handlers": ["stdout"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "uvicorn.access": {
+            "handlers": ["stdout"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
+logging.config.dictConfig(logging_config)
 
 # logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 app = FastAPI(
