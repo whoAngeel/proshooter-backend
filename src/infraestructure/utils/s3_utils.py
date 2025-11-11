@@ -5,6 +5,7 @@ from typing import List, Optional
 from uuid import uuid4
 
 import boto3
+from botocore.exceptions import ClientError
 from fastapi import HTTPException, UploadFile
 
 from src.infraestructure.config.settings import settings
@@ -63,13 +64,25 @@ def upload_file_to_s3(
     access_key = settings.AWS_ACCESS_KEY or "NOT SET"
     secret_key = settings.AWS_SECRET_ACCESS_KEY or "NOT SET"
     logger.info(
-        "AWS_ACCESS_KEY: %s***", access_key[:10] if len(access_key) > 10 else "SHORT"
+        "AWS_ACCESS_KEY (settings): %s***",
+        access_key[:10] if len(access_key) > 10 else (access_key if access_key != "NOT SET" else "NOT SET"),
     )
-    logger.info("AWS_REGION: %s", settings.AWS_REGION)
+    logger.info("AWS_REGION (settings): %s", settings.AWS_REGION)
 
-    # Verifica si las credenciales están configuradas
+    # Visibilidad de variables de entorno estándar (no imprimimos secretos completos)
+    env_ak = os.getenv("AWS_ACCESS_KEY_ID")
+    env_sk = os.getenv("AWS_SECRET_ACCESS_KEY")
+    env_st = os.getenv("AWS_SESSION_TOKEN")
+    logger.info(
+        "Env AWS vars present -> AWS_ACCESS_KEY_ID: %s, AWS_SECRET_ACCESS_KEY: %s, AWS_SESSION_TOKEN: %s",
+        "YES" if env_ak else "NO",
+        "YES" if env_sk else "NO",
+        "YES" if env_st else "NO",
+    )
+
+    # Verifica si las credenciales están configuradas en settings
     if not settings.AWS_ACCESS_KEY or not settings.AWS_SECRET_ACCESS_KEY:
-        logger.error("❌ AWS credentials are NOT configured!")
+        logger.error("❌ AWS credentials are NOT configured in settings!")
         raise HTTPException(
             status_code=500, detail="AWS credentials not configured in settings"
         )
@@ -89,8 +102,66 @@ def upload_file_to_s3(
         # Verificar que el cliente se creó correctamente
         logger.info("✅ S3 client created successfully")
         logger.info("✅ AWS Region configured: %s", settings.AWS_REGION)
-        logger.info("✅ AWS Access Key length: %d", len(settings.AWS_ACCESS_KEY) if settings.AWS_ACCESS_KEY else 0)
-        logger.info("✅ AWS Secret Key configured: %s", "Yes" if settings.AWS_SECRET_ACCESS_KEY else "No")
+        logger.info(
+            "✅ AWS Access Key length: %d",
+            len(settings.AWS_ACCESS_KEY) if settings.AWS_ACCESS_KEY else 0,
+        )
+        logger.info(
+            "✅ AWS Secret Key configured: %s",
+            "Yes" if settings.AWS_SECRET_ACCESS_KEY else "No",
+        )
+
+        # Log de identidad de AWS (STS)
+        try:
+            sts = boto3.client(
+                "sts",
+                aws_access_key_id=settings.AWS_ACCESS_KEY,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=settings.AWS_REGION,
+            )
+            ident = sts.get_caller_identity()
+            logger.info(
+                "AWS Identity -> Account: %s, UserId: %s, Arn: %s",
+                ident.get("Account"),
+                ident.get("UserId"),
+                ident.get("Arn"),
+            )
+        except Exception as e:
+            logger.warning("⚠️ Unable to get STS caller identity: %s", str(e))
+
+        # Chequeos del bucket
+        try:
+            loc = s3.get_bucket_location(Bucket=bucket_name)
+            bucket_region = (
+                loc.get("LocationConstraint") or "us-east-1"
+            )  # None => us-east-1
+            logger.info("Bucket region: %s", bucket_region)
+            if bucket_region != settings.AWS_REGION:
+                logger.warning(
+                    "⚠️ Region mismatch: settings=%s vs bucket=%s",
+                    settings.AWS_REGION,
+                    bucket_region,
+                )
+        except ClientError as ce:
+            logger.warning(
+                "⚠️ Could not get bucket location (%s): %s",
+                ce.response.get("Error", {}).get("Code"),
+                ce.response.get("Error", {}).get("Message"),
+            )
+        except Exception as e:
+            logger.warning("⚠️ Unexpected error in get_bucket_location: %s", str(e))
+
+        try:
+            s3.head_bucket(Bucket=bucket_name)
+            logger.info("✅ Head bucket succeeded for: %s", bucket_name)
+        except ClientError as ce:
+            logger.error(
+                "❌ Head bucket failed (%s): %s",
+                ce.response.get("Error", {}).get("Code"),
+                ce.response.get("Error", {}).get("Message"),
+            )
+        except Exception as e:
+            logger.error("❌ Unexpected error in head_bucket: %s", str(e))
     except Exception as e:
         logger.error("❌ Error creating S3 client: %s", str(e))
         raise HTTPException(
@@ -168,15 +239,25 @@ def upload_file_to_s3(
         logger.error("❌ Region: %s", settings.AWS_REGION)
         logger.error("❌ ENV: %s", settings.ENV)
         logger.error("❌ Content Type: %s", content_type)
-        
+
+        # Si es ClientError, extraer información detallada
+        if isinstance(e, ClientError):
+            err = e.response.get("Error", {})
+            logger.error("❌ AWS Error Code: %s", err.get("Code"))
+            logger.error("❌ AWS Error Message: %s", err.get("Message"))
+            logger.error("❌ AWS RequestId: %s", e.response.get("ResponseMetadata", {}).get("RequestId"))
+
         # Proporcionar más información en el error
         error_detail = f"Error al subir el archivo a S3: {str(e)}"
         if "AccessDenied" in str(e):
-            error_detail += " | Verifica: 1) Permisos IAM (s3:PutObject), 2) Políticas del bucket, 3) ACLs del bucket, 4) Variables de entorno AWS_ACCESS_KEY y AWS_SECRET_ACCESS_KEY en el contenedor"
-        
-        raise HTTPException(
-            status_code=500, detail=error_detail
-        )
+            error_detail += (
+                " | Verifica: 1) Permisos IAM (s3:PutObject,s3:PutObjectAcl si aplica),"
+                " 2) Política del bucket (Object Ownership),"
+                " 3) Región del bucket vs AWS_REGION,"
+                " 4) Credenciales usadas (ver logs de STS y env)"
+            )
+
+        raise HTTPException(status_code=500, detail=error_detail)
 
     url = f"https://{bucket_name}.s3.amazonaws.com/{key}"
     logger.info("Generated URL: %s", url)
