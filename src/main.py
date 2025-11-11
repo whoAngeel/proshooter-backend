@@ -37,6 +37,11 @@ logging_config = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+        "src.infraestructure.utils.s3_utils": {
+            "handlers": ["stdout"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
     },
 }
 logging.config.dictConfig(logging_config)

@@ -9,7 +9,10 @@ from fastapi import HTTPException, UploadFile
 
 from src.infraestructure.config.settings import settings
 
-logging.basicConfig(level=logging.INFO)
+# ELIMINAR esta línea:
+# logging.basicConfig(level=logging.INFO)
+
+# Usar solo el logger sin configurar basicConfig
 logger = logging.getLogger(__name__)
 
 
