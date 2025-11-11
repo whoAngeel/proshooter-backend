@@ -18,11 +18,7 @@ services:
       retries: 5
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        BUILD_TARGET: production
+    image: proshooter-api:prod
     container_name: proshooter_api_prod
     environment:
       ENV: ${ENV}
