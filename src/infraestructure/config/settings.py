@@ -66,4 +66,5 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-logging.basicConfig(level=settings.LOG_LEVEL)
+# ELIMINAR esta línea - main.py se encarga de configurar el logging:
+# logging.basicConfig(level=settings.LOG_LEVEL)

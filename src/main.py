@@ -1,4 +1,5 @@
 import logging
+import logging.config
 import sys
 
 from fastapi import FastAPI
@@ -7,7 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.infraestructure.config.settings import settings
 from src.presentation.api.v1.routers import router as router_v1
 
-LOG_LEVEL = settings.LOG_LEVEL if hasattr(settings, "LOG_LEVEL") else "INFO"
+# Convertir LOG_LEVEL de string a nivel de logging
+LOG_LEVEL_STR = settings.LOG_LEVEL if hasattr(settings, "LOG_LEVEL") else "INFO"
+LOG_LEVEL = getattr(logging, LOG_LEVEL_STR.upper(), logging.INFO)
+
 logging_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -23,7 +27,7 @@ logging_config = {
     },
     "root": {
         "handlers": ["stdout"],
-        "level": LOG_LEVEL,
+        "level": LOG_LEVEL,  # Ahora es un entero, no un string
     },
     "loggers": {
         "uvicorn": {"handlers": ["stdout"], "level": LOG_LEVEL, "propagate": False},
