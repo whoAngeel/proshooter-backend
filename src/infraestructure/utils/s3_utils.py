@@ -1,9 +1,15 @@
-import boto3
-from uuid import uuid4
-from fastapi import UploadFile, HTTPException
+import logging
+import os
 from datetime import datetime
 from typing import List, Optional
+from uuid import uuid4
+
+import boto3
+from fastapi import HTTPException, UploadFile
+
 from src.infraestructure.config.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 def upload_file_to_s3(
@@ -16,19 +22,6 @@ def upload_file_to_s3(
 ) -> str:
     """
     Sube un archivo a un bucket S3 y retorna la URL pública.
-
-    Args:
-        file (UploadFile): Archivo a subir.
-        bucket_name (str): Nombre del bucket S3.
-        allowed_types (List[str], optional): Tipos de archivo permitidos (MIME o extensiones).
-        folder (str, optional): Carpeta destino en el bucket.
-        max_size_bytes (int, optional): Tamaño máximo permitido en bytes (por defecto 2 MB).
-
-    Returns:
-        str: URL pública del archivo subido.
-
-    Raises:
-        HTTPException: Si el tipo de archivo no está permitido, excede el tamaño o falla la subida.
     """
 
     # Validación de tipo de archivo
@@ -42,15 +35,43 @@ def upload_file_to_s3(
             )
 
     # Validación de tamaño máximo
-    max_size_bytes = max_size_mb * 1024 * 1024  # Convertir MB a bytes
-    file.file.seek(0, 2)  # Ir al final del archivo
+    max_size_bytes = max_size_mb * 1024 * 1024
+    file.file.seek(0, 2)
     file_size = file.file.tell()
-    file.file.seek(0)  # Volver al inicio
+    file.file.seek(0)
     if file_size > max_size_bytes:
         raise HTTPException(
             status_code=400,
-            detail=f"El archivo excede el tamaño máximo permitido de {max_size_bytes // (1024 * 1024)} MB. Tamaño recibido: {file_size} bytes.",
+            detail=f"El archivo excede el tamaño máximo permitido de {max_size_mb} MB. Tamaño recibido: {file_size // (1024 * 1024)} MB.",
         )
+
+    # ========== DEBUG INFO ==========
+    logger.info("=" * 50)
+    logger.info("S3 Upload Debug Info")
+    logger.info("=" * 50)
+    logger.info("Bucket Name: %s", bucket_name)
+    logger.info("Folder: %s", folder)
+    logger.info("File Name: %s", file.filename)
+    logger.info("Content Type: %s", file.content_type)
+    logger.info("File Size (bytes): %d", file_size)
+
+    # Log parciales de credenciales (solo primeros caracteres)
+    access_key = settings.AWS_ACCESS_KEY or "NOT SET"
+    secret_key = settings.AWS_SECRET_ACCESS_KEY or "NOT SET"
+    logger.info(
+        "AWS_ACCESS_KEY: %s***", access_key[:10] if len(access_key) > 10 else "SHORT"
+    )
+    logger.info("AWS_REGION: %s", settings.AWS_REGION)
+
+    # Verifica si las credenciales están configuradas
+    if not settings.AWS_ACCESS_KEY or not settings.AWS_SECRET_ACCESS_KEY:
+        logger.error("❌ AWS credentials are NOT configured!")
+        raise HTTPException(
+            status_code=500, detail="AWS credentials not configured in settings"
+        )
+
+    logger.info("=" * 50)
+    # ========== END DEBUG ==========
 
     s3 = boto3.client(
         "s3",
@@ -58,19 +79,26 @@ def upload_file_to_s3(
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         region_name=settings.AWS_REGION,
     )
+
     file_extension = file.filename.rsplit(".", 1)[-1].lower()
     base_filename = file_name_prefix
     fecha = datetime.now().strftime("%Y%m%d")
     key = f"{folder}/{base_filename}_{fecha}.{file_extension}"
 
+    logger.info("Uploading to S3 - Key: %s", key)
+
     try:
         s3.upload_fileobj(file.file, bucket_name, key)
+        logger.info("✅ File uploaded successfully: %s", key)
     except Exception as e:
+        logger.error("❌ S3 Upload Error: %s", str(e))
+        logger.error("❌ Error Type: %s", type(e).__name__)
         raise HTTPException(
             status_code=500, detail=f"Error al subir el archivo a S3: {str(e)}"
         )
 
     url = f"https://{bucket_name}.s3.amazonaws.com/{key}"
+    logger.info("Generated URL: %s", url)
     return url
 
 
