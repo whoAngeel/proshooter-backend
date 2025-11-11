@@ -1,3 +1,5 @@
+import logging
+
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
@@ -64,3 +66,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+logging.basicConfig(level=settings.LOG_LEVEL)

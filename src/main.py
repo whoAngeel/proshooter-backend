@@ -1,8 +1,23 @@
-from fastapi import FastAPI
-from src.infraestructure.config.settings import settings
-from fastapi.middleware.cors import CORSMiddleware
 import logging
+import sys
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.infraestructure.config.settings import settings
 from src.presentation.api.v1.routers import router as router_v1
+
+logging.basicConfig(
+    level=settings.LOG_LEVEL,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(
+            sys.stdout
+        ),  # Asegurar que sale a stdout (Docker lo captura)
+    ],
+)
+
+logger = logging.getLogger(__name__)
 
 # logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 app = FastAPI(

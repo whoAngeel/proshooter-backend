@@ -9,6 +9,7 @@ from fastapi import HTTPException, UploadFile
 
 from src.infraestructure.config.settings import settings
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
