@@ -85,6 +85,9 @@ def upload_file_to_s3(
         )
         # Verificar que el cliente se creó correctamente
         logger.info("✅ S3 client created successfully")
+        logger.info("✅ AWS Region configured: %s", settings.AWS_REGION)
+        logger.info("✅ AWS Access Key length: %d", len(settings.AWS_ACCESS_KEY) if settings.AWS_ACCESS_KEY else 0)
+        logger.info("✅ AWS Secret Key configured: %s", "Yes" if settings.AWS_SECRET_ACCESS_KEY else "No")
     except Exception as e:
         logger.error("❌ Error creating S3 client: %s", str(e))
         raise HTTPException(
@@ -114,18 +117,17 @@ def upload_file_to_s3(
     logger.info("Environment: %s", settings.ENV)
 
     try:
-        # Leer el contenido del archivo en memoria
+        # Asegurar que el archivo esté al inicio
         file.file.seek(0)
-        file_content = file.file.read()
-        file.file.seek(0)  # Resetear para posibles reintentos
         
         # Especificar ContentType explícitamente usando ExtraArgs
         # Esto es importante para buckets con políticas estrictas o ACLs deshabilitadas
+        # NO especificamos ACL para evitar problemas con buckets que tienen ACLs deshabilitadas
         extra_args = {
             "ContentType": content_type,
         }
         
-        # Intentar primero con upload_fileobj
+        # Intentar primero con upload_fileobj (más eficiente para archivos grandes)
         try:
             s3.upload_fileobj(
                 file.file, 
@@ -135,9 +137,13 @@ def upload_file_to_s3(
             )
             logger.info("✅ File uploaded successfully using upload_fileobj: %s", key)
         except Exception as upload_error:
-            # Si upload_fileobj falla, intentar con put_object como alternativa
+            # Si upload_fileobj falla, leer el archivo y usar put_object como alternativa
             logger.warning("⚠️ upload_fileobj failed, trying put_object: %s", str(upload_error))
             try:
+                # Leer el contenido del archivo en memoria para put_object
+                file.file.seek(0)
+                file_content = file.file.read()
+                
                 s3.put_object(
                     Bucket=bucket_name,
                     Key=key,
@@ -148,6 +154,7 @@ def upload_file_to_s3(
             except Exception as put_error:
                 # Si ambos fallan, lanzar el error original de upload_fileobj
                 logger.error("❌ Both upload methods failed")
+                logger.error("❌ put_object error: %s", str(put_error))
                 raise upload_error
         
     except Exception as e:
