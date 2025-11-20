@@ -51,17 +51,7 @@ services:
     networks:
       - proshooter_network_prod
     restart: unless-stopped
-    command: >
-      sh -c "
-      echo 'Esperando a PostgreSQL...' &&
-      while ! nc -z postgres 5432; do
-        sleep 0.5;
-      done;
-      echo 'PostgreSQL está lista. Ejecutando migraciones...' &&
-      alembic upgrade head &&
-      echo 'Iniciando Uvicorn en modo producción' &&
-      uvicorn src.main:app --host 0.0.0.0 --port 8000
-      "
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
 
 volumes:
   postgres_data_prod:
