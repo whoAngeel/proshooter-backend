@@ -1,39 +1,41 @@
 # 1. EXTENDER EL SERVICIO EXISTENTE SIN ROMPER NADA
 # src/application/services/enhanced_target_analysis_service.py
 
-import requests
-from io import BytesIO
-from PIL import Image
-import numpy as np
-from datetime import datetime
-from sqlalchemy.orm import Session
-from fastapi import HTTPException, Depends
-from uuid import UUID
-from typing import Optional, Tuple, List, Any, Dict
 import logging
+from datetime import datetime
+from io import BytesIO
+from typing import Any, Dict, List, Optional, Tuple
+from uuid import UUID
 
-# Importaciones existentes (mantener)
-from src.infraestructure.ml_models import get_bullet_detector, BulletDetectorError
-from src.infraestructure.database.session import get_db
+import numpy as np
+import requests
+from fastapi import Depends, HTTPException
+from PIL import Image
+from sqlalchemy.orm import Session
+
+from src.application.services.detection_converter import DetectionConverter
+from src.application.services.exercise_consolidation import ExerciseConsolidationService
+from src.application.services.scoring_calculator import ScoringCalculatorService
+
+# Nuevas importaciones para puntuación
+from src.domain.entities.scoring import ShotCoordinate
+from src.domain.services.distance_based_scoring import DistanceBasedScoringService
+from src.domain.validator.target_analysis_validators import TargetAnalysisValidator
+from src.domain.value_objects.target_config import TargetConfigurations, TargetType
+from src.infraestructure.database.models.target_analysis_model import (
+    TargetAnalysisModel,
+)
 from src.infraestructure.database.repositories.practice_exercise_repo import (
     PracticeExerciseRepository,
 )
 from src.infraestructure.database.repositories.target_analysis_repo import (
     TargetAnalysisRepository,
 )
-from src.infraestructure.database.models.target_analysis_model import (
-    TargetAnalysisModel,
-)
-from src.presentation.schemas.target_analysis_schema import ExerciseAnalysisResponse
-from src.application.services.exercise_consolidation import ExerciseConsolidationService
+from src.infraestructure.database.session import get_db
 
-# Nuevas importaciones para puntuación
-from src.domain.entities.scoring import ShotCoordinate
-from src.application.services.scoring_calculator import ScoringCalculatorService
-from src.application.services.detection_converter import DetectionConverter
-from src.domain.value_objects.target_config import TargetConfigurations, TargetType
-from src.domain.validator.target_analysis_validators import TargetAnalysisValidator
-from src.domain.services.distance_based_scoring import DistanceBasedScoringService
+# Importaciones existentes (mantener)
+from src.infraestructure.ml_models import BulletDetectorError, get_bullet_detector
+from src.presentation.schemas.target_analysis_schema import ExerciseAnalysisResponse
 
 logger = logging.getLogger(__name__)
 
@@ -292,20 +294,24 @@ class EnhancedTargetAnalysisService:
     def _prepare_basic_analysis_data(
         self, stats: dict, detections: list, confidence_threshold: float
     ) -> dict:
-        """Prepara datos básicos del análisis (método existente mejorado)"""
+        """Prepara datos básicos del análisis (compatible con modelo v2)"""
         return {
             "total_impacts_detected": stats["total_impacts"],
             "fresh_impacts_inside": stats["fresh_impacts_inside"],
             "fresh_impacts_outside": stats["fresh_impacts_outside"],
-            "covered_impacts_inside": stats["covered_impacts_inside"],
-            "covered_impacts_outside": stats["covered_impacts_outside"],
+            "covered_impacts_inside": stats.get(
+                "covered_impacts_inside", 0
+            ),  # ← usar .get() con default 0
+            "covered_impacts_outside": stats.get(
+                "covered_impacts_outside", 0
+            ),  # ← usar .get() con default 0
             "accuracy_percentage": stats["accuracy_percentage"],
             "average_confidence": stats["average_confidence"],
             "impact_coordinates": detections,
             "confidence_stats": stats["confidence_stats"],
             "confidence_threshold": confidence_threshold,
             "analysis_method": "YOLO_v8",
-            "model_version": "1.0",
+            "model_version": "2.0",  # ← ACTUALIZAR versión
         }
 
     def _create_analysis_with_scoring(
