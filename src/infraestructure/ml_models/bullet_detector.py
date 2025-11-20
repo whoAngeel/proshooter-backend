@@ -1,12 +1,13 @@
-import os
 import io
-import numpy as np
-from pathlib import Path
-from typing import List, Dict, Tuple, Optional
-from PIL import Image
-import cv2
-from ultralytics import YOLO
 import logging
+import os
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import cv2
+import numpy as np
+from PIL import Image
+from ultralytics import YOLO
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class BulletDetector:
         try:
             # Ruta relativa al modelo
             current_dir = Path(__file__).parent
-            model_path = current_dir / "models_versions" / "BulletDetector_v1.pt"
+            model_path = current_dir / "models_versions" / "BulletDetector_v2.pt"
 
             # Debug: mostrar rutas para diagnóstico
             logger.info(f"Directorio actual: {current_dir}")
@@ -74,8 +75,6 @@ class BulletDetector:
             expected_classes = [
                 "impacto_fresco_dentro",
                 "impacto_fresco_fuera",
-                "impacto_tapado_dentro",
-                "impacto_tapado_fuera",
             ]
 
             model_classes = list(self._model.names.values())
@@ -119,7 +118,7 @@ class BulletDetector:
             raise BulletDetectorError(f"Error procesando imagen: {str(e)}")
 
     def detect_impacts(
-        self, image_data: bytes, confidence_threshold: float = 0.25
+        self, image_data: bytes, confidence_threshold: float = 0.6
     ) -> List[Dict]:
         """
         Detecta impactos en una imagen de blanco de tiro.
@@ -225,7 +224,7 @@ class BulletDetector:
             "model_type": "YOLOv8",
             "classes": list(self._model.names.values()),
             "num_classes": len(self._model.names),
-            "version": "1.0",
+            "version": "2.0",
         }
 
     def validate_image(self, image_data: bytes) -> Tuple[bool, Optional[str]]:
@@ -289,45 +288,28 @@ class BulletDetector:
             "analysis_metadata": {
                 "confidence_threshold": confidence_threshold,
                 "total_detections": len(detections),
-                "model_version": "1.0",
+                "model_version": "2.0",
             },
         }
 
     def _calculate_statistics(self, detections: List[Dict]) -> Dict:
-        """
-        Calcula estadísticas detalladas de las detecciones.
+        """Calcula estadísticas solo para impactos frescos"""
 
-        Args:
-            detections: Lista de detecciones
-
-        Returns:
-            Diccionario con estadísticas calculadas
-        """
         if not detections:
             return {
                 "total_impacts": 0,
                 "fresh_impacts_inside": 0,
                 "fresh_impacts_outside": 0,
-                "covered_impacts_inside": 0,
-                "covered_impacts_outside": 0,
                 "accuracy_percentage": 0.0,
                 "average_confidence": 0.0,
                 "confidence_stats": {"min": 0.0, "max": 0.0, "mean": 0.0, "std": 0.0},
             }
 
-        # Separar por tipos
-        fresh_inside = [d for d in detections if d["es_fresco"] and d["dentro_blanco"]]
-        fresh_outside = [
-            d for d in detections if d["es_fresco"] and not d["dentro_blanco"]
-        ]
-        covered_inside = [
-            d for d in detections if not d["es_fresco"] and d["dentro_blanco"]
-        ]
-        covered_outside = [
-            d for d in detections if not d["es_fresco"] and not d["dentro_blanco"]
-        ]
+        # Solo frescos ahora (modelo v2)
+        fresh_inside = [d for d in detections if d["dentro_blanco"]]
+        fresh_outside = [d for d in detections if not d["dentro_blanco"]]
 
-        total_fresh = len(fresh_inside) + len(fresh_outside)
+        total_fresh = len(detections)
         accuracy = (len(fresh_inside) / total_fresh * 100) if total_fresh > 0 else 0.0
 
         # Estadísticas de confianza
@@ -343,8 +325,6 @@ class BulletDetector:
             "total_impacts": total_fresh,
             "fresh_impacts_inside": len(fresh_inside),
             "fresh_impacts_outside": len(fresh_outside),
-            "covered_impacts_inside": len(covered_inside),
-            "covered_impacts_outside": len(covered_outside),
             "accuracy_percentage": accuracy,
             "average_confidence": float(confidence_stats["mean"]),
             "confidence_stats": {
